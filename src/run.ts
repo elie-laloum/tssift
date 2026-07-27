@@ -1,6 +1,7 @@
 import { relative } from "node:path";
 import { CONTEXT_CAPTURE_CODES } from "./codes.js";
 import { TssiftUnrunnable } from "./errors.js";
+import { dedupe } from "./pipeline/index.js";
 import { renderAgentText } from "./render/agent-text.js";
 import { countErrors, isRenderFormat, RENDER_FORMATS, type RenderFormat } from "./render/index.js";
 import { renderJson } from "./render/json.js";
@@ -103,10 +104,17 @@ export function run(argv: readonly string[], streams: Streams): number {
   }
 
   try {
-    const { diagnostics, facts } = new TsApiSource().load({
+    const { diagnostics: ingested, facts } = new TsApiSource().load({
       project: options.project,
       captureFor: CONTEXT_CAPTURE_CODES,
     });
+
+    // The pipeline. Stages are pure and see no `typescript` (rule 4).
+    //
+    // `dedupe` runs even under `--all`: it removes only byte-identical copies,
+    // which carry no information, so "restore everything" still restores
+    // everything there is. Every later stage declasses instead of removing.
+    const diagnostics = dedupe(ingested, facts);
 
     const input = {
       diagnostics,
