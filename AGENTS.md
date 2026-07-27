@@ -35,7 +35,7 @@ Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
-Prochain jalon : **P1, la causalité** (PROJECT.md §5.1 et §8). Concrètement :
+Prochain jalon : **P1, la causalité**. Le séquencement exécutable, avec critères d'acceptation, est dans **`.plans/2026-07-27_p1-causality.md`** — le lire avant d'écrire une ligne de `pipeline/`. Il ouvre sur une mesure qui réordonne le plan : **deux cascades sur trois du corpus ne portent aujourd'hui aucun lien structurel**, donc la capture s'étend avant que la causalité s'écrive. En résumé :
 1. `pipeline/dedupe.ts` puis `pipeline/causality.ts` — **liens structurels uniquement**, seuil de §5.1 à la lettre. Le seul composant qui vaut le plan mode (CLAUDE.md)
 2. `pipeline/group.ts`, tri par pouvoir explicatif, plafonds et déclassement
 3. `budget.ts` **et** le drapeau `--budget-tokens` qui l'expose, ensemble

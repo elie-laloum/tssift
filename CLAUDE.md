@@ -12,7 +12,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 
 1. `AGENTS.md` (importé ci-dessus) — les règles dures
 2. `PROJECT.md` — la spec produit, seule source de vérité pour le modèle de données (§4) et la table des enrichisseurs (§5.2)
-3. `.plans/` — le plan daté le plus récent : le séquencement exécutable, avec critères d'acceptation
+3. `.plans/2026-07-27_p1-causality.md` — le plan courant : le séquencement exécutable de P1, avec critères d'acceptation. (`_p0-b0.md` est clos, `_prior-art.md` porte le verdict du créneau)
 4. `EVAL.md` s'il existe — les chiffres priment sur les intentions
 
 **P0 + B0 sont livrés** (2026-07-27). Le code existe : `src/` (types, codes, `sources/ts-api.ts`, `render/`, `run.ts`, `cli.ts`), `test/` (70 tests, 3 snapshots), `eval/`, `fixtures/`, `.github/workflows/`. En revanche **`src/pipeline/` n'existe pas du tout** — causalité, regroupement et enrichissement sont P1/P2.

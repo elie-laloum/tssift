@@ -2,7 +2,7 @@
 
 **Dernière mise à jour :** 2026-07-27
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
-**Reproduction :** `mise exec -- bun run eval`
+**Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
 ---
 
@@ -14,6 +14,8 @@ B0 compare deux textes, rien d'autre :
 |---|---|
 | **A** | la sortie brute de `tsc --noEmit --pretty false` du **compilateur du projet mesuré**, lancé dans le dossier du projet |
 | **B** | la sortie `agent-text` de `tssift` sur le même projet |
+
+Trois familles de cibles : les **fixtures** (le contrat, minuscules), les **dépôts réels vivants** (représentatifs mais instables), et le **corpus** — du vrai code figé à un commit épinglé puis cassé par une mutation d'une ligne, décrit dans `eval/corpus.json`. C'est le corpus qui porte le signal.
 
 Deux métriques : le **nombre de diagnostics** affichés de chaque côté, et le **nombre de caractères**. Le caractère est le primitif publié — n'importe qui peut le reproduire sans faire confiance à notre tokenizer, et le **rapport** A/B, qui est la revendication réelle, est de toute façon quasi indépendant du tokenizer.
 
