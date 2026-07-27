@@ -1,0 +1,42 @@
+{
+  "name": "tssift",
+  "version": "0.0.0",
+  "description": "Groups tsc diagnostics by root cause and ranks them by explanatory power, for agents that run tsc --noEmit in a shell.",
+  "license": "MIT",
+  "author": "Elie Laloum",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "bin": {
+    "tssift": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "biome check --write",
+    "eval": "tsc -p tsconfig.eval.json && node .eval-dist/eval/measure.js",
+    "fixtures:verify": "node scripts/verify-fixtures.mjs"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.4 <6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
+    "@types/node": "^20",
+    "typescript": "5.9.3",
+    "typescript-5.4": "npm:typescript@5.4.5",
+    "vitest": "^4.1.10"
+  }
+}

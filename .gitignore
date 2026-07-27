@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.eval-dist/
+coverage/
+.DS_Store
+
+# Un seul lockfile est commité : bun.lock. Un second lockfile commité est un
+# piège à dérive de versions — AGENTS.md § « Stack & commandes », PROJECT.md §9.1.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

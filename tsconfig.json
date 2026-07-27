@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    // NodeNext parce que le paquet se construit avec `tsc` seul et sort en ESM :
+    // les imports relatifs de src/ portent donc l'extension .js. Les fixtures,
+    // elles, sont en moduleResolution Bundler sans extension — ce sont des
+    // projets *analysés*, pas notre build. Ne pas croiser les deux.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src", "test", "eval", "scripts", "vitest.config.ts"],
+  "exclude": ["fixtures", "dist", ".eval-dist", "node_modules"]
+}
