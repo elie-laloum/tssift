@@ -94,6 +94,18 @@ const TARGETS: Target[] = [
     kind: "fixture",
     project: "fixtures/missing-required-property/before",
   },
+  {
+    name: "assignability-mismatch",
+    kind: "fixture",
+    project: "fixtures/assignability-mismatch/before",
+  },
+  { name: "misspelled-property", kind: "fixture", project: "fixtures/misspelled-property/before" },
+  {
+    name: "unconstrained-generic",
+    kind: "fixture",
+    project: "fixtures/unconstrained-generic/before",
+  },
+  { name: "value-used-as-type", kind: "fixture", project: "fixtures/value-used-as-type/before" },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

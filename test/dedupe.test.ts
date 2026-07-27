@@ -23,6 +23,10 @@ const FIXTURES = [
   "narrowed-union-member",
   "nullable-chain",
   "missing-required-property",
+  "assignability-mismatch",
+  "misspelled-property",
+  "unconstrained-generic",
+  "value-used-as-type",
 ];
 
 const load = (name: string) =>

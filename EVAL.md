@@ -124,15 +124,48 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | **narrowed-union-member** | fixture | 5.9.3 | 8 | 1 | **88 %** | 1 365 | 804 | **59 %** | 341 | 201 |
 | nullable-chain | fixture | 5.9.3 | 4 | **4** | **0 %** | 334 | 429 | 128 % | 84 | 107 |
 | missing-required-property | fixture | 5.9.3 | 3 | **3** | **0 %** | 449 | 759 | 169 % | 112 | 190 |
+| assignability-mismatch | fixture | 5.9.3 | 3 | **3** | **0 %** | 284 | 640 | 225 % | 71 | 160 |
+| misspelled-property | fixture | 5.9.3 | 2 | **2** | **0 %** | 254 | 486 | 191 % | 64 | 122 |
+| unconstrained-generic | fixture | 5.9.3 | 4 | **4** | **0 %** | 448 | 562 | 125 % | 112 | 141 |
+| value-used-as-type | fixture | 5.9.3 | 4 | **4** | **0 %** | 579 | 678 | 117 % | 145 | 170 |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 13 cibles mesurées : diagnostics A = 305 → entrées B = 39 (pliage de 87 %). Caractères A = 41 966, B = 11 245, soit B/A = 27 %.**
+**Totaux sur les 17 cibles mesurées : diagnostics A = 318 → entrées B = 52 (pliage de 84 %). Caractères A = 43 531, B = 13 611, soit B/A = 31 %.**
 
-**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les cinq lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+### Le chiffre que douze fixtures permettent enfin de donner : **4 sur 10**
 
-### Ce que les quatre nouvelles fixtures ont appris
+Douze fixtures, dont deux ne peuvent structurellement rien plier — `overload-mismatch` n'a qu'un diagnostic, et `two-independent-roots` est le témoin négatif dont le pliage nul **est** le critère. Restent **dix cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **quatre** :
+
+| plie | ne plie pas |
+|---|---|
+| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) |
+
+**C'est la mesure la plus utile produite depuis le chiffre de H1, et elle n'est pas flatteuse.** Elle dit que le pliage ne repose pas sur une propriété générale des cascades TypeScript mais sur **la liste de six codes de `src/codes.ts`** : hors de cette liste, une cascade parfaitement réelle est rendue à plat. Elle dit aussi ce que coûterait l'inverse — les six non-pliages sortent entre **117 % et 225 %**, soit très exactement le surcoût de P0 que P1 était censé effacer.
+
+À noter que ce n'est pas un plafond de conception : cinq des six codes manquants (18047 · 2741 · 2322 · 2551, plus 2739) sont dans la table des dix de §5.2 et attendent les chiffres (règle 8). Le sixième, 2749, est différent — voir ci-dessous.
+
+### `assignability-mismatch` tranche la question de conception n° 2 — et la réponse est non
+
+La question du plan P1 : **le span d'un `related` peut-il servir de clé de regroupement ?** Elle avait été classée *sans objet*, puis rouverte par `missing-required-property`, dont les trois diagnostics impriment tous un `related` désignant exactement leur cause commune. Cette fixture-ci la referme, dans l'autre sens, par construction plutôt que par argument.
+
+Sa cause est `type Currency = "EUR" | "USD"` à `src/pricing/currency.ts:6` — l'union a perdu `"GBP"`. Or :
+
+- **deux** de ses trois diagnostics portent un `related`, et il pointe `currency.ts:9:3` — la **propriété** `currency` de `Rate`. Cette ligne est **du code correct**, que le lecteur ne doit pas toucher ;
+- le **troisième** — une annotation directe, `const reportingCurrency: Currency = "GBP"` — ne porte **aucun** `related`.
+
+Une règle indexée sur le `related` regrouperait donc deux diagnostics sur trois, **en tête desquels une déclaration qui n'a pas besoin d'être modifiée**, et laisserait le troisième dehors. Envoyer le lecteur sur la mauvaise ligne est le mode de défaillance que §11 classe critique ; il est simplement plus discret que la fusion de deux bugs indépendants. **Un `related` pointe là où le compilateur a jugé utile d'expliquer *ce* diagnostic-là, ce qui n'est pas la même chose que la cause.**
+
+Les deux fixtures se lisent donc ensemble : `missing-required-property` montre un lien présent et juste, `assignability-mismatch` un lien présent et trompeur. La règle n'est pas seulement non prouvée, elle est **fausse**. Un test nommé la garde (`test/causality.test.ts`).
+
+### `value-used-as-type` marque le bord extérieur du seuil
+
+Quatre diagnostics, une cause, et **rien à capturer** : ni `related`, ni déclaration résolvable. `OrderStatus` existe bel et bien — c'est un objet `const` — il n'a simplement aucun sens en position de type. Le compilateur n'a donc aucun lien structurel à offrir. Toute règle qui plierait cette cascade devrait travailler sur l'identifiant et `ProgramFacts.imports`, c'est-à-dire dériver sur « le même nom » — précisément ce que §5.1 interdit. Ce n'est pas un manque de capture, c'est la limite de ce que le seuil structurel peut atteindre, et il est utile de l'avoir commitée.
+
+**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les neuf lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+
+### Ce que les fixtures de pliage ont appris
 
 **1. Une petite fixture peut passer sous 100 %, et `narrowed-union-member` est la première : 59 %.** Huit diagnostics pour une entrée. Ce qui change par rapport aux autres petites cibles, c'est que ses diagnostics sont **verbeux** — chacun porte un nœud de chaîne nommant le membre d'union fautif — donc le plafond à trois sites en supprime réellement du volume. Le pliage paie dès que le diagnostic unitaire est gros, pas seulement quand la cascade est longue.
 
@@ -140,7 +173,7 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 
 **3. Deux fixtures ne plient pas du tout, et c'est leur raison d'être.** `nullable-chain` (4 × TS18047) et `missing-required-property` (3 × TS2741) sont des cascades à cause unique qu'un humain regroupe d'un coup d'œil ; le seuil de §5.1 les laisse en racines isolées, parce que ni 18047 ni 2741 n'est dans `CONTEXT_CAPTURE_CODES`. Les deux codes sont dans la table des dix de §5.2, donc c'est un manque connu en attente des chiffres (règle 8), pas un oubli. Elles sont commitées précisément pour que ce manque soit **mesurable** plutôt qu'anecdotique : 128 % et 169 % sont le prix courant de ce que le seuil refuse.
 
-**4. `missing-required-property` rouvre une question fermée, et c'est le résultat le plus utile du lot.** Ses trois diagnostics **impriment déjà leur cause commune** : chacun porte un `related` lisant `src/accounts/profile.ts:10:3: 'locale' is declared here.` Le rapport nomme donc trois fois la même déclaration partagée et refuse quand même de grouper dessus. C'est la question de conception n° 2 du plan P1 — *le span d'un `related` compte-t-il comme un `declaredAt` ?* — classée **sans objet** parce que TS2554 s'était finalement résolu par `getResolvedSignature()`. Ici elle a un objet. Elle reste ouverte : un `related` pointe là où le compilateur l'a jugé utile, ce qui n'est pas toujours la cause, et desserrer sur cette base est exactement le mouvement que §5.1 interdit de faire sans chiffres.
+**4. `missing-required-property` a rouvert une question fermée.** Ses trois diagnostics **impriment déjà leur cause commune** : chacun porte un `related` lisant `src/accounts/profile.ts:10:3: 'locale' is declared here.` Le rapport nomme donc trois fois la même déclaration partagée et refuse quand même de grouper dessus. C'est la question de conception n° 2 du plan P1 — *le span d'un `related` compte-t-il comme un `declaredAt` ?* — classée **sans objet** parce que TS2554 s'était finalement résolu par `getResolvedSignature()`. Ici elle avait un objet. **`assignability-mismatch` l'a refermée depuis, par la négative** — section suivante.
 
 Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **six à sept** selon le périmètre.
 

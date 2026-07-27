@@ -34,6 +34,34 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed with --all 1`
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders assignability-mismatch 1`] = `
+"root: fixtures/assignability-mismatch/before
+3 errors · 3 files
+
+[1] src/billing/quote.ts:4:12 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+
+[2] src/pricing/catalog.ts:3:37 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+
+[3] src/reporting/ledger.ts:3:14 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders assignability-mismatch with --all 1`] = `
+"root: fixtures/assignability-mismatch/before
+3 errors · 3 files
+
+[1] src/billing/quote.ts:4:12 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+
+[2] src/pricing/catalog.ts:3:37 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+
+[3] src/reporting/ledger.ts:3:14 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export 1`] = `
 "root: fixtures/broken-barrel-export/before
 3 errors · 3 files · 1 root cause
@@ -85,6 +113,30 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property w
 
 [3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
     related src/accounts/profile.ts:10:3: 'locale' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders misspelled-property 1`] = `
+"root: fixtures/misspelled-property/before
+2 errors · 2 files
+
+[1] src/http/logging.ts:4:29 error TS2551: Property 'statusCod' does not exist on type 'HttpResponse'. Did you mean 'statusCode'?
+    related src/http/response.ts:8:3: 'statusCode' is declared here.
+
+[2] src/http/retry.ts:4:19 error TS2551: Property 'statusCod' does not exist on type 'HttpResponse'. Did you mean 'statusCode'?
+    related src/http/response.ts:8:3: 'statusCode' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders misspelled-property with --all 1`] = `
+"root: fixtures/misspelled-property/before
+2 errors · 2 files
+
+[1] src/http/logging.ts:4:29 error TS2551: Property 'statusCod' does not exist on type 'HttpResponse'. Did you mean 'statusCode'?
+    related src/http/response.ts:8:3: 'statusCode' is declared here.
+
+[2] src/http/retry.ts:4:19 error TS2551: Property 'statusCod' does not exist on type 'HttpResponse'. Did you mean 'statusCode'?
+    related src/http/response.ts:8:3: 'statusCode' is declared here.
 "
 `;
 
@@ -241,5 +293,63 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with 
 [1] src/billing/invoice.ts:10:15 error TS2339: Property 'quantity' does not exist on type 'LineItem'.
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders unconstrained-generic 1`] = `
+"root: fixtures/unconstrained-generic/before
+4 errors · 2 files
+
+[1] src/accounts/directory.ts:9:3 error TS2322: Type 'Map<unknown, User>' is not assignable to type 'Map<string, User>'.
+      TS2322: Type 'unknown' is not assignable to type 'string'.
+
+[2] src/collections/index-by.ts:7:56 error TS2536: Type 'K' cannot be used to index type 'T'.
+
+[3] src/collections/index-by.ts:8:23 error TS2536: Type 'K' cannot be used to index type 'T'.
+
+[4] src/collections/index-by.ts:9:37 error TS2536: Type 'K' cannot be used to index type 'T'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders unconstrained-generic with --all 1`] = `
+"root: fixtures/unconstrained-generic/before
+4 errors · 2 files
+
+[1] src/accounts/directory.ts:9:3 error TS2322: Type 'Map<unknown, User>' is not assignable to type 'Map<string, User>'.
+      TS2322: Type 'unknown' is not assignable to type 'string'.
+
+[2] src/collections/index-by.ts:7:56 error TS2536: Type 'K' cannot be used to index type 'T'.
+
+[3] src/collections/index-by.ts:8:23 error TS2536: Type 'K' cannot be used to index type 'T'.
+
+[4] src/collections/index-by.ts:9:37 error TS2536: Type 'K' cannot be used to index type 'T'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders value-used-as-type 1`] = `
+"root: fixtures/value-used-as-type/before
+4 errors · 3 files
+
+[1] src/orders/board.ts:3:32 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[2] src/orders/filter.ts:3:38 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[3] src/orders/filter.ts:3:54 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[4] src/reporting/summary.ts:3:34 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders value-used-as-type with --all 1`] = `
+"root: fixtures/value-used-as-type/before
+4 errors · 3 files
+
+[1] src/orders/board.ts:3:32 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[2] src/orders/filter.ts:3:38 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[3] src/orders/filter.ts:3:54 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+
+[4] src/reporting/summary.ts:3:34 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
 "
 `;

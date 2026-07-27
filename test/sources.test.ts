@@ -97,6 +97,10 @@ describe("TsApiSource · path and position discipline", () => {
     "narrowed-union-member",
     "nullable-chain",
     "missing-required-property",
+    "assignability-mismatch",
+    "misspelled-property",
+    "unconstrained-generic",
+    "value-used-as-type",
   ]) {
     it(`emits no absolute path and no backslash on ${name}`, () => {
       const { diagnostics, facts } = load(name);

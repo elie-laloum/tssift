@@ -237,6 +237,40 @@ describe("causality · the cascades the §5.1 threshold declines to fold", () =>
   });
 });
 
+describe("causality · why a related span may NOT be used as a group key", () => {
+  // Design question 2 of the P1 plan, answered with a counter-example rather
+  // than with an argument. It was closed as "moot" when TS2554 turned out to
+  // resolve through getResolvedSignature(); `missing-required-property` reopened
+  // it by showing a related that DOES point at the cause. This one closes it for
+  // good, in the other direction.
+  const { report } = analyse("assignability-mismatch");
+
+  it("stays three roots", () => {
+    expect(report.diagnostics).toHaveLength(3);
+    expect(report.groups).toEqual([]);
+  });
+
+  it("would have grouped two of three, and headed them with correct code", () => {
+    const relatedSites = report.diagnostics.map((d) =>
+      d.related[0]?.span
+        ? `${d.related[0].span.file}:${d.related[0].span.line}:${d.related[0].span.column}`
+        : undefined,
+    );
+
+    // Two carry a related; the third — a direct `const x: Currency = "GBP"` —
+    // carries none, so a related-keyed rule could never reach it.
+    expect(relatedSites.filter(Boolean)).toHaveLength(2);
+    expect(new Set(relatedSites.filter(Boolean))).toEqual(new Set(["src/pricing/currency.ts:9:3"]));
+
+    // And line 9 is `currency: Currency;` — the PROPERTY of `Rate`, which is
+    // correct code the reader must not touch. The cause is line 6, the union
+    // that lost "GBP". Grouping on the related would send the reader to a line
+    // that needs no edit, which is the misdirection PROJECT.md §11 calls
+    // critical — just quieter than merging two unrelated bugs.
+    expect(new Set(relatedSites.filter(Boolean))).not.toContain("src/pricing/currency.ts:6:1");
+  });
+});
+
 describe("causality · what must never happen", () => {
   it("does not group on a declaration outside the program's own files", () => {
     // Measured, not hypothetical: on .corpus/lekes-result-value-renamed a TS2345

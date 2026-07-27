@@ -1,0 +1,7 @@
+{
+  "rootCause": "src/collections/index-by.ts declares `indexBy<T, K>` whose `K` lost its `extends keyof T` constraint, so `T[K]` is no longer a legal index. Three diagnostics land inside the declaration itself (TS2536) and one lands at the call site in src/accounts/directory.ts, where the return type degrades to `Map<unknown, User>` (TS2322).",
+  "expectedFix": "Restore `K extends keyof T` in the signature at src/collections/index-by.ts. The call site in src/accounts/directory.ts is correct as written and starts compiling again once the constraint is back.",
+  "tags": ["generics", "constraint", "declaration-site", "cross-file", "TS2536", "TS2322"],
+  "difficulty": "medium",
+  "purpose": "The only fixture where diagnostics sit ON their own cause. Every group measured so far has `members-on-cause = 0` — renaming a field leaves the declaration valid and breaks its USAGES — which is why a group is headed by a declaration rather than by a member (PROJECT.md §4, §6). Here the declaration is what fails, three times, and a consumer fails a fourth time downstream of it. The `role: root` election path in causality.ts, which prefers a member sitting on the cause, has only ever been exercised by a synthetic test; this is the real project shaped like it. It does not fold today — neither 2536 nor 2322 is captured — so it is also the witness that would have to change first if that election path is ever to matter in practice."
+}

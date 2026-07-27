@@ -21,9 +21,9 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**256 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **8**, premier morceau de B1 (§8 lot B : « 20 fixtures »).
+**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**330 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **12**, premier morceau de B1 (§8 lot B : « 20 fixtures »).
 
-Ce qui existe : les **8** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
+Ce qui existe : les **12** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
 
 Ce qui n'existe pas encore : tout l'**enrichissement** (P2, `src/pipeline/enrich/` est vide), et **B1** — le bras d'éval qui appelle un modèle.
 
@@ -39,7 +39,7 @@ Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
-**Les huit fixtures et ce que chacune est seule à couvrir.** Quatre plient, quatre non — et les non-pliages sont délibérés, pas des pannes :
+**Les douze fixtures et ce que chacune est seule à couvrir.**
 
 | fixture | codes | plie | ce qu'elle est seule à porter |
 |---|---|---|---|
@@ -48,21 +48,26 @@ La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md
 | `overload-mismatch` | 2769 | — | chaîne à trois niveaux, trois `related` |
 | `broken-barrel-export` | 2724 | 3 → 1 | cause = **module** ; trois fichiers sur un symbole |
 | `arity-changed` | 2554 | 4 → 1 | le jumeau **commité** de la plus grosse cascade de l'éval ; seule à dépasser le plafond d'affichage |
-| `narrowed-union-member` | 2339 | 8 → 1 | cause = **alias d'union** ; seule cascade **de second ordre** (le narrowing raté casse les accès qui suivent) |
-| `nullable-chain` | 18047 | **0 %** | cascade réelle que le seuil refuse — 18047 n'est pas capturé |
-| `missing-required-property` | 2741 | **0 %** | idem, **mais le lien est déjà imprimé** dans le `related` de chaque diagnostic |
+| `narrowed-union-member` | 2339 | 8 → 1 | cause = **alias d'union** ; seule cascade **de second ordre** |
+| `nullable-chain` | 18047 | **0 %** | cascade réelle que le seuil refuse — rien n'est capturé |
+| `missing-required-property` | 2741 | **0 %** | un `related` qui **désigne bien** la cause, et reste inutilisé |
+| `assignability-mismatch` | 2322 | **0 %** | un `related` qui **désigne la mauvaise ligne** — la réfutation de la règle « related » |
+| `misspelled-property` | 2551 | **0 %** | le garde du « ne pas dégrader » : la suggestion native est épinglée au snapshot |
+| `unconstrained-generic` | 2536 · 2322 | **0 %** | la seule où les diagnostics sont **sur** leur propre cause |
+| `value-used-as-type` | 2749 | **0 %** | **aucun** lien structurel d'aucune sorte — le bord extérieur du seuil |
 
-Les deux dernières sont commitées pour rendre le manque **mesurable** (128 % et 169 %), pas pour être corrigées tout de suite : leurs codes sont dans la table des dix de §5.2, donc ils attendent les chiffres (règle 8).
+**Le chiffre à connaître : sur les dix fixtures qui sont des cascades à cause unique, le seuil en plie quatre.** Les six autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage ne tient donc pas à une propriété générale des cascades TypeScript mais à **la liste de six codes de `src/codes.ts`**. Elles sont commitées pour rendre ce manque **mesurable** plutôt qu'anecdotique, pas pour être corrigées tout de suite : cinq des six codes sont dans la table des dix de §5.2 et attendent les chiffres (règle 8).
 
 Prochain jalon : **B1**, et d'abord **un corpus réel figé plus large** — `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas : trois mutations d'un seul dépôt. C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
 
 `.plans/2026-07-27_p1-causality.md` est clos ; son tableau d'avancement porte ce que chaque tâche a réellement donné, y compris là où le plan s'est trompé.
 
-**Cinq faits établis en P1 qu'il ne faut pas redécouvrir :**
+**Six faits établis en P1 et confirmés depuis, qu'il ne faut pas redécouvrir :**
 - **Une cause n'est presque jamais un diagnostic.** Dans 100 % des groupes mesurés, aucun membre ne se trouve sur sa propre cause — renommer un champ laisse la déclaration valide et casse ses *usages*. D'où un groupe dont l'en-tête est une **déclaration** (`DiagnosticGroup`, PROJECT.md §4 et §6).
 - **Une déclaration hors des fichiers du programme ne peut pas être une cause.** Un TS2345 du corpus résout vers `<ts-lib>/…/interface Map` ; grouper là-dessus fusionnerait deux bugs indépendants. Garde-fou en place, testé.
 - **Le pipeline ne filtre jamais le tableau.** Il rend `{ diagnostics, groups }` où `diagnostics` est complet et `groups` n'est qu'un index de rendu. C'est ce qui rend la règle 2 vraie par construction.
 - **Le code TS qui sort dépend parfois des noms, pas de la panne.** `broken-barrel-export` émet **2724** et jamais 2305, uniquement parce que `Order` voisine `OrderId` et que TypeScript préfère alors la variante « Did you mean ». Les deux codes partagent resolver et forme capturée ; les deux sont dans `CONTEXT_CAPTURE_CODES`. La leçon générale : **avant d'ajouter un code à une table, vérifier sur une fixture réelle lequel sort vraiment.**
+- **Le span d'un `related` ne peut PAS servir de clé de regroupement — c'est tranché, par contre-exemple.** Sur `assignability-mismatch`, deux diagnostics sur trois portent un `related` qui désigne la *propriété* `Rate.currency`, du code parfaitement correct, alors que la cause est l'union `Currency` qui a perdu un membre trois lignes plus haut ; le troisième n'a aucun `related`. Une règle indexée là-dessus regrouperait deux tiers de la cascade en tête d'une ligne qui n'a pas besoin d'être modifiée. **Un `related` pointe là où le compilateur a jugé utile d'expliquer *ce* diagnostic, pas la cause.** Test nommé dans `test/causality.test.ts`.
 - **Un barrel cassé n'est pas un TS2307.** Son module résout parfaitement — c'est le membre qui manque. La règle de dérivation 2307, longtemps rattachée à cette fixture, appartient donc à l'enrichisseur 2307 de P2 et à ses deux fixtures d'installateur (dépendance fantôme pnpm, Yarn PnP).
 
 ---
