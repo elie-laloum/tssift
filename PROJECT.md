@@ -247,17 +247,15 @@ Ne jamais tronquer une racine.
 
 ## 6. Format de sortie
 
+*Les deux blocs ci-dessous sont la **sortie réelle** de `fixtures/partial-interface-rename/before` sous TypeScript 5.9.3, relevée le 2026-07-27 et figée dans `test/__snapshots__/render.test.ts.snap`. La version antérieure de cette section était écrite à la main : elle montrait des numéros de ligne inventés et un enchaînement 2353 en chaîne du 2345 que le compilateur ne produit pas. Si ces blocs et le snapshot divergent un jour, c'est le snapshot qui a raison, et cette section se corrige.*
+
 ### Avant (`tsc --noEmit`)
 
 ```
-src/api/user.ts(42,5): error TS2353: Object literal may only specify known
-properties, and 'emial' does not exist in type 'CreateUserInput'.
-src/api/user.ts(58,12): error TS2339: Property 'emial' does not exist on type
-'CreateUserInput'.
-src/api/user.ts(71,3): error TS2345: Argument of type '{ emial: string; }' is
-not assignable to parameter of type 'CreateUserInput'.
-  Object literal may only specify known properties, and 'emial' does not exist
-  in type 'CreateUserInput'.
+fixtures/partial-interface-rename/before/src/api/user.ts(10,5): error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
+fixtures/partial-interface-rename/before/src/api/user.ts(16,16): error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
+fixtures/partial-interface-rename/before/src/api/user.ts(30,11): error TS2345: Argument of type '{ id: string; emailAddress: string; }' is not assignable to parameter of type 'CreateUserInput'.
+  Property 'email' is missing in type '{ id: string; emailAddress: string; }' but required in type 'CreateUserInput'.
 ```
 
 ### Après — P0 (renderer `agent-text`, sans causalité ni enrichissement)
@@ -266,13 +264,33 @@ not assignable to parameter of type 'CreateUserInput'.
 root: fixtures/partial-interface-rename/before
 3 errors · 1 file
 
-[1] src/api/user.ts:42:5 error TS2353: Object literal may only specify known properties, and 'emial' does not exist in type 'CreateUserInput'.
+[1] src/api/user.ts:10:5 error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
 
-[2] src/api/user.ts:58:12 error TS2339: Property 'emial' does not exist on type 'CreateUserInput'.
+[2] src/api/user.ts:16:16 error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
 
-[3] src/api/user.ts:71:3 error TS2345: Argument of type '{ emial: string; }' is not assignable to parameter of type 'CreateUserInput'.
-      TS2353: Object literal may only specify known properties, and 'emial' does not exist in type 'CreateUserInput'.
-    related src/types/user.ts:8:3: The expected type comes from property 'email' which is declared here
+[3] src/api/user.ts:30:11 error TS2345: Argument of type '{ id: string; emailAddress: string; }' is not assignable to parameter of type 'CreateUserInput'.
+      TS2741: Property 'email' is missing in type '{ id: string; emailAddress: string; }' but required in type 'CreateUserInput'.
+    related src/types/user.ts:9:3: 'email' is declared here.
+```
+
+Le gain visible à ce stade est mince, et c'est attendu (voir plus bas) : les chemins sont raccourcis par la racine sortie en tête, la chaîne et le related sont étiquetés et positionnés — `related src/types/user.ts:9:3` est une information que `tsc` ne donne pas du tout en texte. Le pliage des cascades, lui, arrive en P1.
+
+Un second témoin, `fixtures/overload-mismatch`, montre ce que le rendu de chaîne doit encaisser — un arbre **branchant**, trois surcharges candidates, chacune avec sa propre feuille, et trois related :
+
+```
+root: fixtures/overload-mismatch/before
+1 error · 1 file
+
+[1] src/transport/client.ts:4:10 error TS2769: No overload matches this call.
+      TS2772: Overload 1 of 3, '(url: string, options: GetOptions): string', gave the following error.
+        TS2322: Type '"POST"' is not assignable to type '"GET"'.
+      TS2772: Overload 2 of 3, '(url: string, options: PostOptions): string', gave the following error.
+        TS2820: Type '"exponentail"' is not assignable to type '"exponential" | "linear"'. Did you mean '"exponential"'?
+      TS2772: Overload 3 of 3, '(url: string, options: StreamOptions): string', gave the following error.
+        TS2322: Type '"POST"' is not assignable to type '"STREAM"'.
+    related src/transport/request.ts:10:3: The expected type comes from property 'method' which is declared here on type 'GetOptions'
+    related src/transport/request.ts:4:5: The expected type comes from property 'kind' which is declared here on type '{ kind: "exponential" | "linear"; ceilingMs: number; }'
+    related src/transport/request.ts:22:3: The expected type comes from property 'method' which is declared here on type 'StreamOptions'
 ```
 
 ### Après — P1 puis P2 (causalité, puis faits)
