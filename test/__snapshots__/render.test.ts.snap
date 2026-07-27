@@ -17,7 +17,38 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders overload-mismatch 1`] = `
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders overload-mismatch with --all 1`] = `
+"root: fixtures/overload-mismatch/before
+1 error · 1 file
+
+[1] src/transport/client.ts:4:10 error TS2769: No overload matches this call.
+      TS2772: Overload 1 of 3, '(url: string, options: GetOptions): string', gave the following error.
+        TS2322: Type '"POST"' is not assignable to type '"GET"'.
+      TS2772: Overload 2 of 3, '(url: string, options: PostOptions): string', gave the following error.
+        TS2820: Type '"exponentail"' is not assignable to type '"exponential" | "linear"'. Did you mean '"exponential"'?
+      TS2772: Overload 3 of 3, '(url: string, options: StreamOptions): string', gave the following error.
+        TS2322: Type '"POST"' is not assignable to type '"STREAM"'.
+    related src/transport/request.ts:10:3: The expected type comes from property 'method' which is declared here on type 'GetOptions'
+    related src/transport/request.ts:4:5: The expected type comes from property 'kind' which is declared here on type '{ kind: "exponential" | "linear"; ceilingMs: number; }'
+    related src/transport/request.ts:22:3: The expected type comes from property 'method' which is declared here on type 'StreamOptions'
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename 1`] = `
+"root: fixtures/partial-interface-rename/before
+3 errors · 1 file · 1 root cause
+
+[1] cause: interface 'CreateUserInput' declared at src/types/user.ts:7:1
+    3 diagnostics, TS2339 · TS2345 · TS2353
+    src/api/user.ts:10:5 error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
+    src/api/user.ts:16:16 error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
+    src/api/user.ts:30:11 error TS2345: Argument of type '{ id: string; emailAddress: string; }' is not assignable to parameter of type 'CreateUserInput'.
+        TS2741: Property 'email' is missing in type '{ id: string; emailAddress: string; }' but required in type 'CreateUserInput'.
+      related src/types/user.ts:9:3: 'email' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename with --all 1`] = `
 "root: fixtures/partial-interface-rename/before
 3 errors · 1 file
 
@@ -32,6 +63,16 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename 1`
 `;
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots 1`] = `
+"root: fixtures/two-independent-roots/before
+2 errors · 2 files
+
+[1] src/billing/invoice.ts:10:15 error TS2339: Property 'quantity' does not exist on type 'LineItem'.
+
+[2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with --all 1`] = `
 "root: fixtures/two-independent-roots/before
 2 errors · 2 files
 

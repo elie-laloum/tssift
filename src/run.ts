@@ -1,7 +1,7 @@
 import { relative } from "node:path";
 import { CONTEXT_CAPTURE_CODES } from "./codes.js";
 import { TssiftUnrunnable } from "./errors.js";
-import { dedupe } from "./pipeline/index.js";
+import { dedupe, detectCausality } from "./pipeline/index.js";
 import { renderAgentText } from "./render/agent-text.js";
 import { countErrors, isRenderFormat, RENDER_FORMATS, type RenderFormat } from "./render/index.js";
 import { renderJson } from "./render/json.js";
@@ -113,11 +113,13 @@ export function run(argv: readonly string[], streams: Streams): number {
     //
     // `dedupe` runs even under `--all`: it removes only byte-identical copies,
     // which carry no information, so "restore everything" still restores
-    // everything there is. Every later stage declasses instead of removing.
-    const diagnostics = dedupe(ingested, facts);
+    // everything there is. `detectCausality` removes nothing at all — it returns
+    // the complete table plus a ranked index over it, and `--all` decides only
+    // whether the renderer walks that index (rule 2).
+    const report = detectCausality(dedupe(ingested, facts), facts);
 
     const input = {
-      diagnostics,
+      report,
       facts,
       rootLabel: relative(process.cwd(), facts.root) || ".",
       all: options.all,
@@ -125,7 +127,7 @@ export function run(argv: readonly string[], streams: Streams): number {
 
     streams.out(options.format === "json" ? renderJson(input) : renderAgentText(input));
 
-    return countErrors(diagnostics) > 0 ? 1 : 0;
+    return countErrors(report.diagnostics) > 0 ? 1 : 0;
   } catch (error) {
     if (error instanceof TssiftUnrunnable) {
       streams.err(`${error.message}\n`);

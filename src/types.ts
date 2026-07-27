@@ -87,15 +87,66 @@ export interface SymbolRef {
 }
 
 export interface EnrichedDiagnostic extends NormalizedDiagnostic {
+  /**
+   * 'derived' means "explained by something else" — by a root diagnostic, or by
+   * a group cause that is not itself a diagnostic.
+   *
+   * The second case is not exotic: measured on the corpus (2026-07-27), it is
+   * the ONLY one that occurs. Renaming a field or changing an arity produces a
+   * cascade of usage-site errors while the declaration that caused them stays
+   * perfectly valid TypeScript, so there is no diagnostic to be derived *from*.
+   */
   role: "root" | "derived";
-  /** ids of the root diagnostics. */
+  /**
+   * ids of the root diagnostics. Empty when the cause is a declaration carrying
+   * no diagnostic of its own — `group` is what carries the link there.
+   */
   derivedFrom: string[];
+  /** Id of the `DiagnosticGroup` this belongs to; absent when it belongs to none. */
+  group?: string;
   /** Verifiable facts, never an imperative (rule 1). */
   facts: Fact[];
   /** 'low' ⇒ fall back to the native format. Degrading beats inventing (rule 5). */
   confidence: "high" | "low";
   /** H2. Empty until the eval justifies it, code by code. */
   restated?: string;
+}
+
+/**
+ * What the members of a group share.
+ *
+ * A discriminated union with one arm today. The second arm is already named and
+ * dated: TS2307 groups by an *unresolved* module specifier, which by definition
+ * has no declaration to point at, so it cannot reuse this one.
+ */
+export type GroupCause = {
+  kind: "declaration";
+  /** The declaration every member points at. `symbol.declaredAt` is the group key. */
+  symbol: SymbolRef;
+};
+
+export interface DiagnosticGroup {
+  /** sha256(kind|file|line|column) of the cause, first 12 hex — same discipline as `id`. */
+  id: string;
+  cause: GroupCause;
+  /** Member diagnostic ids, in report order. Never fewer than two. */
+  members: string[];
+}
+
+/**
+ * What the pipeline hands the renderers.
+ *
+ * The two fields are not alternatives, and that is the point. `diagnostics` is
+ * the complete table — every diagnostic the source produced, nothing removed
+ * (rule 2). `groups` is a *rendering index over it*, never a substitute for it.
+ * Declassing is therefore a property of the rendering, not of the data, which is
+ * what makes "`--all` restores everything" true by construction instead of by
+ * discipline.
+ */
+export interface DiagnosticReport {
+  diagnostics: EnrichedDiagnostic[];
+  /** Ranked by explanatory power: most members first (§5.1). */
+  groups: DiagnosticGroup[];
 }
 
 export interface Fact {

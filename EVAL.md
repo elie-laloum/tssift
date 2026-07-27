@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-27
+**Dernière mise à jour :** 2026-07-27 (après P1)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -31,7 +31,7 @@ B0 ne dit **rien** de H2, rien du taux de correction, rien des faux départs. Ce
 
 ---
 
-## Résultats — 2026-07-27, P0
+## Ligne de base — 2026-07-27, P0 (avant causalité)
 
 Chiffres obtenus par deux exécutions consécutives donnant un résultat **identique**, sans avertissement de l'arbre de travail.
 
@@ -72,11 +72,11 @@ Et cette information n'est pas décorative : **chacun de ces 152 related désign
 
 ---
 
-## Lecture honnête
+## Lecture honnête de la ligne de base
 
-**Le gain de P0 est nul sur les diagnostics et négatif sur les caractères.** Même nombre de diagnostics des deux côtés — 14 contre 14 — et une sortie 27 % à 106 % plus grosse selon la cible.
+**Le gain de P0 était nul sur les diagnostics et négatif sur les caractères.** Même nombre des deux côtés — **283 contre 283** — et une sortie 3 % à 106 % plus grosse selon la cible. *(Une version antérieure de cette phrase annonçait « 14 contre 14 » : c'était le total d'avant l'existence du corpus, resté en place après que le tableau eut été refait. Corrigé le 2026-07-27.)*
 
-Ce n'est pas une contre-performance, c'est le résultat attendu et annoncé (`.plans/2026-07-27_p0-b0.md` § T9, PROJECT.md §6) : **en P0 il n'y a ni causalité ni enrichissement.** Le bras B contient exactement les mêmes diagnostics que le bras A, seulement reformatés et annotés. Le pliage des cascades — le mécanisme qui porte H1 — arrive en **P1**. Ce tableau est la **ligne de base contre laquelle P1 se mesurera**, pas une démonstration de quoi que ce soit.
+Ce n'est pas une contre-performance, c'est le résultat attendu et annoncé (`.plans/2026-07-27_p0-b0.md` § T9, PROJECT.md §6) : **en P0 il n'y a ni causalité ni enrichissement.** Le bras B contient exactement les mêmes diagnostics que le bras A, seulement reformatés et annotés. Le pliage des cascades — le mécanisme qui porte H1 — arrive en **P1**, et le tableau « après P1 » plus bas est ce qu'il a donné.
 
 ### D'où viennent les caractères en plus
 
@@ -105,6 +105,39 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 - **Il ne dit rien de H1.** H1 porte sur les faux départs et sur les tokens *une fois les cascades pliées*. Aucune cascade n'est pliée ici.
 - **Il ne compte pas les lectures évitées.** Un `related` positionné remplace potentiellement un `Read`. B0 mesure la taille du rapport, pas le coût total de la boucle d'agent. C'est B1 qui tranchera, et c'est aussi ce qui décidera de la variante `--snippets`.
 - **Il ne compare que du texte.** La sortie `json`, rapport complet et futur consommable MCP, est plus grosse encore et n'est pas mesurée ici.
+
+---
+
+## Résultats — 2026-07-27, après P1 (causalité + regroupement)
+
+**C'est le chiffre de H1.** Même protocole, même corpus, même jour, même version de TypeScript que la ligne de base ci-dessus. Seul le bras B a changé : il passe désormais par `dedupe → detectCausality → entriesOf` avant le renderer.
+
+`B diags` compte les **entrées** du rapport, pas les diagnostics. C'est précisément le déplacement que P1 revendique : après pliage, une entrée peut représenter toute une cascade. Le total qu'elles couvrent reste intégralement dans `json`, et `--all` le restitue ligne à ligne.
+
+| cible | type | ts | A diags | B entrées | pliage | A car. | B car. | B/A car. | A ~tok | B ~tok |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| partial-interface-rename | fixture | 5.9.3 | 3 | 1 | 67 % | 523 | 831 | 159 % | 131 | 208 |
+| **two-independent-roots** | fixture | 5.9.3 | 2 | **2** | **0 %** | 223 | 319 | 143 % | 56 | 80 |
+| overload-mismatch | fixture | 5.9.3 | 1 | 1 | 0 % | 571 | 1 176 | 206 % | 143 | 294 |
+| corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
+| corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
+| corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
+
+**Totaux sur les 8 cibles mesurées : diagnostics A = 283 → entrées B = 29 (pliage de 90 %). Caractères A = 39 144, B = 7 960, soit B/A = 20 %.**
+
+Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **sept**.
+
+### Ce que ce tableau dit, et ce qu'il ne dit pas
+
+**Il dit que H1 tient sur du vrai code.** Sur les trois entrées de corpus, qui sont les seules cibles ressemblant au cas d'usage réel, le rapport passe de 103–182 % à **6–42 %**. `lekes-ok-arity-changed` est le cas d'école : 153 diagnostics répartis sur 31 fichiers deviennent 2 entrées, dont une qui nomme `src/shared/domain/result.ts:15:19` — la ligne qu'il faut lire — et un compteur pour les 149 sites restants.
+
+**Il dit aussi que le pliage ne rend rien sur un petit projet, et c'est attendu.** `partial-interface-rename` passe de 133 % à **159 %** : ses trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+
+**Le témoin négatif tient : `two-independent-roots` reste à 2 entrées pour 2 diagnostics, pliage 0 %.** C'est la mesure la plus importante du tableau après les trois entrées de corpus. Deux échecs sans lien restent deux échecs, et le critère de la Definition of Done (§12) est vérifié par un test nommé, pas seulement observé ici.
+
+**Il ne dit toujours rien de H2**, ni du taux de correction, ni des faux départs. Ces métriques exigent un modèle et arrivent en B1/B2. Ce que B0 mesure ici est un volume et un compte, pas un comportement.
+
+**Le sous-regroupement est visible et volontaire.** `lekes-result-value-renamed` plie 80 %, pas 99 % : 21 de ses 112 diagnostics restent isolés — 10 TS7006 (paramètre `any` implicite, aucune déclaration à viser), 8 TS2339 dont le récepteur est `{}` ou `unknown`, 2 TS2353 et 1 TS2345. Aucun ne porte de lien structurel vers la cause. Les regrouper demanderait de dériver sur une ressemblance, ce que §5.1 interdit. C'est le comportement voulu.
 
 ---
 

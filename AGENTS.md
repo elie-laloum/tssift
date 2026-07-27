@@ -21,13 +21,17 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe.
+**P0 + B0 livrés le 2026-07-27. P1 T0 → T4 livrés le même jour.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (129 tests).
 
-Ce qui existe : les 3 fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` (résolution du peer, garde de version, normalisation, `ProgramFacts`) · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 · 70 tests dont 3 snapshots texte sur 5.9.3 · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
+Ce qui existe : les 3 fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554) · `src/pipeline/` avec **dedupe, causalité et regroupement** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
 
-Ce qui n'existe pas : **tout `src/pipeline/`**. Ni causalité, ni regroupement, ni enrichissement, ni budget. C'est P1 et P2.
+Ce qui n'existe pas encore : **`pipeline/budget.ts` et `--budget-tokens`** (T5), la fixture **`broken-barrel-export`** (T6), et tout l'**enrichissement** (P2).
 
-**Le chiffre de base est dans `EVAL.md`, et il est plat** : 14 diagnostics des deux côtés, et une sortie 27 % à 106 % plus grosse que `tsc` brut. C'est le résultat attendu en P0 — rien n'est encore plié — et c'est la ligne de base contre laquelle P1 se mesure. Ne pas le lire comme une infirmation de H1 : H1 n'est pas encore testée.
+**H1 est confirmée sur du vrai code, et le chiffre est dans `EVAL.md`.** Ligne de base P0 : 283 diagnostics des deux côtés, sortie à **141 %** de `tsc` brut. Après P1 : **283 diagnostics rendus en 29 entrées (pliage de 90 %), sortie à 20 %** — soit sept fois moins de caractères que la ligne de base. Sur les trois entrées de corpus, qui sont les seules cibles réalistes, le rapport tombe à **6 – 42 %** ; `lekes-ok-arity-changed` rend 153 diagnostics en **2 entrées**.
+
+Deux chiffres à ne pas mélire :
+- **Le témoin négatif `two-independent-roots` reste à 2 entrées pour 2 diagnostics, pliage 0 %.** C'est le comportement voulu et un critère de la DoD.
+- **Les petites fixtures coûtent plus cher qu'avant** (`partial-interface-rename` : 133 % → 159 %). Sous le plafond de trois sites, tous les diagnostics s'impriment encore et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel, pas volumétrique — et sur un projet de trois erreurs, `tsc` n'a pas de problème de bruit.
 
 **Le contrat de sortie et le modèle de données ont été arrêtés le 2026-07-27** et sont intégrés dans PROJECT.md. Ils ne se rouvrent pas sans raison neuve. Le séquencement exécutable, avec critères d'acceptation, est dans **`.plans/2026-07-27_p0-b0.md`**.
 
@@ -35,12 +39,15 @@ Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
-Prochain jalon : **P1, la causalité**. Le séquencement exécutable, avec critères d'acceptation, est dans **`.plans/2026-07-27_p1-causality.md`** — le lire avant d'écrire une ligne de `pipeline/`. Il ouvre sur une mesure qui réordonne le plan : **deux cascades sur trois du corpus ne portent aujourd'hui aucun lien structurel**, donc la capture s'étend avant que la causalité s'écrive. En résumé :
-1. `pipeline/dedupe.ts` puis `pipeline/causality.ts` — **liens structurels uniquement**, seuil de §5.1 à la lettre. Le seul composant qui vaut le plan mode (CLAUDE.md)
-2. `pipeline/group.ts`, tri par pouvoir explicatif, plafonds et déclassement
-3. `budget.ts` **et** le drapeau `--budget-tokens` qui l'expose, ensemble
-4. Zéro faux positif sur `two-independent-roots` — critère de DoD, la fixture existe déjà
-5. B1, et d'abord **un corpus réel figé** : `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas
+Prochain jalon : **la fin de P1** — `.plans/2026-07-27_p1-causality.md` porte le séquencement et les critères d'acceptation. Reste :
+1. `budget.ts` **et** le drapeau `--budget-tokens` qui l'expose, ensemble (T5)
+2. La fixture `broken-barrel-export` (T6) — et c'est avec elle qu'arrive la règle 2307 différée en T3
+3. B1, et d'abord **un corpus réel figé** : `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas
+
+**Trois faits établis en P1 qu'il ne faut pas redécouvrir :**
+- **Une cause n'est presque jamais un diagnostic.** Dans 100 % des groupes mesurés, aucun membre ne se trouve sur sa propre cause — renommer un champ laisse la déclaration valide et casse ses *usages*. D'où un groupe dont l'en-tête est une **déclaration** (`DiagnosticGroup`, PROJECT.md §4 et §6).
+- **Une déclaration hors des fichiers du programme ne peut pas être une cause.** Un TS2345 du corpus résout vers `<ts-lib>/…/interface Map` ; grouper là-dessus fusionnerait deux bugs indépendants. Garde-fou en place, testé.
+- **Le pipeline ne filtre jamais le tableau.** Il rend `{ diagnostics, groups }` où `diagnostics` est complet et `groups` n'est qu'un index de rendu. C'est ce qui rend la règle 2 vraie par construction.
 
 ---
 

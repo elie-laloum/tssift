@@ -1,7 +1,13 @@
-import type { NormalizedDiagnostic, ProgramFacts } from "../types.js";
+import type { DiagnosticReport, EnrichedDiagnostic, ProgramFacts } from "../types.js";
 
 export interface RenderInput {
-  diagnostics: NormalizedDiagnostic[];
+  /**
+   * The pipeline's output: the complete diagnostic table plus the ranked group
+   * index over it. Both, always — a renderer that received only the groups
+   * could not honour `--all`, and one that received only the diagnostics could
+   * not rank (rule 2, §5.1).
+   */
+  report: DiagnosticReport;
   facts: ProgramFacts;
   /**
    * How the root is printed. Relative to the current directory rather than
@@ -9,7 +15,7 @@ export interface RenderInput {
    * Computed by the caller — renderers stay pure.
    */
   rootLabel: string;
-  /** `--all`. Nothing is declassed in P0, so it changes no output yet (rule 2). */
+  /** `--all`: every diagnostic on a full line, ungrouped. Nothing is declassed. */
   all: boolean;
 }
 
@@ -21,6 +27,6 @@ export function isRenderFormat(value: string): value is RenderFormat {
   return (RENDER_FORMATS as readonly string[]).includes(value);
 }
 
-export function countErrors(diagnostics: readonly NormalizedDiagnostic[]): number {
+export function countErrors(diagnostics: readonly EnrichedDiagnostic[]): number {
   return diagnostics.filter((diagnostic) => diagnostic.category === "error").length;
 }

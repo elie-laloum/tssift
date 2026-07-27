@@ -144,11 +144,28 @@ interface SymbolRef {
 }
 
 interface EnrichedDiagnostic extends NormalizedDiagnostic {
-  role: 'root' | 'derived';
-  derivedFrom: string[];         // ids des diagnostics racines
+  role: 'root' | 'derived';      // 'derived' = expliqué par autre chose — voir plus bas
+  derivedFrom: string[];         // ids des diagnostics racines — VIDE si la cause n'est pas un diagnostic
+  group?: string;                // id du DiagnosticGroup, absent s'il n'appartient à aucun
   facts: Fact[];                 // faits vérifiables, jamais d'impératif
   confidence: 'high' | 'low';    // low ⇒ on retombe sur le format natif
   restated?: string;             // H2 — vide tant que l'éval ne l'a pas justifié, code par code
+}
+
+type GroupCause = {
+  kind: 'declaration';
+  symbol: SymbolRef;             // symbol.declaredAt EST la clé du groupe
+};
+
+interface DiagnosticGroup {
+  id: string;                    // sha256(kind|file|line|column), 12 hex
+  cause: GroupCause;
+  members: string[];             // ids des membres, dans l'ordre du rapport — jamais moins de 2
+}
+
+interface DiagnosticReport {
+  diagnostics: EnrichedDiagnostic[];  // TOUS, rien de retiré (règle 2)
+  groups: DiagnosticGroup[];          // index de rendu, trié par pouvoir explicatif
 }
 
 interface Fact {
@@ -174,6 +191,9 @@ interface Fact {
 - **`SourceSpan.file`.** Relatif au dossier du tsconfig résolu, séparateurs POSIX, la racine étant imprimée une fois en tête de rapport. Les chemins hors racine sont normalisés : `<ts-lib>/lib.es5.d.ts` pour les libs TypeScript, suffixe `node_modules/…` depuis la racine de paquet la plus proche. Un chemin hors racine qui n'est ni l'un ni l'autre reste relatif à la racine, avec des `../` — ce qui ne fait fuiter aucun `/home/<user>/…` non plus. Sans quoi un snapshot embarque le chemin de la machine et la version de TS, et meurt en CI comme partout ailleurs.
   Cas limite tranché à l'implémentation : un diagnostic **sans fichier** (TS 7 l'autorise explicitement, et TS 5 en produit pour certains diagnostics globaux) porte `file: "<none>"`, `line: 1`, `column: 1`. Le sentinelle rejoint le vocabulaire de `<ts-lib>/…` ; `primary` reste obligatoire, donc le modèle ne bouge pas.
 - **`restated`.** Le champ de H2. Il existe pour que le modèle de données n'ait pas à bouger le jour où l'éval justifie une reformulation sur un code donné. Il reste vide jusque-là.
+- **`DiagnosticGroup` et `DiagnosticReport` — ajoutés le 2026-07-27 à l'implémentation de P1, sur une mesure.** Le modèle n'avait que `role` / `derivedFrom`, ce qui présuppose qu'une cascade a un **diagnostic** pour cause. Mesure sur les trois entrées de corpus et les trois fixtures : dans **100 % des groupes observés, aucun membre ne se trouve sur sa propre cause**. C'est mécanique et non accidentel — renommer un champ ou changer une arité laisse la déclaration parfaitement valide et casse tous ses *usages*. Il n'y a donc, en général, aucun diagnostic dont dériver. Élire un membre comme « racine » aurait mis un fichier de test en tête de rapport à chaque fois, ce qui contredit la seule promesse du produit : *le premier diagnostic lu doit être le plus explicatif*. D'où un groupe dont l'en-tête est une **déclaration**.
+- **Pourquoi deux champs et non un.** `diagnostics` est le tableau **complet**, `groups` un **index de rendu par-dessus**. Ce ne sont pas des alternatives : c'est ce découpage qui rend « `--all` restitue tout » vrai **par construction** plutôt que par vigilance, puisque le déclassement devient une propriété du rendu et jamais de la donnée (règle 2). Un pipeline qui filtrerait le tableau ne pourrait plus le promettre.
+- **`derivedFrom` vide sur un dérivé.** Assumé. Un `derivedFrom` non vide affirme « ce diagnostic-ci est expliqué par ce diagnostic-là » ; quand la cause est une déclaration saine, il n'existe aucun id honnête à y mettre, et en fabriquer un serait un lien vers une chose qui n'existe pas. C'est `group` qui porte le lien dans ce cas — le seul que le corpus produise aujourd'hui.
 
 ---
 
@@ -206,6 +226,13 @@ On ne dérive **que sur un lien structurel présent dans les données capturées
 Sont exclus : Levenshtein, « même identifiant », « même fichier + même code ». La règle 3 ci-dessus n'est donc **pas** appliquée telle quelle : « même nom dans le même fichier » n'est pas une identité — deux liaisons distinctes qui s'ombrent portent le même nom, et c'est exactement le mode de défaillance que §11 classe *critique*.
 
 L'asymétrie est assumée : sous-regrouper coûte une part du chiffre de H1, sur-regrouper cache une vraie erreur derrière un compteur et produit l'édition-du-mauvais-fichier que la métrique « faux départ » existe pour détecter. **On desserrera plus tard avec des chiffres ; on ne resserre pas après un raté.** Attendre donc un sous-regroupement systématique sur les premières mesures : c'est le comportement voulu, pas un bug à corriger.
+
+**Deux garde-fous ajoutés le 2026-07-27, à l'implémentation, et tous deux sortis de la mesure et non de la prudence.**
+
+1. **Une déclaration hors des fichiers du programme ne peut pas être une cause.** `<ts-lib>/…` et `node_modules/…` sont refusés ; `ProgramFacts.files` fait autorité, plutôt qu'un test de préfixe sur le chemin. Ce n'est pas une précaution théorique : sur `.corpus/lekes-result-value-renamed`, un TS2345 résout son type attendu vers `<ts-lib>/lib.es2015.collection.d.ts` — `interface Map`. Sans ce garde-fou, deux bugs parfaitement indépendants fusionneraient dès que tous deux appellent mal une méthode de `Map`. C'est le mode de défaillance que §11 classe *critique*, et il était **déjà dans les données** avant qu'une seule ligne de causalité soit écrite. La capture, elle, reste : elle est vraie, et un enrichisseur de P2 la voudra. C'est la **dérivation** qui la refuse.
+2. **Un groupe compte au moins deux membres.** Un groupe d'un seul est un en-tête sans rien de plié dessous : du bruit, et une entrée de plus dans le compte même sur lequel H1 se mesure.
+
+**Ce qui n'est PAS implémenté en P1, dit ici plutôt que passé sous silence.** La règle 2307 ci-dessus — « tout ce qui importe ce module est dérivé », via `ProgramFacts.imports` — est **différée**. Raison : aucune entrée de corpus et aucune fixture actuelle ne contient de *cascade* 2307, et la règle demande un champ que le modèle n'a pas encore (le spécificateur non résolu — un module qui ne résout pas n'a par définition aucune déclaration sur laquelle indexer). Elle arrivera avec la fixture qui pourra la tester. **TS2305 n'en a pas besoin** : son module *résout*, donc c'est déjà un cas de `declaredAt` identique — 12/12 sur le corpus. 2305 et 2307 se ressemblent dans le message et pas du tout dans la structure.
 
 **Ordre de sortie :** racines d'abord, triées par nombre de dérivés décroissant. Le premier diagnostic lu par l'agent doit être le plus explicatif.
 
@@ -293,17 +320,54 @@ root: fixtures/overload-mismatch/before
     related src/transport/request.ts:22:3: The expected type comes from property 'method' which is declared here on type 'StreamOptions'
 ```
 
-### Après — P1 puis P2 (causalité, puis faits)
+### Après — P1 (causalité)
+
+*Sortie réelle de `fixtures/partial-interface-rename/before` sous 5.9.3, relevée le 2026-07-27 et figée dans le snapshot. Les trois diagnostics de P0 sont devenus **une** entrée.*
 
 ```
 root: fixtures/partial-interface-rename/before
-3 errors · 1 root
+3 errors · 1 file · 1 root cause
 
-[1] src/api/user.ts:42:5 error TS2353: Object literal may only specify known properties, and 'emial' does not exist in type 'CreateUserInput'.
-    CreateUserInput declared at src/types/user.ts:8:1
+[1] cause: interface 'CreateUserInput' declared at src/types/user.ts:7:1
+    3 diagnostics, TS2339 · TS2345 · TS2353
+    src/api/user.ts:10:5 error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
+    src/api/user.ts:16:16 error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
+    src/api/user.ts:30:11 error TS2345: Argument of type '{ id: string; emailAddress: string; }' is not assignable to parameter of type 'CreateUserInput'.
+        TS2741: Property 'email' is missing in type '{ id: string; emailAddress: string; }' but required in type 'CreateUserInput'.
+      related src/types/user.ts:9:3: 'email' is declared here.
+```
+
+Sur une vraie cascade, au-delà du plafond de trois sites — `.corpus/lekes-ok-arity-changed`, **153 diagnostics rendus en 2 entrées** :
+
+```
+root: .corpus/lekes-ok-arity-changed
+153 errors · 31 files · 1 root cause
+
+[1] cause: function 'ok' declared at src/shared/domain/result.ts:15:19
+    152 diagnostics, all TS2554
+    src/features/agents/application/agent-runner.service.test.ts:52:20 error TS2554: Expected 2 arguments, but got 1.
+      related src/shared/domain/result.ts:15:33: An argument for 'origin' was not provided.
+    src/features/agents/application/agent-runner.service.test.ts:53:24 error TS2554: Expected 2 arguments, but got 1.
+      related src/shared/domain/result.ts:15:33: An argument for 'origin' was not provided.
+    src/features/agents/application/agent-runner.service.test.ts:54:22 error TS2554: Expected 2 arguments, but got 1.
+      related src/shared/domain/result.ts:15:33: An argument for 'origin' was not provided.
+    +149 more sites (--all for every one)
+
+[2] src/shared/domain/result.ts:15:90 error TS2353: Object literal may only specify known properties, and 'origin' does not exist in type '{ readonly ok: true; readonly value: T; }'.
+```
+
+**L'en-tête d'un groupe est une déclaration, pas un diagnostic — amendement du 2026-07-27, sur mesure.** La version antérieure de cette section montrait la forme inverse : un diagnostic en pleine ligne suivi de `2 derived: :58:12, :71:3`. Elle a été écrite avant que le corpus existe, et la mesure l'a infirmée : dans **100 % des groupes observés, aucun membre ne se trouve sur sa propre cause** (détail en §4). Appliquée à `ok-arity-changed`, cette forme aurait mis en tête `agent-runner.service.test.ts:52:20` — un fichier de **test** — et n'aurait **jamais nommé** `result.ts:15`, qui est la seule chose à lire. Un rapport qui trie par pouvoir explicatif ne peut pas taire l'explication.
+
+### Après — P2 (les faits)
+
+Ce que P2 ajoutera sous l'en-tête de cause, et qui n'existe pas encore :
+
+```
+[1] cause: interface 'CreateUserInput' declared at src/types/user.ts:7:1
       { id: string; email: string; name?: string }
     near match: 'email' (distance 2)
-    2 derived: :58:12, :71:3
+    3 diagnostics, TS2339 · TS2345 · TS2353
+    …
 ```
 
 **Trois choses à ne pas défaire dans ce format.**

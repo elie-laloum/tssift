@@ -21,6 +21,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { TssiftUnrunnable } from "../src/errors.js";
+import { dedupe, detectCausality } from "../src/pipeline/index.js";
 import { renderAgentText } from "../src/render/agent-text.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
 
@@ -140,8 +141,14 @@ function armB(projectDir: string): { arm: Arm; typescript: string } {
     project: projectDir,
     captureFor: CONTEXT_CAPTURE_CODES,
   });
-  const text = renderAgentText({ diagnostics, facts, rootLabel: projectDir, all: false });
+  // The same pipeline `run.ts` composes. Measuring the renderer without it would
+  // measure a product nobody ships.
+  const report = detectCausality(dedupe(diagnostics, facts), facts);
+  const text = renderAgentText({ report, facts, rootLabel: projectDir, all: false });
   return {
+    // `[n]` counts *entries*, not diagnostics: after P1 one entry can stand for
+    // a whole cascade, and that difference is precisely what H1 claims. The
+    // total the entries account for stays in `report.diagnostics`.
     arm: { diagnostics: (text.match(/^\[\d+\] /gm) ?? []).length, chars: text.length },
     typescript: facts.typescript.version,
   };

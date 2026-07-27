@@ -149,8 +149,14 @@ describe("context capture · the report stays a projection (rule 14)", () => {
   it("keeps context out of agent-text and in json", async () => {
     const { renderAgentText } = await import("../src/render/agent-text.js");
     const { renderJson } = await import("../src/render/json.js");
-    const result = load("partial-interface-rename");
-    const input = { ...result, rootLabel: relative(process.cwd(), result.facts.root), all: false };
+    const { dedupe, detectCausality } = await import("../src/pipeline/index.js");
+    const { diagnostics, facts } = load("partial-interface-rename");
+    const input = {
+      report: detectCausality(dedupe(diagnostics, facts), facts),
+      facts,
+      rootLabel: relative(process.cwd(), facts.root),
+      all: false,
+    };
 
     const text = renderAgentText(input);
     const json = renderJson(input);

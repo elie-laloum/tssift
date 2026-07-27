@@ -7,6 +7,29 @@
 
 ---
 
+## État d'avancement — mis à jour le 2026-07-27
+
+| tâche | état | note |
+|---|---|---|
+| T0 · trou du tsconfig solution | **livré** | et la seconde branche s'est révélée **inatteignable** : TypeScript signale déjà TS18002/18003 dès que `references` manque. Ce qui *renforce* le discriminant retenu. |
+| T1 · étendre la capture | **livré** | 2305 · 2339 · 2345 · 2353 · 2554. Taux 92 – 100 %. Coût en temps dans le bruit (−6 à +8 %), coût en volume `json` réel (+16 à +69 %). |
+| T2 · `pipeline/dedupe.ts` | **livré** | taux de doublons mesuré : **zéro** sur 283 diagnostics. Module minimal, mais contrat non trivial — l'`id` seul ne suffit pas à supprimer. |
+| T3 · `pipeline/causality.ts` | **livré** | conçu en plan mode. Règle du `declaredAt` identique uniquement. |
+| T4 · `group.ts`, tri, plafonds | **livré** | plafond à 3 sites, `--all` byte-identique à P0. |
+| T5 · `budget.ts` + `--budget-tokens` | à faire | |
+| T6 · `broken-barrel-export` | à faire | c'est avec elle qu'arrive la règle 2307 différée en T3 |
+| T7 · le chiffre de H1 | **livré** | **283 diagnostics → 29 entrées, 141 % → 20 % de caractères.** Détail dans `EVAL.md`. |
+
+**Les trois questions de conception de T3 sont tranchées, deux par la mesure plutôt que par décision :**
+
+1. **Une cause sans diagnostic** — tranchée : le groupe est en-têté par la **déclaration**. Ce n'est pas un cas limite mais **le seul cas observé** : `members-on-cause = 0` dans 100 % des groupes. §4 gagne `DiagnosticGroup` / `DiagnosticReport`, §6 est amendée.
+2. **Le span d'un `related` compte-t-il comme un `declaredAt` ?** — **question devenue sans objet.** `getResolvedSignature().declaration` résout 152/152 sur TS2554, et c'est le lien structurel ordinaire que §5.1 règle 2 décrit déjà. La plus grosse cascade du corpus se plie **sans desserrer le seuil**. Aucun amendement.
+3. **2305 et 2307 partagent-ils une règle ?** — **non.** Le module d'un 2305 *résout*, donc c'est déjà un cas de `declaredAt` identique (12/12). Celui d'un 2307 ne résout par définition pas. Ils se ressemblent dans le message et pas du tout dans la structure. La règle 2307 est **différée en T6**, écrit en §5.1.
+
+**Un garde-fou ajouté, non prévu au plan, et sorti de la mesure :** une déclaration hors des fichiers du programme (`<ts-lib>/…`, `node_modules/…`) ne peut pas être une cause. Un TS2345 du corpus résout vers `interface Map` de la lib standard ; sans ce refus, deux bugs indépendants fusionneraient. C'était déjà dans les données avant la première ligne de causalité.
+
+---
+
 ## Comment se servir de ce fichier
 
 Lire dans cet ordre, avant toute action : `AGENTS.md` (règles dures) → `PROJECT.md` (spec) → `EVAL.md` (les chiffres de base) → ce plan.
