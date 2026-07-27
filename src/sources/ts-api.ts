@@ -5,13 +5,23 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type * as TS from "typescript";
 import { TssiftUnrunnable } from "../errors.js";
 import type {
+  DiagnosticContext,
   MessageChainNode,
   NormalizedDiagnostic,
   ProgramFacts,
   RelatedInfo,
   SourceSpan,
 } from "../types.js";
+import { resolveContext } from "./context.js";
 import type { DiagnosticSource, LoadOptions, SourceResult } from "./index.js";
+
+/**
+ * How `context.ts` produces a span. Injected rather than imported there so that
+ * path normalisation lives in exactly one place: a `declaredAt` must come out
+ * byte-identical to a `primary`, or causality's identity comparison silently
+ * stops matching and the whole of P1 quietly folds nothing.
+ */
+type SpanCapture = (file: TS.SourceFile, start: number, length: number) => SourceSpan;
 
 /** The peer range. Anything outside it exits 2 rather than guessing (rule 7, rule 15). */
 export const SUPPORTED_TYPESCRIPT_RANGE = ">=5.4 <6";
@@ -169,6 +179,7 @@ function normalize(
   diagnostic: TS.Diagnostic,
   root: string,
   tsLibDir: string,
+  context: DiagnosticContext | undefined,
 ): NormalizedDiagnostic {
   const primary: SourceSpan = diagnostic.file
     ? spanOf(diagnostic.file, diagnostic.start ?? 0, diagnostic.length ?? 0, root, tsLibDir)
@@ -176,7 +187,7 @@ function normalize(
 
   const message = headText(diagnostic.messageText);
 
-  return {
+  const normalized: NormalizedDiagnostic = {
     id: diagnosticId(diagnostic.code, primary.file, primary.line, primary.column, message),
     code: diagnostic.code,
     category: categoryOf(ts, diagnostic.category),
@@ -184,9 +195,13 @@ function normalize(
     message,
     chain: flattenChain(diagnostic.messageText),
     related: relatedOf(ts, diagnostic, root, tsLibDir),
-    // `context` stays absent while CONTEXT_CAPTURE_CODES is empty (P0). The
-    // mechanism is the `captureFor` parameter, honoured below.
   };
+
+  // Filled by the SOURCE, never by the pipeline (rule 4). Absent rather than
+  // empty when nothing resolved, so "no context" and "context with nothing in
+  // it" cannot be confused downstream.
+  if (context) normalized.context = context;
+  return normalized;
 }
 
 /** Deterministic order. Without it the program's own order leaks into snapshots. */
@@ -373,9 +388,21 @@ export class TsApiSource implements DiagnosticSource {
       configFileParsingDiagnostics: parsed.errors,
     });
 
-    const diagnostics = ts
-      .getPreEmitDiagnostics(program)
-      .map((diagnostic) => normalize(ts, diagnostic, root, libDir));
+    // Selective capture (rule 4, PROJECT.md §5.2). The checker is only asked for
+    // when at least one code is listed; `getPreEmitDiagnostics` has already built
+    // it, so the cost measured in `src/codes.ts` is the per-diagnostic node walk
+    // and type resolution, never a second program.
+    const captureFor = new Set(options.captureFor);
+    const checker = captureFor.size > 0 ? program.getTypeChecker() : undefined;
+    const capture: SpanCapture = (file, start, length) => spanOf(file, start, length, root, libDir);
+
+    const diagnostics = ts.getPreEmitDiagnostics(program).map((diagnostic) => {
+      const context =
+        checker && captureFor.has(diagnostic.code)
+          ? resolveContext(ts, checker, diagnostic, capture)
+          : undefined;
+      return normalize(ts, diagnostic, root, libDir, context);
+    });
 
     const files: string[] = [];
     const imports: Record<string, string[]> = {};

@@ -108,6 +108,61 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 
 ---
 
+## P1 T1 — ce que la capture sélective rapporte, et ce qu'elle coûte
+
+**Mesuré le 2026-07-27** sous TypeScript 5.9.3, reproductible par `mise exec -- bun run capture:measure`. Décision 28 du plan P1 : toute extension de `CONTEXT_CAPTURE_CODES` se paie en allers-retours de checker, donc elle se mesure avant d'être gardée. Codes capturés : **2305 · 2339 · 2345 · 2353 · 2554**, justifiés un par un dans `src/codes.ts`.
+
+Le taux de résolution est la part des diagnostics du code qui reviennent avec un `declaredAt` exploitable.
+
+| cible | code | résolus | où pointe le `declaredAt` |
+|---|---|---:|---|
+| partial-interface-rename | 2353 · 2339 · 2345 | 3/3 (100 %) | **une seule et même position**, `src/types/user.ts:7:1` |
+| two-independent-roots | 2339 | 1/1 | `src/billing/invoice.ts:3:1` — et le 2307 n'a **aucun** contexte |
+| corpus/lekes-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 sur `src/shared/domain/result.ts:12:4` |
+| corpus/lekes-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 sur `…/domain/task.entity.ts:1:1` |
+| corpus/lekes-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 sur `src/shared/domain/result.ts:15:19` |
+
+**C'est le gisement de H1, vu pour la première fois sous forme de lien structurel** et non d'intuition : 152 diagnostics sur une déclaration, 91 sur une autre, 12 sur une troisième. Rien n'est encore plié — T3 et T4 le feront — mais la matière du pliage existe et elle est vérifiable.
+
+### Le coût en temps est dans le bruit
+
+Meilleur de 3 exécutions, capture désactivée puis activée :
+
+| cible | off | on | écart |
+|---|---:|---:|---:|
+| partial-interface-rename | 175 ms | 164 ms | −6 % |
+| two-independent-roots | 156 ms | 153 ms | −2 % |
+| overload-mismatch | 155 ms | 150 ms | −3 % |
+| corpus/lekes-result-value-renamed | 3 909 ms | 3 973 ms | **+2 %** |
+| corpus/lekes-task-export-renamed | 4 139 ms | 4 157 ms | **+0,4 %** |
+| corpus/lekes-ok-arity-changed | 4 260 ms | 4 611 ms | **+8 %** |
+
+Les écarts négatifs sont la preuve que la mesure est dominée par la variance : la capture ne peut pas *accélérer* le chargement. `createProgram` et `getPreEmitDiagnostics` coûtent quatre secondes sur 169 fichiers ; la descente d'arbre par diagnostic et la résolution de type se perdent dedans. **Très en dessous du seuil de ~20 % de la décision 28 — la capture paresseuse n'a pas lieu d'être discutée.**
+
+### Le coût en volume est réel, lui
+
+| cible | json off | json on | écart |
+|---|---:|---:|---:|
+| partial-interface-rename | 2 410 | 4 069 | +69 % |
+| corpus/lekes-result-value-renamed | 93 551 | 143 712 | +54 % |
+| corpus/lekes-task-export-renamed | 43 234 | 49 977 | +16 % |
+| corpus/lekes-ok-arity-changed | 169 469 | 252 149 | +49 % |
+| overload-mismatch | 3 209 | 3 209 | 0 % |
+
+`memberNames`, `signature` et le `snippet` du `declaredAt` sont répétés une fois par diagnostic. **C'est du `json` uniquement — `agent-text` est inchangé, donc la ligne de base B0 ci-dessus ne bouge pas d'un caractère.** Le pliage de T4 doit rendre cet écart négatif ; si T7 montre le contraire, c'est le rapport `json` qu'il faudra dédupliquer, pas la capture qu'il faudra retirer.
+
+### Un avertissement pour T3, sorti de la mesure
+
+Sur `corpus/lekes-result-value-renamed`, l'unique TS2345 résout son `expected` vers **`<ts-lib>/lib.es2015.collection.d.ts:19:1 (interface Map)`**.
+
+C'est correct comme capture, et ce serait un **désastre comme critère de causalité** : deux bugs parfaitement indépendants qui passent chacun un mauvais argument à une méthode de `Map` partageraient ce `declaredAt` et seraient regroupés. C'est très exactement le sur-regroupement que §11 classe *critique*.
+
+Conséquence à tenir en T3 : **une déclaration hors des fichiers du programme — `<ts-lib>/…`, `node_modules/…` — ne peut pas servir de cause racine.** La capture reste, parce qu'elle est vraie et qu'un enrichisseur P2 en voudra ; c'est la dérivation qui doit la refuser.
+
+Second constat de la même famille : sur cette entrée, les 2339 pointent le *littéral de type* (`result.ts:12:4`) et le 2353 pointe l'*alias* (`result.ts:11:1`). Deux positions distinctes, donc deux groupes là où un humain en verrait un. C'est du **sous-regroupement**, l'asymétrie que §5.1 assume explicitement : on desserrera avec des chiffres, on ne resserre pas après un raté.
+
+---
+
 ## Limites du corpus — à corriger avant B1
 
 Trois problèmes, tous constatés le jour même de la première mesure. Aucun n'invalide la ligne de base ; tous les trois rendent le corpus réel inutilisable tel quel pour B1.

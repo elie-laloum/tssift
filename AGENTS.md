@@ -81,6 +81,7 @@ src/
   sources/
     index.ts            interface DiagnosticSource → { diagnostics, facts }
     ts-api.ts           TsApiSource — TS 5.4–5.9, createProgram + Checker (P0)
+    context.ts          résolution sélective de DiagnosticContext, un resolver par code (P1)
     ts7-api.ts          Ts7ApiSource — typescript/unstable/sync (P2.5, pas avant)
     tsc-text.ts         TscTextSource — parse de la sortie tsc (fallback)
   pipeline/

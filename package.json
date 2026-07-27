@@ -27,6 +27,7 @@
     "test:watch": "vitest",
     "check": "biome check --write",
     "eval": "tsc -p tsconfig.eval.json && node .eval-dist/eval/measure.js",
+    "capture:measure": "tsc -p tsconfig.eval.json && node scripts/measure-capture.mjs",
     "fixtures:verify": "node scripts/verify-fixtures.mjs",
     "corpus:build": "node scripts/build-corpus.mjs"
   },
