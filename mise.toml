@@ -1,0 +1,22 @@
+# Toolchain de DÉVELOPPEMENT LOCAL, épinglée. Voir AGENTS.md § « Stack & commandes ».
+#
+# La CI ne lit pas ce fichier : elle installe ses propres versions, son rôle
+# étant de balayer une matrice (TS 5.4 → 5.9, plusieurs Node, plusieurs
+# installateurs) qu'une version unique contredirait. En contrepartie, la version
+# de node ci-dessous doit toujours figurer dans la matrice CI — sinon on
+# développe sur une configuration que rien ne teste.
+#
+# Toute commande passe par mise :   mise exec -- bun run test
+# Jamais de binaire appelé par chemin absolu (~/.bun/bin/bun, /usr/bin/node…) :
+# le shell d'un agent n'a pas forcément mise activé, et un chemin en dur
+# contourne silencieusement la version épinglée.
+
+[tools]
+# Plancher de compatibilité déclaré (PROJECT.md §9). On développe dessus plutôt
+# que sur la dernière version, pour ne pas dépendre par accident d'une API plus
+# récente que ce qu'on promet aux utilisateurs. La CI teste 20 · 22 · 24.
+node = "20"
+
+# Gestionnaire de paquets et lanceur de scripts uniquement. Le runtime de test
+# reste Node — voir la règle 11 d'AGENTS.md.
+bun = "1.3.14"
