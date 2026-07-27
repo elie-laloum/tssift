@@ -112,13 +112,36 @@ Celles de `.plans/2026-07-27_p0-b0.md` restent valables. S'y ajoutent :
 
 **Attendu.** Détecter le cas (`parsed.fileNames.length === 0`, a fortiori avec `projectReferences` non vide) et le **dire**. Ne pas implémenter `tsc -b` : les project references sont hors périmètre v0.1, et c'est justement pour ça qu'il faut le nommer plutôt que de rendre `0 errors`.
 
-**Question ouverte à trancher :** sortie 2 (« tssift n'a pas pu tourner utilement ») ou sortie 0 avec un message explicite ? La règle 15 penche pour 2 ; l'argument inverse est que `tsc` lui-même sort 0. **Trancher explicitement et écrire la raison dans PROJECT.md §9.**
+**TRANCHÉ le 2026-07-27 : on discrimine par `references`.** Écrit dans PROJECT.md §9, ne pas rouvrir.
+
+- `fileNames` vide **et** `references` non vide ⇒ **sortie 2**. C'est un tsconfig solution : les erreurs existent, elles sont simplement ailleurs, et l'invocation est mauvaise. Le message nomme le tsconfig, le compte de fichiers, le compte de références, et **liste les chemins référencés** pour que l'agent sache où pointer.
+- `fileNames` vide **et** aucune référence ⇒ **sortie 0**, avec `0 errors · 0 files checked`. Là, le « 0 errors » est **vrai** : refuser un projet légitimement vide serait un faux négatif de notre côté.
+
+La raison du découpage : la règle 15 interdit le repli silencieux, pas les sorties 0 exactes. Ce qui est intolérable n'est pas « 0 », c'est un « 0 » **faux**. La présence de `references` est exactement ce qui distingue les deux cas, et elle est déjà dans `parsed.projectReferences`.
+
+Forme attendue :
+
+```
+$ tssift --project ./tsconfig.json        # racine de monorepo, 4 references
+→ exit 2, stderr :
+  Nothing to type-check.
+    tsconfig: /repo/tsconfig.json
+    0 files matched, 4 project references declared
+  tssift analyses one project at a time; project references are not supported.
+  Point --project at one of: ./apps/data-explorer, ./apps/widget, …
+
+$ tssift --project ./empty/tsconfig.json   # 0 fichier, 0 référence
+→ exit 0, stdout :
+  root: empty
+  0 errors · 0 files checked
+```
 
 **Critères d'acceptation**
-- [ ] Un projet à `fileNames` vide ne rend jamais un `0 errors` nu
-- [ ] Le message nomme le tsconfig, le nombre de références, et dit que les project references ne sont pas prises en charge
-- [ ] Un test le couvre, avec un tsconfig solution en fixture temporaire
-- [ ] La décision sortie 0 vs 2 est écrite dans PROJECT.md
+- [ ] `fileNames` vide + `references` non vide ⇒ sortie 2, **rien sur stdout**, message nommant tsconfig + comptes + chemins référencés
+- [ ] `fileNames` vide + 0 référence ⇒ sortie 0 et `0 files checked`
+- [ ] Deux tests, un par branche, sur des tsconfig temporaires hors du dépôt
+- [ ] Le cas réel `~/projects/nextp/keyzia/frontends/data-explorer` sort bien en 2
+- [ ] `EVAL.md` mis à jour : cette cible passe de « 0 diagnostic » à « refusée », comme `cursor-rules-hooks`
 
 ---
 
