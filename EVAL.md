@@ -119,19 +119,24 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | partial-interface-rename | fixture | 5.9.3 | 3 | 1 | 67 % | 523 | 831 | 159 % | 131 | 208 |
 | **two-independent-roots** | fixture | 5.9.3 | 2 | **2** | **0 %** | 223 | 319 | 143 % | 56 | 80 |
 | overload-mismatch | fixture | 5.9.3 | 1 | 1 | 0 % | 571 | 1 176 | 206 % | 143 | 294 |
+| broken-barrel-export | fixture | 5.9.3 | 3 | 1 | 67 % | 361 | 568 | 157 % | 90 | 142 |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 8 cibles mesurées : diagnostics A = 283 → entrées B = 29 (pliage de 90 %). Caractères A = 39 144, B = 7 960, soit B/A = 20 %.**
+**Totaux sur les 9 cibles mesurées : diagnostics A = 286 → entrées B = 30 (pliage de 90 %). Caractères A = 39 505, B = 8 528, soit B/A = 22 %.**
 
-Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **sept**.
+`broken-barrel-export` (T6) est entrée dans le tableau après coup ; **à périmètre constant, les chiffres de la mesure initiale sont inchangés** — retirer sa ligne redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. Le rapport global passe de 20 % à 22 % uniquement parce qu'une quatrième fixture minuscule, dont la section suivante explique qu'elles coûtent structurellement plus cher, s'ajoute au dénominateur des petites cibles.
+
+Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **six à sept** selon le périmètre.
 
 ### Ce que ce tableau dit, et ce qu'il ne dit pas
 
 **Il dit que H1 tient sur du vrai code.** Sur les trois entrées de corpus, qui sont les seules cibles ressemblant au cas d'usage réel, le rapport passe de 103–182 % à **6–42 %**. `lekes-ok-arity-changed` est le cas d'école : 153 diagnostics répartis sur 31 fichiers deviennent 2 entrées, dont une qui nomme `src/shared/domain/result.ts:15:19` — la ligne qu'il faut lire — et un compteur pour les 149 sites restants.
 
-**Il dit aussi que le pliage ne rend rien sur un petit projet, et c'est attendu.** `partial-interface-rename` passe de 133 % à **159 %** : ses trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+**Il dit aussi que le pliage ne rend rien sur un petit projet, et c'est attendu.** `partial-interface-rename` passe de 133 % à **159 %**, et `broken-barrel-export` sort à **157 %** : leurs trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+
+Le cas de `broken-barrel-export` est le plus net des deux, parce que le pliage y est **exactement** ce que la fixture existe pour montrer : trois fichiers différents importent le même symbole d'un barrel, `tsc` les rapporte comme trois échecs sans lien, et `tssift` nomme `src/domain/index.ts:1:1` une fois. 157 % de caractères pour une entrée au lieu de trois, sur un projet où le pliage n'a mécaniquement rien à économiser.
 
 **Le témoin négatif tient : `two-independent-roots` reste à 2 entrées pour 2 diagnostics, pliage 0 %.** C'est la mesure la plus importante du tableau après les trois entrées de corpus. Deux échecs sans lien restent deux échecs, et le critère de la Definition of Done (§12) est vérifié par un test nommé, pas seulement observé ici.
 
@@ -143,7 +148,9 @@ Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de carac
 
 ## P1 T1 — ce que la capture sélective rapporte, et ce qu'elle coûte
 
-**Mesuré le 2026-07-27** sous TypeScript 5.9.3, reproductible par `mise exec -- bun run capture:measure`. Décision 28 du plan P1 : toute extension de `CONTEXT_CAPTURE_CODES` se paie en allers-retours de checker, donc elle se mesure avant d'être gardée. Codes capturés : **2305 · 2339 · 2345 · 2353 · 2554**, justifiés un par un dans `src/codes.ts`.
+**Mesuré le 2026-07-27** sous TypeScript 5.9.3, reproductible par `mise exec -- bun run capture:measure`. Décision 28 du plan P1 : toute extension de `CONTEXT_CAPTURE_CODES` se paie en allers-retours de checker, donc elle se mesure avant d'être gardée. Codes capturés : **2305 · 2339 · 2345 · 2353 · 2554 · 2724**, justifiés un par un dans `src/codes.ts`.
+
+**2724 est arrivé en dernier, par T6, et il n'était pas prévu.** La fixture `broken-barrel-export` devait produire du 2305 ; elle produit du 2724 (`… Did you mean 'Order'?`) parce que TypeScript préfère la variante « suggestion » dès qu'un nom proche existe parmi les exports réels du module. **Le code qui sort dépend donc des noms en présence, pas de la nature de la panne** — une cascade identique aurait plié ou non selon l'orthographe choisie par l'auteur. Le tableau ci-dessous le montre : 2305 et 2724 résolvent au même endroit, par le même resolver.
 
 Le taux de résolution est la part des diagnostics du code qui reviennent avec un `declaredAt` exploitable.
 
@@ -151,6 +158,7 @@ Le taux de résolution est la part des diagnostics du code qui reviennent avec u
 |---|---|---:|---|
 | partial-interface-rename | 2353 · 2339 · 2345 | 3/3 (100 %) | **une seule et même position**, `src/types/user.ts:7:1` |
 | two-independent-roots | 2339 | 1/1 | `src/billing/invoice.ts:3:1` — et le 2307 n'a **aucun** contexte |
+| broken-barrel-export | 2724 | 3/3 (**100 %**) | 3 sur `src/domain/index.ts:1:1`, le barrel — pas `order.ts`, qui exporte toujours |
 | corpus/lekes-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 sur `src/shared/domain/result.ts:12:4` |
 | corpus/lekes-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 sur `…/domain/task.entity.ts:1:1` |
 | corpus/lekes-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 sur `src/shared/domain/result.ts:15:19` |
@@ -163,26 +171,35 @@ Meilleur de 3 exécutions, capture désactivée puis activée :
 
 | cible | off | on | écart |
 |---|---:|---:|---:|
-| partial-interface-rename | 175 ms | 164 ms | −6 % |
-| two-independent-roots | 156 ms | 153 ms | −2 % |
-| overload-mismatch | 155 ms | 150 ms | −3 % |
-| corpus/lekes-result-value-renamed | 3 909 ms | 3 973 ms | **+2 %** |
-| corpus/lekes-task-export-renamed | 4 139 ms | 4 157 ms | **+0,4 %** |
-| corpus/lekes-ok-arity-changed | 4 260 ms | 4 611 ms | **+8 %** |
+| partial-interface-rename | 180 ms | 167 ms | −7 % |
+| two-independent-roots | 157 ms | 152 ms | −3 % |
+| overload-mismatch | 175 ms | 183 ms | **+5 %** |
+| broken-barrel-export | 182 ms | 176 ms | −4 % |
+| corpus/lekes-result-value-renamed | 3 947 ms | 3 738 ms | −5 % |
+| corpus/lekes-task-export-renamed | 4 426 ms | 4 006 ms | −10 % |
+| corpus/lekes-ok-arity-changed | 3 781 ms | 4 342 ms | **+15 %** |
 
-Les écarts négatifs sont la preuve que la mesure est dominée par la variance : la capture ne peut pas *accélérer* le chargement. `createProgram` et `getPreEmitDiagnostics` coûtent quatre secondes sur 169 fichiers ; la descente d'arbre par diagnostic et la résolution de type se perdent dedans. **Très en dessous du seuil de ~20 % de la décision 28 — la capture paresseuse n'a pas lieu d'être discutée.**
+*Tableau rejoué le 2026-07-27 en fin de T6, avec 2724 dans la liste. Les valeurs bougent de plusieurs points d'un run à l'autre — `overload-mismatch` était à −3 % au premier passage et sort à +5 % ici, sans qu'aucun de ses diagnostics ne soit capturé, donc sans qu'une seule ligne de code de capture s'y exécute. C'est la meilleure démonstration disponible que ces chiffres mesurent la machine autant que l'outil.*
+
+Les écarts négatifs sont la preuve que la mesure est dominée par la variance : la capture ne peut pas *accélérer* le chargement. `createProgram` et `getPreEmitDiagnostics` coûtent quatre secondes sur 169 fichiers ; la descente d'arbre par diagnostic et la résolution de type se perdent dedans. **Sous le seuil de ~20 % de la décision 28, donc la capture paresseuse n'a pas lieu d'être discutée — mais le pire cas, `lekes-ok-arity-changed` avec ses 152 résolutions de signature, est monté à +15 % sur ce second run et n'est plus « très en dessous ».** C'est la cible à re-mesurer si un code de plus entre dans la liste.
 
 ### Le coût en volume est réel, lui
 
 | cible | json off | json on | écart |
 |---|---:|---:|---:|
-| partial-interface-rename | 2 410 | 4 069 | +69 % |
-| corpus/lekes-result-value-renamed | 93 551 | 143 712 | +54 % |
-| corpus/lekes-task-export-renamed | 43 234 | 49 977 | +16 % |
-| corpus/lekes-ok-arity-changed | 169 469 | 252 149 | +49 % |
-| overload-mismatch | 3 209 | 3 209 | 0 % |
+| partial-interface-rename | 2 767 | 5 205 | +88 % |
+| two-independent-roots | 1 711 | 2 217 | +30 % |
+| broken-barrel-export | 2 646 | 4 893 | +85 % |
+| corpus/lekes-result-value-renamed | 104 154 | 160 225 | +54 % |
+| corpus/lekes-task-export-renamed | 44 437 | 52 536 | +18 % |
+| corpus/lekes-ok-arity-changed | 183 926 | 276 037 | +50 % |
+| overload-mismatch | 3 378 | 3 378 | 0 % |
 
-`memberNames`, `signature` et le `snippet` du `declaredAt` sont répétés une fois par diagnostic. **C'est du `json` uniquement — `agent-text` est inchangé, donc la ligne de base B0 ci-dessus ne bouge pas d'un caractère.** Le pliage de T4 doit rendre cet écart négatif ; si T7 montre le contraire, c'est le rapport `json` qu'il faudra dédupliquer, pas la capture qu'il faudra retirer.
+*Les deux colonnes ont grossi depuis la première mesure (`partial-interface-rename` : 2 410 → 2 767 côté « off ») parce que le rapport `json` porte désormais `groups`, `role` et `derivedFrom`. Le côté « on » inclut donc aussi les groupes que la capture rend possibles — c'est la comptabilité honnête : sans contexte capturé, aucun groupe n'existe, leurs octets font partie de ce que la capture coûte.*
+
+`memberNames`, `signature` et le `snippet` du `declaredAt` sont répétés une fois par diagnostic. **C'est du `json` uniquement — `agent-text` est inchangé, donc la ligne de base B0 ci-dessus ne bouge pas d'un caractère.**
+
+**Et l'écart n'est pas devenu négatif après T4, contrairement à ce que cette section pariait.** Le pliage se voit dans `agent-text`, où il fait passer le rapport de 141 % à 20 % ; le `json`, lui, reste le rapport complet par construction (règle 14) et ne plie rien — il *ajoute* l'index de groupes par-dessus le tableau intégral. Le pari était mal posé : il n'y a pas de contradiction à corriger, seulement deux formats qui font deux métiers. Si le volume `json` devient un problème pour MCP, c'est une déduplication du rapport qu'il faudra, jamais un retrait de la capture.
 
 ### Un avertissement pour T3, sorti de la mesure
 

@@ -19,6 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTEXT_CAPTURE_CODES } from "../.eval-dist/src/codes.js";
+import { dedupe, detectCausality } from "../.eval-dist/src/pipeline/index.js";
 import { renderJson } from "../.eval-dist/src/render/json.js";
 import { TsApiSource } from "../.eval-dist/src/sources/ts-api.js";
 
@@ -26,9 +27,12 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const RUNS = 3;
 
 function targets() {
-  const fixtures = ["partial-interface-rename", "two-independent-roots", "overload-mismatch"].map(
-    (name) => ({ name, project: join(repoRoot, "fixtures", name, "before") }),
-  );
+  const fixtures = [
+    "partial-interface-rename",
+    "two-independent-roots",
+    "overload-mismatch",
+    "broken-barrel-export",
+  ].map((name) => ({ name, project: join(repoRoot, "fixtures", name, "before") }));
 
   const manifestPath = join(repoRoot, "eval", "corpus.json");
   const corpus = existsSync(manifestPath)
@@ -54,8 +58,16 @@ function timeLoad(project, captureFor) {
   return { ms: best, result: last };
 }
 
+/**
+ * Size of the json report, capture off versus on. Since T4 the renderer takes a
+ * `DiagnosticReport`, so the full pipeline is composed here as `run.ts` does it.
+ * That makes the "on" side include the groups capture makes possible — which is
+ * the honest accounting: groups only exist in json because a context was
+ * captured, so their bytes are part of what capture costs.
+ */
 function jsonSize(result, project) {
-  return renderJson({ ...result, rootLabel: project, all: false }).length;
+  const report = detectCausality(dedupe(result.diagnostics, result.facts), result.facts);
+  return renderJson({ report, facts: result.facts, rootLabel: project, all: false }).length;
 }
 
 for (const target of targets()) {

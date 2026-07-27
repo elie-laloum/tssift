@@ -77,6 +77,11 @@ const TARGETS: Target[] = [
     project: "fixtures/two-independent-roots/before",
   },
   { name: "overload-mismatch", kind: "fixture", project: "fixtures/overload-mismatch/before" },
+  {
+    name: "broken-barrel-export",
+    kind: "fixture",
+    project: "fixtures/broken-barrel-export/before",
+  },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

@@ -1,5 +1,29 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export 1`] = `
+"root: fixtures/broken-barrel-export/before
+3 errors · 3 files · 1 root cause
+
+[1] cause: module '../domain' declared at src/domain/index.ts:1:1
+    3 diagnostics, all TS2724
+    src/billing/invoice.ts:2:22 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+    src/reporting/summary.ts:3:27 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+    src/shipping/label.ts:3:15 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export with --all 1`] = `
+"root: fixtures/broken-barrel-export/before
+3 errors · 3 files
+
+[1] src/billing/invoice.ts:2:22 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+
+[2] src/reporting/summary.ts:3:27 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+
+[3] src/shipping/label.ts:3:15 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders overload-mismatch 1`] = `
 "root: fixtures/overload-mismatch/before
 1 error · 1 file

@@ -298,6 +298,14 @@ function context2345(
 
 /**
  * TS2305 — `Module 'X' has no exported member 'Y'`.
+ * TS2724 — the same thing, with a suggestion appended: `… Did you mean 'Z'?`
+ *
+ * The two share this resolver because they are one diagnostic: TypeScript picks
+ * 2724 whenever the missing name has a near match among the module's real
+ * exports, and 2305 otherwise. Which one fires is a property of the *names*
+ * involved, not of the failure — the barrel fixture gets 2724 purely because
+ * `Order` sits next to `OrderId`. Capturing only 2305 would have meant a
+ * cascade folding or not depending on how the author spelled things.
  *
  * Measured before implementing, as the plan required: the `ProgramFacts.imports`
  * channel alone is *not* enough here. It carries specifiers **as written**, so
@@ -382,6 +390,8 @@ type Resolver = (
 
 const RESOLVERS: Record<number, Resolver | undefined> = {
   2305: context2305,
+  // Same resolver, same shape — see the comment on `context2305`.
+  2724: context2305,
   2339: context2339,
   2345: context2345,
   2353: context2353,

@@ -14,7 +14,12 @@ import { dedupe } from "../src/pipeline/dedupe.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
 import type { NormalizedDiagnostic, ProgramFacts } from "../src/types.js";
 
-const FIXTURES = ["partial-interface-rename", "two-independent-roots", "overload-mismatch"];
+const FIXTURES = [
+  "partial-interface-rename",
+  "two-independent-roots",
+  "overload-mismatch",
+  "broken-barrel-export",
+];
 
 const load = (name: string) =>
   new TsApiSource().load({

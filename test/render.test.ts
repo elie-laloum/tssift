@@ -12,6 +12,7 @@ const FIXTURES = [
   "partial-interface-rename",
   "two-independent-roots",
   "overload-mismatch",
+  "broken-barrel-export",
 ] as const;
 
 /**

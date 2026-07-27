@@ -88,7 +88,12 @@ describe("TsApiSource · partial-interface-rename", () => {
 });
 
 describe("TsApiSource · path and position discipline", () => {
-  for (const name of ["partial-interface-rename", "two-independent-roots", "overload-mismatch"]) {
+  for (const name of [
+    "partial-interface-rename",
+    "two-independent-roots",
+    "overload-mismatch",
+    "broken-barrel-export",
+  ]) {
     it(`emits no absolute path and no backslash on ${name}`, () => {
       const { diagnostics, facts } = load(name);
       const paths = [

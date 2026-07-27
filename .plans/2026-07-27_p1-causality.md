@@ -16,15 +16,20 @@
 | T2 · `pipeline/dedupe.ts` | **livré** | taux de doublons mesuré : **zéro** sur 283 diagnostics. Module minimal, mais contrat non trivial — l'`id` seul ne suffit pas à supprimer. |
 | T3 · `pipeline/causality.ts` | **livré** | conçu en plan mode. Règle du `declaredAt` identique uniquement. |
 | T4 · `group.ts`, tri, plafonds | **livré** | plafond à 3 sites, `--all` byte-identique à P0. |
-| T5 · `budget.ts` + `--budget-tokens` | à faire | |
-| T6 · `broken-barrel-export` | à faire | c'est avec elle qu'arrive la règle 2307 différée en T3 |
-| T7 · le chiffre de H1 | **livré** | **283 diagnostics → 29 entrées, 141 % → 20 % de caractères.** Détail dans `EVAL.md`. |
+| T5 · `budget.ts` + `--budget-tokens` | **livré** | estimation `caractères / 4`, diviseur annoncé. Le budget est dépassé plutôt que de sacrifier la première entrée (règle 6), et ce qui est retenu est toujours compté. |
+| T6 · `broken-barrel-export` | **livré** | 3 fichiers, 1 cause, 3 dérivés. A fait entrer **2724** dans la capture — voir ci-dessous. La règle 2307 reste différée, et la raison a changé. |
+| T7 · le chiffre de H1 | **livré** | **283 diagnostics → 29 entrées, 141 % → 20 % de caractères.** Rejoué avec T6 : 286 → 30, 22 %. Détail dans `EVAL.md`. |
 
 **Les trois questions de conception de T3 sont tranchées, deux par la mesure plutôt que par décision :**
 
 1. **Une cause sans diagnostic** — tranchée : le groupe est en-têté par la **déclaration**. Ce n'est pas un cas limite mais **le seul cas observé** : `members-on-cause = 0` dans 100 % des groupes. §4 gagne `DiagnosticGroup` / `DiagnosticReport`, §6 est amendée.
 2. **Le span d'un `related` compte-t-il comme un `declaredAt` ?** — **question devenue sans objet.** `getResolvedSignature().declaration` résout 152/152 sur TS2554, et c'est le lien structurel ordinaire que §5.1 règle 2 décrit déjà. La plus grosse cascade du corpus se plie **sans desserrer le seuil**. Aucun amendement.
 3. **2305 et 2307 partagent-ils une règle ?** — **non.** Le module d'un 2305 *résout*, donc c'est déjà un cas de `declaredAt` identique (12/12). Celui d'un 2307 ne résout par définition pas. Ils se ressemblent dans le message et pas du tout dans la structure. La règle 2307 est **différée en T6**, écrit en §5.1.
+
+**T6 a produit deux enseignements que le plan n'attendait pas, et le second annule une de ses échéances.**
+
+1. **La fixture émet TS2724, pas TS2305.** TypeScript choisit la variante « Did you mean 'Z'? » dès qu'un nom proche existe parmi les exports réels du module — et `Order` est voisin de `OrderId`. **Quel des deux codes sort est une propriété des noms en présence, pas de la panne.** Le resolver est le même, la forme capturée est la même ; seule la liste des codes devait l'apprendre. Sans ce constat, une cascade identique aurait plié ou non selon l'orthographe choisie par l'auteur du code analysé, et rien n'aurait dit pourquoi. Le garde de fixture l'a attrapé avant la livraison.
+2. **T6 ne pouvait pas porter la règle 2307, et le plan avait tort de l'y ranger.** Un barrel qui cesse de réexporter un symbole *résout parfaitement* : le fichier existe, le module se charge, c'est le membre qui manque. C'est un 2305/2724, l'exact opposé d'un 2307, où **rien** ne résout. La fixture qui aurait exercé la règle 2307 est une autre — dépendance fantôme sous pnpm, ou projet Yarn PnP — et ces deux-là sont déjà nommées en AGENTS.md § « Prise en charge de tous les gestionnaires de paquets ». **La règle 2307 se rattache donc à l'enrichisseur 2307 de P2, pas à un reliquat de P1.**
 
 **Un garde-fou ajouté, non prévu au plan, et sorti de la mesure :** une déclaration hors des fichiers du programme (`<ts-lib>/…`, `node_modules/…`) ne peut pas être une cause. Un TS2345 du corpus résout vers `interface Map` de la lib standard ; sans ce refus, deux bugs indépendants fusionneraient. C'était déjà dans les données avant la première ligne de causalité.
 
@@ -267,10 +272,12 @@ Le trou connu du trio actuel : deux fixtures sur trois sont mono-fichier. Recett
 
 **Note issue du corpus** : retirer un export d'un barrel réel n'a produit **aucun** diagnostic sur `lekes`, ses 11 importateurs consommant chacun un symbole différent. La fixture doit donc être construite pour que plusieurs fichiers consomment **le même** symbole du barrel — sinon elle ne teste rien.
 
-**Critères d'acceptation**
-- [ ] ≥ 3 fichiers importent le même symbole du barrel
-- [ ] Échoue réellement sous 5.4.5 **et** 5.9.3 (`bun run fixtures:verify`)
-- [ ] La causalité y voit 1 racine et ≥ 3 dérivés
+**Critères d'acceptation** — les trois sont vérifiés le 2026-07-27.
+- [x] ≥ 3 fichiers importent le même symbole du barrel — `billing/invoice.ts`, `shipping/label.ts`, `reporting/summary.ts` importent tous `OrderId` de `../domain`
+- [x] Échoue réellement sous 5.4.5 **et** 5.9.3 (`bun run fixtures:verify`) — 3 diagnostics, code 2724, sous les deux
+- [x] La causalité y voit 1 racine et ≥ 3 dérivés — 1 groupe en-têté par `src/domain/index.ts:1:1`, 3 membres, sur 3 fichiers
+
+**Ce que la fixture a coûté et rapporté, à ne pas redécouvrir :** elle a fait entrer 2724 dans `CONTEXT_CAPTURE_CODES` (raison en tête de fichier), et elle a montré que la règle 2307 n'avait rien à faire ici — un barrel cassé résout, un 2307 ne résout pas. Détail dans l'état d'avancement ci-dessus.
 
 ---
 

@@ -107,6 +107,41 @@ describe("causality · partial-interface-rename", () => {
   });
 });
 
+describe("causality · broken-barrel-export", () => {
+  // The fixture that closes the trio's known hole: the other three are one- or
+  // two-file, and this is the only one where a single cause is consumed by
+  // three separate modules. Built that way on purpose — removing an export from
+  // a REAL barrel in `lekes` produced no cascade at all, because its eleven
+  // importers each wanted a different symbol (eval/corpus.json).
+  const { report } = analyse("broken-barrel-export");
+
+  it("sees one root cause and three derived, across three files", () => {
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(3);
+    expect(report.diagnostics.filter((d) => d.role === "derived")).toHaveLength(3);
+
+    const files = new Set(report.diagnostics.map((d) => d.primary.file));
+    expect(files.size).toBe(3);
+  });
+
+  it("names the barrel as the cause, not the module that still exports the symbol", () => {
+    // src/domain/order.ts is correct and unchanged. The barrel is what stopped
+    // re-exporting, and it is what the reader has to open.
+    const cause = report.groups[0]?.cause;
+    expect(cause?.symbol.kind).toBe("module");
+    expect(cause?.symbol.declaredAt.file).toBe("src/domain/index.ts");
+    expect(cause?.symbol.declaredAt.line).toBe(1);
+  });
+
+  it("folds TS2724, which is what TypeScript actually emits here", () => {
+    // Not TS2305. TypeScript picks the "Did you mean" variant whenever a near
+    // match exists among the module's real exports, and `Order` sits beside
+    // `OrderId`. Which of the two fires is a property of the names, not of the
+    // failure — hence both are captured (src/codes.ts).
+    expect(new Set(report.diagnostics.map((d) => d.code))).toEqual(new Set([2724]));
+  });
+});
+
 describe("causality · what must never happen", () => {
   it("does not group on a declaration outside the program's own files", () => {
     // Measured, not hypothetical: on .corpus/lekes-result-value-renamed a TS2345
