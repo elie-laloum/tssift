@@ -120,13 +120,27 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | **two-independent-roots** | fixture | 5.9.3 | 2 | **2** | **0 %** | 223 | 319 | 143 % | 56 | 80 |
 | overload-mismatch | fixture | 5.9.3 | 1 | 1 | 0 % | 571 | 1 176 | 206 % | 143 | 294 |
 | broken-barrel-export | fixture | 5.9.3 | 3 | 1 | 67 % | 361 | 568 | 157 % | 90 | 142 |
+| arity-changed | fixture | 5.9.3 | 4 | 1 | 75 % | 313 | 725 | **232 %** | 78 | 181 |
+| **narrowed-union-member** | fixture | 5.9.3 | 8 | 1 | **88 %** | 1 365 | 804 | **59 %** | 341 | 201 |
+| nullable-chain | fixture | 5.9.3 | 4 | **4** | **0 %** | 334 | 429 | 128 % | 84 | 107 |
+| missing-required-property | fixture | 5.9.3 | 3 | **3** | **0 %** | 449 | 759 | 169 % | 112 | 190 |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 9 cibles mesurées : diagnostics A = 286 → entrées B = 30 (pliage de 90 %). Caractères A = 39 505, B = 8 528, soit B/A = 22 %.**
+**Totaux sur les 13 cibles mesurées : diagnostics A = 305 → entrées B = 39 (pliage de 87 %). Caractères A = 41 966, B = 11 245, soit B/A = 27 %.**
 
-`broken-barrel-export` (T6) est entrée dans le tableau après coup ; **à périmètre constant, les chiffres de la mesure initiale sont inchangés** — retirer sa ligne redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. Le rapport global passe de 20 % à 22 % uniquement parce qu'une quatrième fixture minuscule, dont la section suivante explique qu'elles coûtent structurellement plus cher, s'ajoute au dénominateur des petites cibles.
+**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les cinq lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+
+### Ce que les quatre nouvelles fixtures ont appris
+
+**1. Une petite fixture peut passer sous 100 %, et `narrowed-union-member` est la première : 59 %.** Huit diagnostics pour une entrée. Ce qui change par rapport aux autres petites cibles, c'est que ses diagnostics sont **verbeux** — chacun porte un nœud de chaîne nommant le membre d'union fautif — donc le plafond à trois sites en supprime réellement du volume. Le pliage paie dès que le diagnostic unitaire est gros, pas seulement quand la cascade est longue.
+
+**2. `arity-changed` sort à 232 %, le pire rapport du tableau — et c'est le même code que la meilleure ligne du tableau.** TS2554 donne **6 %** sur `corpus/lekes-ok-arity-changed` (153 diagnostics) et **232 %** ici (4 diagnostics). Même famille, même règle de causalité, même renderer ; seule la taille de la cascade diffère. La cause du surcoût est identique dans les deux cas — les `relatedInformation` que `tsc --pretty false` n'imprime pas du tout, ici répétées trois fois pour 313 caractères de bras A — mais à 4 sites le pliage n'en retire qu'un, alors qu'à 153 il en retire 150. **C'est H1 énoncée en une comparaison : le gain n'est pas dans le format, il est dans le nombre de sites qu'une cause explique.**
+
+**3. Deux fixtures ne plient pas du tout, et c'est leur raison d'être.** `nullable-chain` (4 × TS18047) et `missing-required-property` (3 × TS2741) sont des cascades à cause unique qu'un humain regroupe d'un coup d'œil ; le seuil de §5.1 les laisse en racines isolées, parce que ni 18047 ni 2741 n'est dans `CONTEXT_CAPTURE_CODES`. Les deux codes sont dans la table des dix de §5.2, donc c'est un manque connu en attente des chiffres (règle 8), pas un oubli. Elles sont commitées précisément pour que ce manque soit **mesurable** plutôt qu'anecdotique : 128 % et 169 % sont le prix courant de ce que le seuil refuse.
+
+**4. `missing-required-property` rouvre une question fermée, et c'est le résultat le plus utile du lot.** Ses trois diagnostics **impriment déjà leur cause commune** : chacun porte un `related` lisant `src/accounts/profile.ts:10:3: 'locale' is declared here.` Le rapport nomme donc trois fois la même déclaration partagée et refuse quand même de grouper dessus. C'est la question de conception n° 2 du plan P1 — *le span d'un `related` compte-t-il comme un `declaredAt` ?* — classée **sans objet** parce que TS2554 s'était finalement résolu par `getResolvedSignature()`. Ici elle a un objet. Elle reste ouverte : un `related` pointe là où le compilateur l'a jugé utile, ce qui n'est pas toujours la cause, et desserrer sur cette base est exactement le mouvement que §5.1 interdit de faire sans chiffres.
 
 Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **six à sept** selon le périmètre.
 
@@ -134,7 +148,9 @@ Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de carac
 
 **Il dit que H1 tient sur du vrai code.** Sur les trois entrées de corpus, qui sont les seules cibles ressemblant au cas d'usage réel, le rapport passe de 103–182 % à **6–42 %**. `lekes-ok-arity-changed` est le cas d'école : 153 diagnostics répartis sur 31 fichiers deviennent 2 entrées, dont une qui nomme `src/shared/domain/result.ts:15:19` — la ligne qu'il faut lire — et un compteur pour les 149 sites restants.
 
-**Il dit aussi que le pliage ne rend rien sur un petit projet, et c'est attendu.** `partial-interface-rename` passe de 133 % à **159 %**, et `broken-barrel-export` sort à **157 %** : leurs trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+**Il dit aussi que le pliage ne rend rien sur un petit projet *dont les diagnostics sont courts*.** `partial-interface-rename` passe de 133 % à **159 %**, et `broken-barrel-export` sort à **157 %** : leurs trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+
+*La restriction en italique a été ajoutée le 2026-07-28 : la version précédente disait « sur un petit projet », sans condition, et `narrowed-union-member` la contredit à **59 %** avec ses huit diagnostics sur trois fichiers. Ce n'est pas la taille du projet qui décide, c'est le produit « nombre de sites × verbosité du diagnostic unitaire ». Détail dans la section suivante.*
 
 Le cas de `broken-barrel-export` est le plus net des deux, parce que le pliage y est **exactement** ce que la fixture existe pour montrer : trois fichiers différents importent le même symbole d'un barrel, `tsc` les rapporte comme trois échecs sans lien, et `tssift` nomme `src/domain/index.ts:1:1` une fois. 157 % de caractères pour une entrée au lieu de trois, sur un projet où le pliage n'a mécaniquement rien à économiser.
 

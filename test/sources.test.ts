@@ -93,6 +93,10 @@ describe("TsApiSource · path and position discipline", () => {
     "two-independent-roots",
     "overload-mismatch",
     "broken-barrel-export",
+    "arity-changed",
+    "narrowed-union-member",
+    "nullable-chain",
+    "missing-required-property",
   ]) {
     it(`emits no absolute path and no backslash on ${name}`, () => {
       const { diagnostics, facts } = load(name);

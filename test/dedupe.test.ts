@@ -19,6 +19,10 @@ const FIXTURES = [
   "two-independent-roots",
   "overload-mismatch",
   "broken-barrel-export",
+  "arity-changed",
+  "narrowed-union-member",
+  "nullable-chain",
+  "missing-required-property",
 ];
 
 const load = (name: string) =>

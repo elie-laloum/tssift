@@ -1,0 +1,7 @@
+{
+  "rootCause": "src/config/settings.ts declares `proxy: ProxyConfig | null` on `Settings`. `proxy` became nullable when proxy support was made optional. Three readers still dereference it directly: src/transport/dialer.ts (twice, on one line), src/transport/health.ts and src/diagnostics/report.ts.",
+  "expectedFix": "Guard on `settings.proxy` before reading it at the three call sites, or stop allowing null in src/config/settings.ts. One decision at the declaration settles all four diagnostics.",
+  "tags": ["nullability", "strict-null-checks", "cross-file", "single-root", "TS18047"],
+  "difficulty": "easy",
+  "purpose": "A REAL CASCADE THAT THE CURRENT THRESHOLD DELIBERATELY DOES NOT FOLD, and the fixture exists to keep that fact measurable rather than anecdotal. All four diagnostics share one cause — the `proxy` property declaration — but TS18047 is not in CONTEXT_CAPTURE_CODES, so nothing captures a declaredAt and the report shows four lone roots. 18047/18048 is in the §5.2 table of ten, so this is a known gap awaiting the eval numbers (rule 8), not an oversight. If capture is ever extended to it, this fixture is the before/after witness: it must go from 4 entries to 1, and `two-independent-roots` must stay at 2."
+}

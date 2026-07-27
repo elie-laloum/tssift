@@ -13,6 +13,10 @@ const FIXTURES = [
   "two-independent-roots",
   "overload-mismatch",
   "broken-barrel-export",
+  "arity-changed",
+  "narrowed-union-member",
+  "nullable-chain",
+  "missing-required-property",
 ] as const;
 
 /**
@@ -154,6 +158,18 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
     it(`${name} · every field of the text exists in json`, () => {
       const input = build(name);
       const text = renderAgentText(input);
+      // The per-diagnostic comparison below runs against the --all rendering,
+      // where every diagnostic is printed by construction.
+      //
+      // It used to run against the default rendering, and that was wrong in a
+      // way that hid until this fixture set grew: rule 14 says every field of
+      // the TEXT exists in json, and checking each json diagnostic against the
+      // text asserts the reverse inclusion. The default rendering caps a group
+      // at MAX_SHOWN_MEMBERS and declasses the rest behind a counter, so the
+      // reverse inclusion is FALSE by design (rule 2 — declassing is a property
+      // of the rendering). The old test passed only because no committed
+      // fixture had more than three members; `arity-changed` has four.
+      const shown = renderAgentText(build(name, true));
       const json = JSON.parse(renderJson(input)) as {
         root: string;
         counts: { errors: number; groups: number };
@@ -179,10 +195,31 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
 
       for (const diagnostic of json.diagnostics) {
         const { file, line, column } = diagnostic.primary;
-        expect(text).toContain(`${file}:${line}:${column}`);
-        expect(text).toContain(`TS${diagnostic.code}: ${diagnostic.message}`);
-        for (const node of diagnostic.chain) expect(text).toContain(`TS${node.code}: ${node.text}`);
-        for (const related of diagnostic.related) expect(text).toContain(related.message);
+        expect(shown).toContain(`${file}:${line}:${column}`);
+        expect(shown).toContain(`TS${diagnostic.code}: ${diagnostic.message}`);
+        for (const node of diagnostic.chain)
+          expect(shown).toContain(`TS${node.code}: ${node.text}`);
+        for (const related of diagnostic.related) expect(shown).toContain(related.message);
+      }
+    });
+
+    it(`${name} · nothing the default rendering prints is absent from json`, () => {
+      // The direction rule 14 actually states, asserted on its own rather than
+      // as a side effect: every site the default text prints must exist in the
+      // json table, whatever the cap did to the others.
+      const input = build(name);
+      const json = JSON.parse(renderJson(input)) as {
+        diagnostics: Array<{ primary: { file: string; line: number; column: number } }>;
+      };
+      const sites = new Set(
+        json.diagnostics.map((d) => `${d.primary.file}:${d.primary.line}:${d.primary.column}`),
+      );
+      const printed =
+        renderAgentText(input)
+          .match(/^ {4}(\S+:\d+:\d+) error TS/gm)
+          ?.map((line) => line.trim()) ?? [];
+      for (const line of printed) {
+        expect(sites).toContain(line.split(" ")[0]);
       }
     });
 

@@ -1,5 +1,39 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed 1`] = `
+"root: fixtures/arity-changed/before
+4 errors · 3 files · 1 root cause
+
+[1] cause: function 'auditEvent' declared at src/audit/event.ts:13:1
+    4 diagnostics, all TS2554
+    src/accounts/session.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
+      related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    src/accounts/session.ts:9:17 error TS2554: Expected 2 arguments, but got 1.
+      related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    src/admin/impersonation.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
+      related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    +1 more site (--all for every one)
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed with --all 1`] = `
+"root: fixtures/arity-changed/before
+4 errors · 3 files
+
+[1] src/accounts/session.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
+    related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+
+[2] src/accounts/session.ts:9:17 error TS2554: Expected 2 arguments, but got 1.
+    related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+
+[3] src/admin/impersonation.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
+    related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+
+[4] src/billing/refund.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
+    related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export 1`] = `
 "root: fixtures/broken-barrel-export/before
 3 errors · 3 files · 1 root cause
@@ -21,6 +55,110 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export with -
 [2] src/reporting/summary.ts:3:27 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
 
 [3] src/shipping/label.ts:3:15 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property 1`] = `
+"root: fixtures/missing-required-property/before
+3 errors · 3 files
+
+[1] src/accounts/signup.ts:4:3 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+
+[2] src/import/csv.ts:4:9 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+
+[3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property with --all 1`] = `
+"root: fixtures/missing-required-property/before
+3 errors · 3 files
+
+[1] src/accounts/signup.ts:4:3 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+
+[2] src/import/csv.ts:4:9 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+
+[3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member 1`] = `
+"root: fixtures/narrowed-union-member/before
+8 errors · 3 files · 1 root cause
+
+[1] cause: type-alias 'Shape' declared at src/geometry/shape.ts:7:1
+    8 diagnostics, all TS2339
+    src/geometry/area.ts:4:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
+        TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    src/geometry/area.ts:4:55 error TS2339: Property 'radius' does not exist on type 'Shape'.
+        TS2339: Property 'radius' does not exist on type '{ type: "square"; side: number; }'.
+    src/geometry/area.ts:5:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
+        TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    +5 more sites (--all for every one)
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member with --all 1`] = `
+"root: fixtures/narrowed-union-member/before
+8 errors · 3 files
+
+[1] src/geometry/area.ts:4:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
+      TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[2] src/geometry/area.ts:4:55 error TS2339: Property 'radius' does not exist on type 'Shape'.
+      TS2339: Property 'radius' does not exist on type '{ type: "square"; side: number; }'.
+
+[3] src/geometry/area.ts:5:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
+      TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[4] src/geometry/area.ts:5:45 error TS2339: Property 'side' does not exist on type 'Shape'.
+      TS2339: Property 'side' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[5] src/geometry/area.ts:6:17 error TS2339: Property 'base' does not exist on type 'Shape'.
+      TS2339: Property 'base' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[6] src/geometry/area.ts:6:30 error TS2339: Property 'height' does not exist on type 'Shape'.
+      TS2339: Property 'height' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[7] src/render/label.ts:4:21 error TS2339: Property 'kind' does not exist on type 'Shape'.
+      TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+
+[8] src/render/legend.ts:4:38 error TS2339: Property 'kind' does not exist on type 'Shape'.
+      TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders nullable-chain 1`] = `
+"root: fixtures/nullable-chain/before
+4 errors · 3 files
+
+[1] src/diagnostics/report.ts:4:27 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[2] src/transport/dialer.ts:4:13 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[3] src/transport/dialer.ts:4:36 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[4] src/transport/health.ts:4:10 error TS18047: 'settings.proxy' is possibly 'null'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders nullable-chain with --all 1`] = `
+"root: fixtures/nullable-chain/before
+4 errors · 3 files
+
+[1] src/diagnostics/report.ts:4:27 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[2] src/transport/dialer.ts:4:13 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[3] src/transport/dialer.ts:4:36 error TS18047: 'settings.proxy' is possibly 'null'.
+
+[4] src/transport/health.ts:4:10 error TS18047: 'settings.proxy' is possibly 'null'.
 "
 `;
 

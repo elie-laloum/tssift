@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { detectCausality } from "../src/pipeline/causality.js";
+import { MAX_SHOWN_MEMBERS } from "../src/pipeline/group.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
 import type { NormalizedDiagnostic, ProgramFacts, SymbolRef } from "../src/types.js";
 
@@ -139,6 +140,100 @@ describe("causality · broken-barrel-export", () => {
     // `OrderId`. Which of the two fires is a property of the names, not of the
     // failure — hence both are captured (src/codes.ts).
     expect(new Set(report.diagnostics.map((d) => d.code))).toEqual(new Set([2724]));
+  });
+});
+
+describe("causality · arity-changed", () => {
+  // The committed twin of .corpus/lekes-ok-arity-changed, which folds 152
+  // diagnostics into one entry and is the single best piece of evidence for H1
+  // — and which a fresh clone cannot run, `.corpus/` being git-ignored and
+  // derived from a private repository.
+  const { report } = analyse("arity-changed");
+
+  it("folds four call sites onto the signature they all miss an argument for", () => {
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(4);
+    expect(report.groups[0]?.cause.symbol.kind).toBe("function");
+    expect(report.groups[0]?.cause.symbol.name).toBe("auditEvent");
+    expect(report.groups[0]?.cause.symbol.declaredAt.file).toBe("src/audit/event.ts");
+  });
+
+  it("folds two call sites living in the same file", () => {
+    // src/accounts/session.ts calls twice. Grouping must key on the shared
+    // declaration, not on the calling file — two sites in one file are no more
+    // related to each other than to the two in other files.
+    const files = report.diagnostics.map((d) => d.primary.file);
+    expect(files.filter((file) => file === "src/accounts/session.ts")).toHaveLength(2);
+    expect(new Set(report.diagnostics.map((d) => d.group)).size).toBe(1);
+  });
+
+  it("is the only fixture that exceeds the display cap", () => {
+    // 4 members against MAX_SHOWN_MEMBERS = 3, so it is the only committed
+    // project whose default rendering exercises the `+N more sites` counter.
+    expect(report.groups[0]?.members.length).toBeGreaterThan(MAX_SHOWN_MEMBERS);
+  });
+});
+
+describe("causality · narrowed-union-member", () => {
+  const { report } = analyse("narrowed-union-member");
+
+  it("folds eight diagnostics onto the union's type alias", () => {
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(8);
+    expect(report.groups[0]?.cause.symbol.kind).toBe("type-alias");
+    expect(report.groups[0]?.cause.symbol.name).toBe("Shape");
+  });
+
+  it("folds the second-order diagnostics too", () => {
+    // The failed narrowing on `kind` leaves the value un-narrowed, so `.radius`
+    // and `.side` fail as a consequence of a consequence. Both orders resolve
+    // to the same declaration, so both land in the one group — no fixture other
+    // than this one has a cause two steps removed from its diagnostic.
+    const properties = report.diagnostics.map((d) => d.message.match(/Property '(\w+)'/)?.[1]);
+    expect(new Set(properties)).toEqual(new Set(["kind", "radius", "side", "base", "height"]));
+    expect(report.diagnostics.every((d) => d.group === report.groups[0]?.id)).toBe(true);
+  });
+});
+
+describe("causality · the cascades the §5.1 threshold declines to fold", () => {
+  // Both fixtures below are single-cause cascades that a human would group at a
+  // glance, and both are reported as lone roots. That is the threshold working
+  // as specified, not a defect — and these tests exist so that the day capture
+  // is extended, the change shows up as a failure here rather than as a silent
+  // improvement nobody measured. Rule 8 keeps them unfolded until B1.
+
+  it("nullable-chain · four dereferences of one nullable property stay four roots", () => {
+    const { report } = analyse("nullable-chain");
+    expect(report.diagnostics).toHaveLength(4);
+    expect(new Set(report.diagnostics.map((d) => d.code))).toEqual(new Set([18047]));
+    expect(report.groups).toEqual([]);
+    expect(report.diagnostics.every((d) => d.role === "root")).toBe(true);
+    // Nothing was captured, so there is nothing to key on. 18047 is in the §5.2
+    // table of ten; this is a known gap, not an oversight.
+    expect(report.diagnostics.every((d) => d.context === undefined)).toBe(true);
+  });
+
+  it("missing-required-property · three sites stay three roots though each PRINTS the cause", () => {
+    // The sharper of the two. Every diagnostic carries a related pointing at
+    // the very declaration they share, so the report names the shared cause
+    // three times and still declines to group on it. This is design question 2
+    // of the P1 plan — does a related span count as a declaredAt? — closed as
+    // moot when TS2554 turned out to resolve through getResolvedSignature().
+    // Here it is not moot.
+    const { report } = analyse("missing-required-property");
+    expect(report.groups).toEqual([]);
+    expect(report.diagnostics.every((d) => d.role === "root")).toBe(true);
+
+    const spans = report.diagnostics.map((d) => d.related[0]?.span);
+    expect(spans).toHaveLength(3);
+    for (const span of spans) {
+      expect(span?.file).toBe("src/accounts/profile.ts");
+      expect(span?.line).toBe(10);
+    }
+    // One and the same position, three times over, unused.
+    expect(new Set(spans.map((span) => `${span?.file}:${span?.line}:${span?.column}`)).size).toBe(
+      1,
+    );
   });
 });
 

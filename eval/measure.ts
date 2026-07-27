@@ -82,6 +82,18 @@ const TARGETS: Target[] = [
     kind: "fixture",
     project: "fixtures/broken-barrel-export/before",
   },
+  { name: "arity-changed", kind: "fixture", project: "fixtures/arity-changed/before" },
+  {
+    name: "narrowed-union-member",
+    kind: "fixture",
+    project: "fixtures/narrowed-union-member/before",
+  },
+  { name: "nullable-chain", kind: "fixture", project: "fixtures/nullable-chain/before" },
+  {
+    name: "missing-required-property",
+    kind: "fixture",
+    project: "fixtures/missing-required-property/before",
+  },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

@@ -21,9 +21,9 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (173 tests).
+**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**256 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **8**, premier morceau de B1 (§8 lot B : « 20 fixtures »).
 
-Ce qui existe : les **4** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
+Ce qui existe : les **8** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
 
 Ce qui n'existe pas encore : tout l'**enrichissement** (P2, `src/pipeline/enrich/` est vide), et **B1** — le bras d'éval qui appelle un modèle.
 
@@ -38,6 +38,21 @@ Deux chiffres à ne pas mélire :
 Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest` du registre npm** et n'expose plus `ts.createProgram`. V1 vise 5.4 → 5.9 et **refuse** 6/7 en sortie 2 ; `Ts7ApiSource` est un jalon daté (PROJECT.md §8, P2.5). Détail complet en §3.
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
+
+**Les huit fixtures et ce que chacune est seule à couvrir.** Quatre plient, quatre non — et les non-pliages sont délibérés, pas des pannes :
+
+| fixture | codes | plie | ce qu'elle est seule à porter |
+|---|---|---|---|
+| `partial-interface-rename` | 2353 · 2339 · 2345 | 3 → 1 | l'exemple de §6 ; trois codes sur une déclaration |
+| `two-independent-roots` | 2307 · 2339 | **0 %** | le témoin négatif de la DoD (§12) |
+| `overload-mismatch` | 2769 | — | chaîne à trois niveaux, trois `related` |
+| `broken-barrel-export` | 2724 | 3 → 1 | cause = **module** ; trois fichiers sur un symbole |
+| `arity-changed` | 2554 | 4 → 1 | le jumeau **commité** de la plus grosse cascade de l'éval ; seule à dépasser le plafond d'affichage |
+| `narrowed-union-member` | 2339 | 8 → 1 | cause = **alias d'union** ; seule cascade **de second ordre** (le narrowing raté casse les accès qui suivent) |
+| `nullable-chain` | 18047 | **0 %** | cascade réelle que le seuil refuse — 18047 n'est pas capturé |
+| `missing-required-property` | 2741 | **0 %** | idem, **mais le lien est déjà imprimé** dans le `related` de chaque diagnostic |
+
+Les deux dernières sont commitées pour rendre le manque **mesurable** (128 % et 169 %), pas pour être corrigées tout de suite : leurs codes sont dans la table des dix de §5.2, donc ils attendent les chiffres (règle 8).
 
 Prochain jalon : **B1**, et d'abord **un corpus réel figé plus large** — `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas : trois mutations d'un seul dépôt. C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
 

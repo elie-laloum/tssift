@@ -1,0 +1,7 @@
+{
+  "rootCause": "src/audit/event.ts declares `auditEvent(action: string, actor: string)`. A required second parameter, `actor`, was added when audit records started carrying who performed the action. Four call sites across three files — src/accounts/session.ts (twice), src/billing/refund.ts and src/admin/impersonation.ts — still pass one argument.",
+  "expectedFix": "Pass an actor at each of the four call sites, or give `actor` a default in src/audit/event.ts. The four call sites are not independent bugs: one decision at the declaration settles all of them.",
+  "tags": ["arity", "signature-change", "cross-file", "single-root", "multi-file-cascade", "TS2554"],
+  "difficulty": "easy",
+  "purpose": "Commits the largest cascade family measured anywhere in the eval. TS2554 folds 152 diagnostics into one entry on .corpus/lekes-ok-arity-changed — but `.corpus/` is git-ignored and derived from a private repository, so until this fixture existed a fresh clone could not reproduce the single best piece of evidence for H1. It is also the only committed witness for the `getResolvedSignature().declaration` link, which is what made design question 2 of the P1 plan moot (a related span never had to count as a declaredAt). Four diagnostics rather than three on purpose: it is the only fixture that exceeds MAX_SHOWN_MEMBERS, so it is the only one whose default rendering exercises the `+N more sites` counter."
+}
