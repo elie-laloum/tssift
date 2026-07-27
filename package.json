@@ -27,7 +27,8 @@
     "test:watch": "vitest",
     "check": "biome check --write",
     "eval": "tsc -p tsconfig.eval.json && node .eval-dist/eval/measure.js",
-    "fixtures:verify": "node scripts/verify-fixtures.mjs"
+    "fixtures:verify": "node scripts/verify-fixtures.mjs",
+    "corpus:build": "node scripts/build-corpus.mjs"
   },
   "peerDependencies": {
     "typescript": ">=5.4 <6"

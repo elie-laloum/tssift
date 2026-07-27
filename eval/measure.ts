@@ -14,7 +14,7 @@
  * exercise — it is the baseline P1 will be measured against.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -29,7 +29,7 @@ const CHARS_PER_TOKEN = 4;
 
 interface Target {
   name: string;
-  kind: "fixture" | "repo";
+  kind: "fixture" | "repo" | "corpus";
   project: string;
 }
 
@@ -184,7 +184,34 @@ function estimate(chars: number): number {
   return Math.round(chars / CHARS_PER_TOKEN);
 }
 
-const rows = TARGETS.map(measure);
+/**
+ * The real broken corpus, when it has been materialised. Frozen at a pinned
+ * commit and mutated deterministically, so unlike a live repository it cannot
+ * move underneath the measurement. Build it with `bun run corpus:build`.
+ */
+function corpusTargets(): Target[] {
+  const manifestPath = join(repoRoot, "eval", "corpus.json");
+  if (!existsSync(manifestPath)) return [];
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    entries: Array<{ name: string; project?: string }>;
+  };
+  return manifest.entries
+    .map((entry) => ({
+      name: `corpus/${entry.name}`,
+      kind: "corpus" as const,
+      project: join(".corpus", entry.name, entry.project ?? "."),
+    }))
+    .filter((target) => existsSync(resolve(repoRoot, target.project)));
+}
+
+const corpus = corpusTargets();
+if (corpus.length === 0) {
+  process.stderr.write(
+    "note: the real corpus is not built — run `bun run corpus:build`. Measuring fixtures and live repos only.\n",
+  );
+}
+
+const rows = [...TARGETS, ...corpus].map(measure);
 
 const lines: string[] = [];
 lines.push(

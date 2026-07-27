@@ -1,0 +1,75 @@
+{
+  "note": [
+    "Corpus réel cassé, pour B0 et B1. Il contient des RÉFÉRENCES et des MUTATIONS,",
+    "jamais du code source : tssift est publié en open source, les dépôts visés sont privés.",
+    "`scripts/build-corpus.mjs` matérialise chaque entrée dans .corpus/ (git-ignoré) par",
+    "`git archive <sha>`, sans jamais toucher à l'arbre de travail du dépôt source.",
+    "",
+    "Pourquoi des mutations et non des commits cassés : l'historique des dépôts réels est",
+    "PROPRE. Scan du 2026-07-27 — 14/14 commits de lekes et 24 commits échantillonnés sur",
+    "240 de data-explorer : zéro diagnostic. On commite du vert, la CI y veille. Les états",
+    "cassés vivent dans les arbres de travail, pas dans l'historique, et un arbre de travail",
+    "bouge sous la mesure (cf. EVAL.md § Limites). Une mutation appliquée à un commit épinglé",
+    "est reproductible, figée, et fournit en prime la vérité terrain que la métrique de faux",
+    "départ de B1 exige : on sait par construction quel fichier est la cause.",
+    "",
+    "Chaque `find` doit apparaître EXACTEMENT UNE FOIS dans le fichier visé — sinon le build",
+    "échoue plutôt que de muter au hasard.",
+    "",
+    "Entrée retirée le 2026-07-27 : `lekes-broken-barrel-export`. Le barrel features/agents a 11 importateurs mais chacun consomme un symbole DIFFERENT — retirer un export n existe donc aucune cascade. Le cas barrel reste couvert par la fixture broken-barrel-export prevue en 4e (AGENTS.md).",
+    "Piege verifie le 2026-07-27 : les ancres doivent viser des fichiers TRACKES au sha epingle. `git archive` ne contient pas les fichiers non suivis, et l arbre de travail de lekes en a plusieurs. Le build echoue explicitement dans ce cas plutot que de muter a cote."
+  ],
+  "entries": [
+    {
+      "name": "lekes-result-value-renamed",
+      "repo": "~/projects/lekes",
+      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
+      "project": ".",
+      "category": "partial-rename",
+      "rootCauseFile": "src/shared/domain/result.ts",
+      "rootCause": "Le champ `value` de la branche succès de `Result<T, E>` est renommé `data` sur la déclaration seule. `Result` est référencé dans 59 fichiers : c'est la cascade la plus large du corpus, pour une cause unique.",
+      "expectedShape": "1 racine (la déclaration) + N dérivés en TS2339 sur `.value`, plus la fabrique `ok()` qui ne satisfait plus son propre type.",
+      "mutations": [
+        {
+          "file": "src/shared/domain/result.ts",
+          "find": "| { readonly ok: true; readonly value: T }",
+          "replace": "| { readonly ok: true; readonly data: T }"
+        }
+      ]
+    },
+    {
+      "name": "lekes-task-export-renamed",
+      "repo": "~/projects/lekes",
+      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
+      "project": ".",
+      "category": "renamed-export",
+      "rootCauseFile": "src/features/agents/domain/task.entity.ts",
+      "rootCause": "Le type exporte `Task` est renomme `TaskDefinition` sur sa declaration seule. Le module `domain/task.entity` est le plus importe du depot au sha epingle : 14 importateurs.",
+      "expectedShape": "1 racine (la declaration) + N derives en TS2305 « has no exported member » chez les importateurs, puis leurs propres cascades. Famille de codes distincte des deux autres entrees.",
+      "mutations": [
+        {
+          "file": "src/features/agents/domain/task.entity.ts",
+          "find": "export interface Task {",
+          "replace": "export interface TaskDefinition {"
+        }
+      ]
+    },
+    {
+      "name": "lekes-ok-arity-changed",
+      "repo": "~/projects/lekes",
+      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
+      "project": ".",
+      "category": "signature-arity",
+      "rootCauseFile": "src/shared/domain/result.ts",
+      "rootCause": "La fabrique `ok()` gagne un second paramètre obligatoire. Tous ses appels deviennent invalides.",
+      "expectedShape": "1 racine (la signature) + N dérivés en TS2554 « Expected 2 arguments, but got 1 ». Famille de codes distincte des deux autres entrées.",
+      "mutations": [
+        {
+          "file": "src/shared/domain/result.ts",
+          "find": "export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });",
+          "replace": "export const ok = <T>(value: T, origin: string): Result<T, never> => ({ ok: true, value, origin });"
+        }
+      ]
+    }
+  ]
+}

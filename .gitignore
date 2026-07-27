@@ -9,3 +9,7 @@ coverage/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Corpus réel matérialisé localement depuis eval/corpus.json.
+# Jamais commité : les dépôts sources sont privés, tssift est public.
+.corpus/

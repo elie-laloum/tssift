@@ -22,5 +22,5 @@
     "types": ["node"]
   },
   "include": ["src", "test", "eval", "scripts", "vitest.config.ts"],
-  "exclude": ["fixtures", "dist", ".eval-dist", "node_modules"]
+  "exclude": ["fixtures", "dist", ".eval-dist", ".corpus", "node_modules"]
 }
