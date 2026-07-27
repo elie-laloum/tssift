@@ -1,0 +1,17 @@
+{
+  "rootCause": "The `emailAddress` field of `CreateUserInput` was renamed to `email` in src/types/user.ts. Three call sites in src/api/user.ts still use the old name: a leftover property on an object literal, a property read, and a widened value passed as an argument.",
+  "expectedFix": "Replace the three remaining `emailAddress` occurrences in src/api/user.ts with `email`. src/types/user.ts is already correct and should not change.",
+  "tags": [
+    "partial-rename",
+    "interface",
+    "cross-file",
+    "single-root",
+    "TS2353",
+    "TS2339",
+    "TS2345",
+    "message-chain",
+    "related-information"
+  ],
+  "difficulty": "easy",
+  "purpose": "The worked example of PROJECT.md §6, and the only witness for a TS2345 carrying both a message chain (TS2345 → TS2741) and a related entry pointing at the declaration in another file."
+}

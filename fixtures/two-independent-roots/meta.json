@@ -1,0 +1,14 @@
+{
+  "rootCause": "Two unrelated failures in one program. src/reporting/export.ts imports `@acme/csv-writer`, which does not resolve. src/billing/invoice.ts reads `item.quantity` on a `LineItem` that declares `quantityOrdered`. The two files share no import, no type and no identifier.",
+  "expectedFix": "Two independent edits: resolve or remove the `@acme/csv-writer` import in src/reporting/export.ts, and read `quantityOrdered` in src/billing/invoice.ts. Neither fix affects the other file.",
+  "tags": [
+    "negative-control",
+    "two-roots",
+    "independent",
+    "TS2307",
+    "TS2339",
+    "causality-false-positive-guard"
+  ],
+  "difficulty": "easy",
+  "purpose": "Negative control. Zero causality false positives on this fixture is a Definition of Done criterion (PROJECT.md §12): the two diagnostics must never be reported as one root and one derived."
+}

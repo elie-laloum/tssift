@@ -209,10 +209,12 @@ Périmètre V1 : les 10 codes de PROJECT.md §5.2, par ordre de rentabilité (27
 
 ```
 fixtures/<nom-kebab>/
-  meta.json     { rootCause, expectedFix, tags, difficulty }
+  meta.json     { rootCause, expectedFix, tags, difficulty, purpose? }
   before/       projet cassé, ne compile pas
   after/        état corrigé attendu
 ```
+
+`rootCause` et `expectedFix` sont la vérité terrain que lira le harnais d'éval — ils décrivent le correctif, et c'est leur rôle ; la règle 1 porte sur les `Fact.text` produits par l'outil, pas sur les métadonnées de fixture. `tags` porte les codes TS attendus (`TS2769`…), ce qui rend visible en diff le jour où une version de TS change de code. `purpose` est **optionnel** et dit pourquoi la fixture existe — ce qu'elle est le seul témoin à couvrir, ou ce qu'elle ne doit jamais produire.
 
 Catégories à couvrir (PROJECT.md §7) : barrel export cassé · renommage d'interface partiel · erreur de surcharge · générique mal contraint · module absent · nullabilité · union discriminée mal narrowée · import de type manquant · mauvais `paths` tsconfig · monorepo cross-package · dépendance fantôme sous pnpm · projet Yarn PnP.
 

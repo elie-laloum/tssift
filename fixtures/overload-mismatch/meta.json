@@ -1,0 +1,16 @@
+{
+  "rootCause": "`request` in src/transport/request.ts declares three overloads, all at arity 2. The call in src/transport/client.ts matches none of them: `retry.backoff.kind` is \"exponentail\" where `PostOptions` requires \"exponential\" | \"linear\". Because no overload can be singled out by arity, TypeScript reports TS2769 with one nested branch per candidate.",
+  "expectedFix": "Correct the `kind` literal in src/transport/client.ts to \"exponential\". The overload declarations are already correct and should not change.",
+  "tags": [
+    "overload",
+    "cross-file",
+    "single-root",
+    "TS2769",
+    "message-chain",
+    "branching-chain",
+    "related-information",
+    "deep-chain"
+  ],
+  "difficulty": "medium",
+  "purpose": "The only witness for deep and branching message chains. TS2769 nests three TS2772 siblings at depth 1, each carrying one leaf at depth 2, and attaches three TS6500 related entries. The prefix-traversal encoding of PROJECT.md §4 has to survive this shape."
+}
