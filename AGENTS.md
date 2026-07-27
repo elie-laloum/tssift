@@ -21,20 +21,26 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**Kickoff. Aucun code écrit.** Le dépôt contient `PROJECT.md`, ce fichier, `CLAUDE.md`, `mise.toml` et `.plans/`.
-Ce n'est pas encore un dépôt git, il n'y a pas de `package.json`.
+**P0 + B0 livrés le 2026-07-27.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe.
+
+Ce qui existe : les 3 fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` (résolution du peer, garde de version, normalisation, `ProgramFacts`) · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 · 70 tests dont 3 snapshots texte sur 5.9.3 · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
+
+Ce qui n'existe pas : **tout `src/pipeline/`**. Ni causalité, ni regroupement, ni enrichissement, ni budget. C'est P1 et P2.
+
+**Le chiffre de base est dans `EVAL.md`, et il est plat** : 14 diagnostics des deux côtés, et une sortie 27 % à 106 % plus grosse que `tsc` brut. C'est le résultat attendu en P0 — rien n'est encore plié — et c'est la ligne de base contre laquelle P1 se mesure. Ne pas le lire comme une infirmation de H1 : H1 n'est pas encore testée.
 
 **Le contrat de sortie et le modèle de données ont été arrêtés le 2026-07-27** et sont intégrés dans PROJECT.md. Ils ne se rouvrent pas sans raison neuve. Le séquencement exécutable, avec critères d'acceptation, est dans **`.plans/2026-07-27_p0-b0.md`**.
 
 Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest` du registre npm** et n'expose plus `ts.createProgram`. V1 vise 5.4 → 5.9 et **refuse** 6/7 en sortie 2 ; `Ts7ApiSource` est un jalon daté (PROJECT.md §8, P2.5). Détail complet en §3.
 
-Prochain jalon : **P0 + B0** (voir PROJECT.md §8). Concrètement, dans cet ordre :
-1. Vérification du créneau (prior art) — porte d'arrêt, voir plus bas
-2. 3 fixtures (`meta.json` + `before/`) — elles définissent le contrat de sortie **avant** tout code moteur
-3. `TsApiSource` + normalisation + `id` déterministe + `ProgramFacts`
-4. Renderers `agent-text` et `json` sans enrichissement
-5. CLI minimale + tests snapshot
-6. B0 : la mesure déterministe, sans modèle
+La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
+
+Prochain jalon : **P1, la causalité** (PROJECT.md §5.1 et §8). Concrètement :
+1. `pipeline/dedupe.ts` puis `pipeline/causality.ts` — **liens structurels uniquement**, seuil de §5.1 à la lettre. Le seul composant qui vaut le plan mode (CLAUDE.md)
+2. `pipeline/group.ts`, tri par pouvoir explicatif, plafonds et déclassement
+3. `budget.ts` **et** le drapeau `--budget-tokens` qui l'expose, ensemble
+4. Zéro faux positif sur `two-independent-roots` — critère de DoD, la fixture existe déjà
+5. B1, et d'abord **un corpus réel figé** : `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas
 
 ---
 
@@ -290,7 +296,7 @@ Les trois premiers visent **l'humain dans l'éditeur**. Le créneau « consommat
 
 ## Git
 
-Le dossier **n'est pas encore un dépôt git**. `git init` sur `main` au début de P0, avec `LICENSE` (MIT © 2026 Elie Laloum) et un `.gitignore` couvrant `dist/`, `node_modules/`, `coverage/` et les trois lockfiles étrangers (§9.1).
+Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, avec `LICENSE` (MIT © 2026 Elie Laloum) et un `.gitignore` couvrant `dist/`, `node_modules/`, `coverage/`, `.eval-dist/` et les trois lockfiles étrangers (§9.1). Aucun remote, aucun push.
 
 **Commit à chaque jalon terminé, sans demander** — fixtures, moteur P0, renderers, CLI, B0. C'est un assouplissement délibéré de la règle « ne commiter que sur demande » : la discipline « un diff de snapshot se lit » exige une base contre laquelle lire, et un long chantier non commité rend le premier diff illisible.
 

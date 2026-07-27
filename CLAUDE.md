@@ -15,7 +15,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 3. `.plans/` — le plan daté le plus récent : le séquencement exécutable, avec critères d'acceptation
 4. `EVAL.md` s'il existe — les chiffres priment sur les intentions
 
-Le projet est en **kickoff : aucun code n'existe encore**. Ne pas chercher de fichier source, il n'y en a pas.
+**P0 + B0 sont livrés** (2026-07-27). Le code existe : `src/` (types, codes, `sources/ts-api.ts`, `render/`, `run.ts`, `cli.ts`), `test/` (70 tests, 3 snapshots), `eval/`, `fixtures/`, `.github/workflows/`. En revanche **`src/pipeline/` n'existe pas du tout** — causalité, regroupement et enrichissement sont P1/P2.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 
@@ -41,13 +41,13 @@ Dans les autres cas : agir, et rapporter ce qui a été fait.
 
 Le contrat de sortie est désormais **arrêté** (PROJECT.md §6) : il ne relève plus du plan mode, il s'applique.
 
-Reste une seule chose pour laquelle le plan mode vaut le détour : la **détection de causalité** (`pipeline/causality.ts`) — composant à plus forte valeur, le plus facile à rendre faux, et le seuil de preuve de §5.1 est à respecter à la lettre. À concevoir **après** l'existence des premiers snapshots, qui en sont la matière première.
+Reste une seule chose pour laquelle le plan mode vaut le détour : la **détection de causalité** (`pipeline/causality.ts`) — composant à plus forte valeur, le plus facile à rendre faux, et le seuil de preuve de §5.1 est à respecter à la lettre. La condition posée — « à concevoir après l'existence des premiers snapshots » — est **remplie** depuis le 2026-07-27 : `test/__snapshots__/render.test.ts.snap` existe, et `ProgramFacts.imports` porte les spécificateurs tels qu'écrits, ce dont la règle 2307 de §5.1 a besoin. C'est donc la prochaine chose à concevoir, en plan mode.
 
 Le reste est mécanique et se fait directement, en suivant le plan de `.plans/`.
 
 ## Git
 
-Le dossier **n'est pas encore un dépôt git**. `git init` sur `main` au début de P0 — c'est la première tâche du plan, pas une question à reposer.
+Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, sans remote.
 
 Ensuite : **commit à chaque jalon terminé, sans demander** ; un diff de snapshot ne se lit que contre une base. **Ne jamais pousser sans demande explicite** — et `gh` n'est pas installé, la création du dépôt distant revient à l'humain.
 

@@ -1,6 +1,6 @@
 # Handoff — Diagnostics TypeScript orientés agent
 
-**Statut :** kickoff, aucun code écrit — **contrat de sortie et modèle de données arrêtés le 2026-07-27**
+**Statut :** **P0 + B0 livrés le 2026-07-27.** Contrat de sortie et modèle de données arrêtés. Prochain jalon : **P1, la causalité** — voir §5.1 et §8, et les chiffres de base dans `EVAL.md`
 **Licence cible :** MIT
 **Nom :** `tssift` — *figé le 2026-07-27. Disponibilité npm vérifiée (404 registry).*
 **Plan d'exécution :** `.plans/2026-07-27_p0-b0.md`
