@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
@@ -29,6 +30,20 @@ function scratchProject(files: Record<string, string>): string {
     writeFileSync(target, contents);
   }
   return dir;
+}
+
+/**
+ * Makes `typescript` resolvable from a scratch project by symlinking our own
+ * install into its `node_modules/`. A copy would cost 20 MB per test; a stub
+ * `main` pointing at the real file would break `libDir`, which is derived from
+ * the resolved path. Ubuntu-only CI and Windows out of scope for v0.1 (§9.2),
+ * so a symlink is safe here.
+ */
+function linkTypeScript(projectDir: string): void {
+  const real = dirname(createRequire(import.meta.url).resolve("typescript"));
+  const modules = join(projectDir, "node_modules");
+  mkdirSync(modules, { recursive: true });
+  symlinkSync(join(real, ".."), join(modules, "typescript"), "dir");
 }
 
 afterAll(() => {
@@ -182,6 +197,70 @@ describe("TsApiSource · exit-2 conditions (rule 15)", () => {
     expect(thrown).toBeInstanceOf(TssiftUnrunnable);
     expect((thrown as Error).message).toMatch(/Cannot resolve "typescript"/);
     expect((thrown as Error).message).toContain(project);
+  });
+
+  it("refuses a solution tsconfig, naming the references to point at instead", () => {
+    // `"files": []` + `"include": []` + `"references": [...]` is the monorepo
+    // root shape. `tsc -p` type-checks nothing there and exits 0; printing that
+    // zero would be a false clean over a whole repository (PROJECT.md §9).
+    const project = scratchProject({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: { strict: true, noEmit: true },
+        files: [],
+        include: [],
+        references: [{ path: "./apps/data-explorer" }, { path: "./apps/widget" }],
+      }),
+      "apps/data-explorer/tsconfig.json": JSON.stringify({
+        compilerOptions: { strict: true, noEmit: true, composite: true },
+      }),
+      "apps/data-explorer/index.ts": "export const x: number = 1;\n",
+      "apps/widget/tsconfig.json": JSON.stringify({
+        compilerOptions: { strict: true, noEmit: true, composite: true },
+      }),
+      "apps/widget/index.ts": "export const y: number = 2;\n",
+    });
+    linkTypeScript(project);
+
+    let thrown: unknown;
+    try {
+      new TsApiSource().load({ project, captureFor: CONTEXT_CAPTURE_CODES });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(TssiftUnrunnable);
+    const message = (thrown as Error).message;
+    expect(message).toMatch(/Nothing to type-check/);
+    expect(message).toContain(join(project, "tsconfig.json"));
+    expect(message).toMatch(/0 files matched, 2 project references declared/);
+    expect(message).toContain("./apps/data-explorer");
+    expect(message).toContain("./apps/widget");
+  });
+
+  it("does not hijack an empty project with no reference — TypeScript reports it", () => {
+    // The mirror case, and it is NOT ours to refuse. Measured 2026-07-27 on
+    // 5.9.3: the very same `"files": []` / `"include": []` shape yields TS18002
+    // as a config-parsing diagnostic as soon as `references` is absent — that
+    // is what makes `references` a sound discriminator rather than a guess.
+    //
+    // So this branch exits 1 with TypeScript's own wording, never a silent 0.
+    // Throwing our own exit 2 here would replace a precise compiler message
+    // with a vaguer one of ours.
+    const project = scratchProject({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: { strict: true, noEmit: true },
+        files: [],
+        include: [],
+      }),
+    });
+    linkTypeScript(project);
+
+    const { diagnostics, facts } = new TsApiSource().load({
+      project,
+      captureFor: CONTEXT_CAPTURE_CODES,
+    });
+    expect(diagnostics.map((d) => d.code)).toEqual([18002]);
+    expect(facts.files).toEqual([]);
   });
 
   it("refuses a missing tsconfig without searching upwards", () => {

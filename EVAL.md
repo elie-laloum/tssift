@@ -42,13 +42,21 @@ Chiffres obtenus par deux exécutions consécutives donnant un résultat **ident
 | overload-mismatch | fixture | 5.9.3 | 1 | 1 | 571 | 1176 | **206 %** | 143 | 294 |
 | lekes | dépôt réel | 5.9.3 | 8 | 8 | 1475 | 1877 | **127 %** | 369 | 469 |
 | tccp | dépôt réel | 5.9.3 | 0 | 0 | 0 | 40 | n/a | 0 | 10 |
-| keyzia/data-explorer | dépôt réel | 5.8.3 | 0 | 0 | 0 | 72 | n/a | 0 | 18 |
+| keyzia/data-explorer | dépôt réel | — | — | — | — | — | **refusé, sortie 2** ¹ | — | — |
 | nextp/cursor-rules-hooks | dépôt réel | 6.0.3 | — | — | — | — | **refusé, sortie 2** | — | — |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 112 | 18 548 | 19 102 | **103 %** | 4 637 | 4 776 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 12 | 1 677 | 1 804 | **108 %** | 419 | 451 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 153 | 17 602 | 32 025 | **182 %** | 4 401 | 8 006 |
 
-**Totaux sur les 9 cibles mesurées : diagnostics A = 283, B = 283. Caractères A = 39 144, B = 55 276, soit B/A = 141 %.**
+**Totaux sur les 8 cibles mesurées : diagnostics A = 283, B = 283. Caractères A = 39 144, B = 55 243, soit B/A = 141 %.**
+
+*C'est la ligne de base contre laquelle P1 se mesure (T7 du plan).*
+
+¹ **`keyzia/data-explorer` a changé de statut le 2026-07-27, et pas par dérive : par correction d'un bug.** Sa racine porte un tsconfig *solution* (`"files": []`, `"include": []`, `"references": [4]`). `tsc -p` n'y typecheckait **rien** et sortait 0 ; les deux bras étaient d'accord sur `0 diagnostic`, et ce `0` était **faux** — les erreurs du monorepo existent, elles sont logées dans les projets référencés. Un agent y lisait un « propre » imaginaire, exactement le repli silencieux que la règle 15 interdit. La cible sort désormais en **2** en nommant le tsconfig, les comptes et les quatre chemins référencés. Décision et mesure en PROJECT.md §9.
+
+Effet sur les totaux : une cible mesurée en moins (9 → 8) et **33 caractères de moins** côté B — le bras A y valait 0 caractère, donc le rapport B/A reste **141 %**. Le chiffre de diagnostics, lui, ne bouge pas d'une unité.
+
+**Deux autres écarts à ne pas prendre pour du bruit** si l'on rejoue la mesure aujourd'hui. D'abord, `lekes` **vivant** est redescendu à `0 / 0` : c'est l'instabilité déjà documentée en « Limites du corpus », et la raison même de figer un corpus. Ensuite, un run propre imprime désormais `0 errors · N files checked` au lieu de `0 errors` — le compte de fichiers voyage avec le zéro pour le rendre vérifiable, ce qui ajoute une vingtaine de caractères aux seules cibles sans diagnostic.
 
 ### Le corpus réel confirme l'hypothèse du coût fixe
 

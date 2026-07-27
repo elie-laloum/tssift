@@ -275,6 +275,59 @@ function resolveConfigPath(project: string): string {
   return stats.isDirectory() ? join(absolute, "tsconfig.json") : absolute;
 }
 
+/**
+ * A reference path as it should be typed back into `--project`: relative to the
+ * tsconfig's own directory, POSIX separators, explicitly relative.
+ */
+function referenceLabel(absolute: string, root: string): string {
+  const path = toPosix(relative(root, absolute));
+  if (path === "") return ".";
+  return path.startsWith(".") ? path : `./${path}`;
+}
+
+/**
+ * The solution-tsconfig hole (PROJECT.md §9, decided 2026-07-27).
+ *
+ * A monorepo root with `"files": []`, `"include": []`, `"references": [...]`
+ * makes `tsc -p` type-check nothing and exit 0. Reproducing that zero verbatim
+ * would print `0 errors` over a whole repository whose errors are real but live
+ * in the referenced projects — a false clean, the worst failure mode for a
+ * diagnostic tool, and the silent fallback rule 15 forbids.
+ *
+ * The discriminator is `references`, and only `references`:
+ *  - no files + references declared ⇒ exit 2, naming where to point instead;
+ *  - no files + no reference ⇒ a legitimate empty project, exit 0. Refusing it
+ *    would be our own false negative. What rule 15 forbids is not a `0`, it is
+ *    a *false* `0`.
+ *
+ * Project references stay out of scope for v0.1 — which is exactly why they get
+ * named rather than guessed at.
+ */
+function assertSomethingToCheck(
+  configPath: string,
+  root: string,
+  parsed: TS.ParsedCommandLine,
+): void {
+  if (parsed.fileNames.length > 0) return;
+
+  const references = parsed.projectReferences ?? [];
+  if (references.length === 0) return;
+
+  const labels = references.map((reference) => referenceLabel(reference.path, root));
+  const shown = labels.slice(0, 12);
+  const rest = labels.length - shown.length;
+
+  throw new TssiftUnrunnable(
+    `Nothing to type-check.\n` +
+      `  tsconfig: ${configPath}\n` +
+      `  0 files matched, ${references.length} project reference${
+        references.length === 1 ? "" : "s"
+      } declared\n` +
+      `tssift analyses one project at a time; project references are not supported.\n` +
+      `Point --project at one of: ${shown.join(", ")}${rest > 0 ? `, +${rest} more` : ""}`,
+  );
+}
+
 /** Module specifiers as written, per file. */
 function collectImports(ts: typeof TS, file: TS.SourceFile): string[] {
   const specifiers: string[] = [];
@@ -308,6 +361,7 @@ export class TsApiSource implements DiagnosticSource {
     }
 
     const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, root, undefined, configPath);
+    assertSomethingToCheck(configPath, root, parsed);
 
     const program = ts.createProgram({
       rootNames: parsed.fileNames,

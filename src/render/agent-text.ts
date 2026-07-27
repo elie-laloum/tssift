@@ -61,8 +61,10 @@ export function renderAgentText(input: RenderInput): string {
 
   if (diagnostics.length === 0) {
     // A clean run prints a line rather than nothing, so success cannot be
-    // mistaken for a swallowed crash (PROJECT.md §9).
-    lines.push("0 errors");
+    // mistaken for a swallowed crash (PROJECT.md §9). The file count travels
+    // with the zero so the zero is verifiable: `0 errors · 0 files checked`
+    // reads as "nothing was checked", which a bare `0 errors` hides.
+    lines.push(`0 errors · ${plural(input.facts.files.length, "file")} checked`);
     return `${lines.join("\n")}\n`;
   }
 
