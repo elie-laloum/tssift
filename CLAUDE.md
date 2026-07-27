@@ -47,9 +47,9 @@ Le reste est mécanique et se fait directement, en suivant le plan de `.plans/`.
 
 ## Git
 
-Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, sans remote.
+Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, et poussé depuis le 2026-07-28 sur un GitLab auto-hébergé (`origin`, voir AGENTS.md § Git). Conséquence à connaître : **la CI de `.github/workflows/` n'y tourne pas**, faute de miroir GitHub.
 
-Ensuite : **commit à chaque jalon terminé, sans demander** ; un diff de snapshot ne se lit que contre une base. **Ne jamais pousser sans demande explicite** — et `gh` n'est pas installé, la création du dépôt distant revient à l'humain.
+Ensuite : **commit à chaque jalon terminé, sans demander** ; un diff de snapshot ne se lit que contre une base. **Ne jamais pousser sans demande explicite** — et `gh` est inutile ici comme absent : le remote est sur GitLab.
 
 ## Vérification
 

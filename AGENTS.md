@@ -320,11 +320,13 @@ Les trois premiers visent **l'humain dans l'éditeur**. Le créneau « consommat
 
 ## Git
 
-Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, avec `LICENSE` (MIT © 2026 Elie Laloum) et un `.gitignore` couvrant `dist/`, `node_modules/`, `coverage/`, `.eval-dist/` et les trois lockfiles étrangers (§9.1). Aucun remote, aucun push.
+Le dépôt est **initialisé sur `main`** depuis le 2026-07-27, avec `LICENSE` (MIT © 2026 Elie Laloum) et un `.gitignore` couvrant `dist/`, `node_modules/`, `coverage/`, `.eval-dist/` et les trois lockfiles étrangers (§9.1).
+
+**Un remote existe depuis le 2026-07-28** : `origin` → `git@gitlab.elielaloum.com:elielaloum/tssift.git`. Il est **auto-hébergé, sur GitLab et non GitHub** — deux conséquences à ne pas confondre. D'abord, `gh` n'y sert à rien, et il n'est de toute façon pas installé : pas de commande de PR depuis un agent. Ensuite, **la CI de `.github/workflows/` n'y tourne pas** ; elle attend un miroir GitHub qui n'existe pas encore, donc la matrice trois axes n'est aujourd'hui vérifiée par personne en dehors des vérifications locales. C'est un trou connu, pas un oubli.
 
 **Commit à chaque jalon terminé, sans demander** — fixtures, moteur P0, renderers, CLI, B0. C'est un assouplissement délibéré de la règle « ne commiter que sur demande » : la discipline « un diff de snapshot se lit » exige une base contre laquelle lire, et un long chantier non commité rend le premier diff illisible.
 
-**Ne jamais pousser sans demande explicite.** `gh` n'est pas installé sur cette machine ; la création du dépôt distant est une action de l'humain.
+**Ne jamais pousser sans demande explicite** — la demande vaut pour la session où elle est faite, pas à perpétuité.
 
 ---
 
