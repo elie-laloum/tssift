@@ -1,4 +1,10 @@
-import { type Entry, entriesOf, MAX_SHOWN_MEMBERS } from "../pipeline/index.js";
+import {
+  type Entry,
+  entriesOf,
+  fitToBudget,
+  MAX_SHOWN_MEMBERS,
+  sizeOf,
+} from "../pipeline/index.js";
 import type { DiagnosticGroup, EnrichedDiagnostic, SourceSpan } from "../types.js";
 import type { RenderInput } from "./index.js";
 
@@ -84,19 +90,44 @@ function membersLine(members: readonly EnrichedDiagnostic[]): string {
   return `${plural(members.length, "diagnostic")}, ${summary}`;
 }
 
-function groupLines(entry: Extract<Entry, { kind: "group" }>, index: number): string[] {
+function groupLines(
+  entry: Extract<Entry, { kind: "group" }>,
+  index: number,
+  maxMembers = MAX_SHOWN_MEMBERS,
+): string[] {
   const lines = [`[${index}] ${causeLine(entry.group)}`, `    ${membersLine(entry.members)}`];
 
   // The cap declasses the tail: those members lose their line and survive as a
   // count. Nothing is removed from the table — `--all` still prints every one,
   // and json still carries them all (rule 2).
-  const shown = entry.members.slice(0, MAX_SHOWN_MEMBERS);
+  const shown = entry.members.slice(0, maxMembers);
   for (const member of shown) lines.push(...diagnosticLines(member, "    "));
 
   const hidden = entry.members.length - shown.length;
   if (hidden > 0) lines.push(`    +${plural(hidden, "more site")} (--all for every one)`);
 
   return lines;
+}
+
+/** A lone diagnostic's block, numbered. */
+function loneLines(diagnostic: EnrichedDiagnostic, index: number): string[] {
+  const [head, ...rest] = diagnosticLines(diagnostic, "");
+  return [`[${index}] ${head}`, ...rest.map((line) => `  ${line}`)];
+}
+
+/**
+ * One entry, rendered from most to least detailed, for the budget to choose from.
+ *
+ * A **lone diagnostic offers exactly one form**: it is a root, and rule 6 forbids
+ * truncating a root. It is rendered whole or dropped whole — never half.
+ *
+ * A **group** may shed member lines, because its members are derived and its
+ * cause header is what carries the explanation. The last form keeps the header
+ * and the counts and nothing else, which is still the useful part.
+ */
+function variantsOf(entry: Entry, index: number): string[][] {
+  if (entry.kind === "diagnostic") return [["", ...loneLines(entry.diagnostic, index)]];
+  return [MAX_SHOWN_MEMBERS, 1, 0].map((max) => ["", ...groupLines(entry, index, max)]);
 }
 
 export function renderAgentText(input: RenderInput): string {
@@ -126,15 +157,19 @@ export function renderAgentText(input: RenderInput): string {
   if (groups > 0) summary.push(plural(groups, "root cause"));
   lines.push(summary.join(" · "));
 
-  entries.forEach((entry, index) => {
-    lines.push("");
-    if (entry.kind === "group") {
-      lines.push(...groupLines(entry, index + 1));
-    } else {
-      const [head, ...rest] = diagnosticLines(entry.diagnostic, "");
-      lines.push(`[${index + 1}] ${head}`, ...rest.map((line) => `  ${line}`));
-    }
-  });
+  // `--all` restores every diagnostic in full and therefore ignores the budget:
+  // the two flags express opposite intents and rule 2 gives `--all` the last
+  // word. This is stated in the usage text rather than left to be discovered.
+  const budget = input.all ? undefined : input.budgetTokens;
 
-  return `${lines.join("\n")}\n`;
+  const fitted = fitToBudget(
+    lines,
+    entries.map((entry, index) => ({
+      variants: variantsOf(entry, index + 1),
+      diagnostics: sizeOf(entry),
+    })),
+    budget,
+  );
+
+  return `${fitted.lines.join("\n")}\n`;
 }

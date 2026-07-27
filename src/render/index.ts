@@ -17,6 +17,15 @@ export interface RenderInput {
   rootLabel: string;
   /** `--all`: every diagnostic on a full line, ungrouped. Nothing is declassed. */
   all: boolean;
+  /**
+   * `--budget-tokens`. Undefined means unconstrained.
+   *
+   * An estimate against `characters / 4`, the divisor `EVAL.md` publishes —
+   * counting real tokens would mean shipping one vendor's tokenizer and being
+   * wrong for every other model. `agent-text` only: `json` is the complete
+   * report and a budget never applies to it (rule 14).
+   */
+  budgetTokens?: number;
 }
 
 export type RenderFormat = "agent-text" | "json";

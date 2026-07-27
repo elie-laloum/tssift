@@ -18,6 +18,8 @@
  * The order is `dedupe → detectCausality → entriesOf`, and `run.ts` is the only
  * place that composes them.
  */
+export type { BudgetedEntry, BudgetResult } from "./budget.js";
+export { CHARS_PER_TOKEN, estimateTokens, fitToBudget } from "./budget.js";
 export { detectCausality } from "./causality.js";
 export { dedupe } from "./dedupe.js";
 export type { DiagnosticEntry, Entry, GroupEntry } from "./group.js";

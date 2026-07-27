@@ -65,8 +65,13 @@ describe("cli · flags", () => {
     });
   });
 
-  it("ships no --budget-tokens: it arrives in P1 with the truncation that honours it", () => {
-    expect(() => parseArgs(["--budget-tokens", "4000"])).toThrowError(/Unknown argument/);
+  it("ships --budget-tokens together with the truncation that honours it", () => {
+    // In P0 this test asserted the opposite — that the flag did NOT parse —
+    // because a flag that parses and does nothing is a lie with a version
+    // number (decision 27). It flipped in P1, when `pipeline/budget.ts` landed
+    // in the same change. Kept rather than deleted: it is still the assertion
+    // that the two never drift apart.
+    expect(parseArgs(["--budget-tokens", "4000"]).budgetTokens).toBe(4000);
   });
 
   it("emits json when asked", () => {

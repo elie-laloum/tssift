@@ -30,6 +30,10 @@ export function renderJson(input: RenderInput): string {
     {
       root: input.rootLabel,
       all: input.all,
+      // Recorded, never applied. json is the complete report (rule 14); the
+      // budget constrains its `agent-text` sibling, and a consumer reading both
+      // should be able to tell what the text was constrained to.
+      budgetTokens: input.budgetTokens ?? null,
       typescript: facts.typescript,
       counts: {
         diagnostics: diagnostics.length,

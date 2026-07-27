@@ -11,12 +11,21 @@ export const USAGE = `tssift — groups tsc diagnostics for an agent, and never 
 
 Usage:
   tssift [--project <tsconfig.json>] [--format agent-text|json] [--all]
+         [--budget-tokens <n>]
 
 Options:
   --project <path>   tsconfig, or a directory holding one. Default ./tsconfig.json.
                      Taken as given: no upward search.
   --format <name>    agent-text (default) or json. json is the complete report.
-  --all              restore every diagnostic in full, ungrouped.
+  --all              restore every diagnostic in full, ungrouped. Ignores
+                     --budget-tokens: the two express opposite intents and --all
+                     wins.
+  --budget-tokens <n>
+                     cap the agent-text report at about n tokens, estimated as
+                     characters / 4. Groups shed usage-site lines first, then
+                     the lowest-ranked entries become a counter. A root is never
+                     truncated, so a budget too small for the first entry is
+                     exceeded rather than obeyed. json is never budgeted.
   --help             print this and exit.
 
 Exit codes:
@@ -34,6 +43,7 @@ export interface CliOptions {
   format: RenderFormat;
   all: boolean;
   help: boolean;
+  budgetTokens?: number;
 }
 
 export function parseArgs(argv: readonly string[]): CliOptions {
@@ -69,6 +79,20 @@ export function parseArgs(argv: readonly string[]): CliOptions {
           );
         }
         options.format = value;
+        break;
+      }
+      case "--budget-tokens": {
+        const value = argv[++index];
+        if (value === undefined) throw new TssiftUnrunnable("--budget-tokens needs a number.");
+        // Strict: a budget silently read as NaN would disable the very
+        // constraint the caller asked for, which is the silent fallback rule 15
+        // forbids. `Number()` alone would accept "1e3", " 12 " and "0x40".
+        if (!/^[1-9]\d*$/.test(value)) {
+          throw new TssiftUnrunnable(
+            `--budget-tokens takes a positive whole number of tokens, got "${value}".`,
+          );
+        }
+        options.budgetTokens = Number(value);
         break;
       }
       default:
@@ -123,6 +147,7 @@ export function run(argv: readonly string[], streams: Streams): number {
       facts,
       rootLabel: relative(process.cwd(), facts.root) || ".",
       all: options.all,
+      ...(options.budgetTokens === undefined ? {} : { budgetTokens: options.budgetTokens }),
     };
 
     streams.out(options.format === "json" ? renderJson(input) : renderAgentText(input));
