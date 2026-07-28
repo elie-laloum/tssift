@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-28 (T1 de B1 — règle 2307 écrite, pliage à 8/17)
+**Dernière mise à jour :** 2026-07-28 (T4 de B1 — premier balayage du bras modèle, 230 runs)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -372,8 +372,72 @@ Même **prompt système** fixe, mêmes **trois outils que nous implémentons** (
 | **taux de faux départ** | **H1, le cœur** | un `write_file` **hors** de l'ensemble racine autorisé, intercepté à l'appel |
 | régressions | garde-fou | run non résolu après édition |
 
-**Le faux départ est la métrique porteuse**, et elle exige une vérité terrain machine-lisible : `rootCauseFiles` a été ajouté à chaque `meta.json` (T4-prep) — l'ensemble des chemins qu'un correctif valide (au sens de `expectedFix`) peut toucher. Écrire hors de cet ensemble est un faux départ. `yarn-pnp-project` porte `rootCauseFiles: []` : son `before/` n'a aucun bug, donc **toute** écriture y est un faux départ — et c'est la démonstration nette de H1 attendue là, le bras B refusant (l'agent ne touche rien) quand le bras A montre trois TS2307 bidons qui poussent à éditer du code correct.
+**Le faux départ est la métrique porteuse**, et elle exige une vérité terrain machine-lisible : `rootCauseFiles` a été ajouté à chaque `meta.json` (T4-prep) — l'ensemble des chemins qu'un correctif valide (au sens de `expectedFix`) peut toucher. Écrire hors de cet ensemble est un faux départ. `yarn-pnp-project` porte `rootCauseFiles: []` : son `before/` n'a aucun bug, donc **toute** écriture y est un faux départ.
 
-### État : harnais livré et validé, balayage en attente de l'endpoint
+### Résultats — 2026-07-28, `cx/gpt-5.6-terra` (n=5, 230 runs)
 
-Le harnais compile, passe biome, et sa machinerie est **vérifiée de bout en bout** — y compris la boucle OpenAI-compatible, contre un serveur mock : `read_file → write_file → run_typecheck → stop` boucle correctement, les `tool_calls` sont exécutés, leurs résultats réinjectés en messages `tool`, les tokens cumulés depuis `usage`, et un `write_file` hors racine remonte bien en faux départ. Hors-API : le bac à sable copie `before/`, `run_typecheck` relance le `tsc` du dépôt, le bras A rend le `tsc` brut, le bras B rend l'`agent-text` (et le refus PnP en sortie 2), une écriture hors racine est refusée. **Aucun run modèle réel n'a encore été fait** : aucun endpoint n'est configuré dans l'environnement de cette session. Le balayage attend la configuration — `OPENAI_API_KEY=… AGENT_MODEL=… mise exec -- bun run eval:agent` (ou `OPENAI_BASE_URL=…` pour un serveur local), avec `AGENT_SMOKE=1` d'abord pour un contrôle de boucle (une fixture, n=1) avant les 230 runs. **Les chiffres seront reportés ici tels qu'obtenus, avec le modèle utilisé, y compris s'ils n'infirment pas H2.**
+**Premier balayage réel.** Modèle `cx/gpt-5.6-terra` via un gateway OpenAI-compatible auto-hébergé, `temperature: 0`, plafond 12 tours, n=5, les 20 fixtures + 3 entrées de corpus. Le tableau brut est en fin de section ; ce qui compte est la lecture, et elle **n'est pas flatteuse** — ce qui est un livrable, pas un échec.
+
+**H2 — correction au 1er essai : aucun signal.** Les 230 runs finissent verts, **100 % des deux côtés, sur chaque cible.** Ce modèle résout toutes les fixtures quel que soit le cadrage ; la métrique ne discrimine donc rien ici. C'est un fait sur *ce* modèle et *ces* tâches (petites, une seule cause locale) — pas une réfutation de H2, mais une absence de prise : il faudrait des tâches plus dures, ou un modèle plus faible, pour que « atteindre le vert » sépare les deux bras.
+
+**H1, tokens — tient sur le vrai code, comme en B0.** Sur les **trois entrées de corpus**, les seules cibles réalistes, le bras B consomme **34 % de tokens en moins au total** (95 613 contre 144 601) : `lekes-ok-arity-changed` **33 089 → 11 191** (le pliage 153 → 2 du cadrage initial se paie en contexte réémis à chaque tour), `result-value-renamed` 42 403 → 30 770, `task-export-renamed` 69 109 → 53 652. Sur les petites fixtures c'est mitigé, exactement comme le rapport de caractères de B0 : le gain est volumétrique quand la cascade est grosse, nul ou négatif quand elle est courte.
+
+**H1, faux départ — le cœur, et il ne valide pas.** Sur 115 runs par bras : **bras A 16 faux départs, bras B 19** — le rapport structuré n'a *pas* réduit les faux départs, il en a même un peu plus. Ils se concentrent sur une famille précise :
+
+- **module non résolu** (`phantom-dependency-pnpm`, `two-independent-roots`, `yarn-pnp-project`) : ~100 % des deux côtés. Face à `Cannot find module 'qs'`, le modèle atteint le vert en **écrivant un `src/qs.d.ts`** qui déclare le module — un contournement qui compile mais ne touche jamais la vraie cause (`package.json`, l'import, la dépendance manquante). Ni le rapport de tssift, ni même **le refus PnP en sortie 2**, ne l'en détournent : sur `yarn-pnp-project`, à qui le bras B ne rend *que* le message « lance via yarn », l'agent stube quand même et rend le projet « vert » — donc **faux, sur un projet sans bug**. La garde T2 protège un lecteur humain ; un agent déterminé passe outre.
+- **`corpus/lekes-result-value-renamed` : bras B *pire* que A** (80 % contre 40 %), sur une édition d'un fichier non impliqué (`mcp-tool-executor.adapter.ts`). Un contre-signal net à H1 sur une entrée réelle.
+
+**Ce que ce balayage établit, honnêtement.** Un modèle capable, sur ce corpus étroit : (1) corrige tout, des deux côtés — H2 sans prise ici ; (2) coûte moins de tokens avec le rapport plié, sur le gros code réel — la revendication volumétrique de H1 tient ; (3) ne fait **pas** moins de faux départs avec le rapport structuré — la revendication centrale de H1 n'est **pas** soutenue par ce run, et le mode de défaillance dominant (stuber un `.d.ts` sur une erreur de module) est indépendant du format du diagnostic. C'est **un** point de mesure, un modèle, un corpus que le plan lui-même dit trop étroit (T3 non fait) ; ce n'est pas un verdict, mais c'est le chiffre obtenu, et il tempère H1 plutôt qu'il ne le confirme.
+
+### Tableau brut
+
+| cible | bras | runs | vert | tours | faux départ | ~tokens |
+|---|---|---:|---:|---:|---:|---:|
+| partial-interface-rename | A | 5 | 100 % | 5.0 | 0 % | 4 854 |
+| partial-interface-rename | B | 5 | 100 % | 4.0 | 0 % | 4 341 |
+| overload-mismatch | A | 5 | 100 % | 5.0 | 0 % | 4 720 |
+| overload-mismatch | B | 5 | 100 % | 4.0 | 0 % | 4 325 |
+| broken-barrel-export | A | 5 | 100 % | 4.6 | 0 % | 4 742 |
+| broken-barrel-export | B | 5 | 100 % | 4.8 | 0 % | 5 229 |
+| arity-changed | A | 5 | 100 % | 7.0 | 0 % | 7 101 |
+| arity-changed | B | 5 | 100 % | 7.6 | 0 % | 9 133 |
+| narrowed-union-member | A | 5 | 100 % | 4.6 | 0 % | 5 781 |
+| narrowed-union-member | B | 5 | 100 % | 5.8 | 0 % | 7 489 |
+| nullable-chain | A | 5 | 100 % | 7.4 | 0 % | 7 445 |
+| nullable-chain | B | 5 | 100 % | 7.8 | 0 % | 7 665 |
+| missing-required-property | A | 5 | 100 % | 5.8 | 0 % | 5 568 |
+| missing-required-property | B | 5 | 100 % | 5.0 | 0 % | 5 481 |
+| missing-multiple-properties | A | 5 | 100 % | 5.0 | 0 % | 3 847 |
+| missing-multiple-properties | B | 5 | 100 % | 5.0 | 0 % | 4 001 |
+| assignability-mismatch | A | 5 | 100 % | 5.0 | 0 % | 3 725 |
+| assignability-mismatch | B | 5 | 100 % | 4.2 | 0 % | 3 704 |
+| misspelled-property | A | 5 | 100 % | 4.0 | 0 % | 2 685 |
+| misspelled-property | B | 5 | 100 % | 4.2 | 0 % | 3 457 |
+| unconstrained-generic | A | 5 | 100 % | 4.0 | 0 % | 3 297 |
+| unconstrained-generic | B | 5 | 100 % | 4.0 | 0 % | 3 431 |
+| value-used-as-type | A | 5 | 100 % | 5.0 | 0 % | 4 439 |
+| value-used-as-type | B | 5 | 100 % | 5.0 | 0 % | 4 527 |
+| missing-type-import | A | 5 | 100 % | 4.6 | 0 % | 3 928 |
+| missing-type-import | B | 5 | 100 % | 4.6 | 0 % | 4 059 |
+| cannot-find-name | A | 5 | 100 % | 5.2 | 0 % | 4 484 |
+| cannot-find-name | B | 5 | 100 % | 4.2 | 0 % | 3 543 |
+| wrong-tsconfig-paths | A | 5 | 100 % | 5.0 | 0 % | 5 521 |
+| wrong-tsconfig-paths | B | 5 | 100 % | 5.2 | 0 % | 6 091 |
+| monorepo-cross-package | A | 5 | 100 % | 7.4 | 0 % | 8 454 |
+| monorepo-cross-package | B | 5 | 100 % | 5.8 | 0 % | 6 166 |
+| two-roots-one-file | A | 5 | 100 % | 4.0 | 0 % | 3 569 |
+| two-roots-one-file | B | 5 | 100 % | 4.0 | 0 % | 3 536 |
+| **two-independent-roots** | A | 5 | 100 % | 6.0 | **80 %** | 5 320 |
+| **two-independent-roots** | B | 5 | 100 % | 5.8 | **100 %** | 5 278 |
+| **phantom-dependency-pnpm** | A | 5 | 100 % | 4.4 | **100 %** | 3 959 |
+| **phantom-dependency-pnpm** | B | 5 | 100 % | 5.4 | **100 %** | 6 275 |
+| **yarn-pnp-project** | A | 5 | 100 % | 4.8 | **100 %** | 5 099 |
+| **yarn-pnp-project** | B | 5 | 100 % | 7.2 | **100 %** | 10 761 |
+| **corpus/lekes-result-value-renamed** | A | 5 | 100 % | 4.8 | **40 %** | 42 403 |
+| **corpus/lekes-result-value-renamed** | B | 5 | 100 % | 4.8 | **80 %** | 30 770 |
+| corpus/lekes-task-export-renamed | A | 5 | 100 % | 4.6 | 0 % | 69 109 |
+| corpus/lekes-task-export-renamed | B | 5 | 100 % | 5.8 | 0 % | 53 652 |
+| corpus/lekes-ok-arity-changed | A | 5 | 100 % | 4.2 | 0 % | 33 089 |
+| corpus/lekes-ok-arity-changed | B | 5 | 100 % | 4.2 | 0 % | 11 191 |
+
+*`~tokens` = `usage.total_tokens` cumulés sur la boucle, dominés par le cadrage initial réémis à chaque tour. Reproductible : `mise exec -- bun run eval:agent`, endpoint dans `.env`.*
