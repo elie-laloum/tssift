@@ -140,6 +140,33 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders misspelled-property with --
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders monorepo-cross-package 1`] = `
+"root: fixtures/monorepo-cross-package/before
+4 errors · 4 files · 1 root cause
+
+[1] cause: interface 'Invoice' declared at packages/core/src/invoice.ts:3:1
+    4 diagnostics, all TS2339
+    packages/api/src/billing-route.ts:7:20 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    packages/api/src/dunning.ts:4:59 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    packages/web/src/invoice-card.ts:4:37 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    +1 more site (--all for every one)
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders monorepo-cross-package with --all 1`] = `
+"root: fixtures/monorepo-cross-package/before
+4 errors · 4 files
+
+[1] packages/api/src/billing-route.ts:7:20 error TS2339: Property 'total' does not exist on type 'Invoice'.
+
+[2] packages/api/src/dunning.ts:4:59 error TS2339: Property 'total' does not exist on type 'Invoice'.
+
+[3] packages/web/src/invoice-card.ts:4:37 error TS2339: Property 'total' does not exist on type 'Invoice'.
+
+[4] packages/web/src/invoice-list.ts:4:58 error TS2339: Property 'total' does not exist on type 'Invoice'.
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member 1`] = `
 "root: fixtures/narrowed-union-member/before
 8 errors · 3 files · 1 root cause
@@ -276,6 +303,30 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename wi
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders phantom-dependency-pnpm 1`] = `
+"root: fixtures/phantom-dependency-pnpm/before
+3 errors · 3 files
+
+[1] src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+
+[2] src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+
+[3] src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders phantom-dependency-pnpm with --all 1`] = `
+"root: fixtures/phantom-dependency-pnpm/before
+3 errors · 3 files
+
+[1] src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+
+[2] src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+
+[3] src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots 1`] = `
 "root: fixtures/two-independent-roots/before
 2 errors · 2 files
@@ -351,5 +402,57 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders value-used-as-type with --a
 [3] src/orders/filter.ts:3:54 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
 
 [4] src/reporting/summary.ts:3:34 error TS2749: 'OrderStatus' refers to a value, but is being used as a type here. Did you mean 'typeof OrderStatus'?
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths 1`] = `
+"root: fixtures/wrong-tsconfig-paths/before
+4 errors · 4 files
+
+[1] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
+
+[2] src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+
+[3] src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+
+[4] src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths with --all 1`] = `
+"root: fixtures/wrong-tsconfig-paths/before
+4 errors · 4 files
+
+[1] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
+
+[2] src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+
+[3] src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+
+[4] src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders yarn-pnp-project 1`] = `
+"root: fixtures/yarn-pnp-project/before
+3 errors · 3 files
+
+[1] src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+
+[2] src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+
+[3] src/telemetry.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders yarn-pnp-project with --all 1`] = `
+"root: fixtures/yarn-pnp-project/before
+3 errors · 3 files
+
+[1] src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+
+[2] src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+
+[3] src/telemetry.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
 "
 `;

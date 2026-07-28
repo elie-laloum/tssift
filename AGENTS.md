@@ -21,9 +21,9 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**330 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **12**, premier morceau de B1 (§8 lot B : « 20 fixtures »).
+**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**390 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **16**, premier morceau de B1 (§8 lot B : « 20 fixtures »). Les quatre dernières épuisent les catégories de **configuration** de §7 et sont les seules à dévier du tsconfig canonique ; deux d'entre elles portent une **arborescence installée commitée** (liens `.pnpm`, projet PnP sans `node_modules`), ce qui demande les exceptions `!fixtures/**/…` du `.gitignore`.
 
-Ce qui existe : les **12** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
+Ce qui existe : les **16** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
 
 Ce qui n'existe pas encore : tout l'**enrichissement** (P2, `src/pipeline/enrich/` est vide), et **B1** — le bras d'éval qui appelle un modèle.
 
@@ -39,7 +39,7 @@ Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
-**Les douze fixtures et ce que chacune est seule à couvrir.**
+**Les seize fixtures et ce que chacune est seule à couvrir.**
 
 | fixture | codes | plie | ce qu'elle est seule à porter |
 |---|---|---|---|
@@ -55,10 +55,25 @@ La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md
 | `misspelled-property` | 2551 | **0 %** | le garde du « ne pas dégrader » : la suggestion native est épinglée au snapshot |
 | `unconstrained-generic` | 2536 · 2322 | **0 %** | la seule où les diagnostics sont **sur** leur propre cause |
 | `value-used-as-type` | 2749 | **0 %** | **aucun** lien structurel d'aucune sorte — le bord extérieur du seuil |
+| `wrong-tsconfig-paths` | 2307 | **0 %** | cause = une ligne de **`tsconfig.json`**, donc dans aucun fichier du programme |
+| `monorepo-cross-package` | 2339 | 4 → 1 | cause dans un **autre paquet** ; le garde-fou « hors programme » doit ici *admettre* |
+| `phantom-dependency-pnpm` | 2307 | **0 %** | topologie **pnpm** commitée ; même message TS pour une vérité propre à l'installateur |
+| `yarn-pnp-project` | 2307 | **0 %** | le seul `before/` **sans bug** : du code juste, mal lu, faute du runtime PnP |
 
-**Le chiffre à connaître : sur les dix fixtures qui sont des cascades à cause unique, le seuil en plie quatre.** Les six autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage ne tient donc pas à une propriété générale des cascades TypeScript mais à **la liste de six codes de `src/codes.ts`**. Elles sont commitées pour rendre ce manque **mesurable** plutôt qu'anecdotique, pas pour être corrigées tout de suite : cinq des six codes sont dans la table des dix de §5.2 et attendent les chiffres (règle 8).
+**Le chiffre à connaître : sur les quatorze fixtures qui sont des cascades à cause unique, le seuil en plie cinq.** Les neuf autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage ne tient donc pas à une propriété générale des cascades TypeScript mais à **la liste de six codes de `src/codes.ts`**. Elles sont commitées pour rendre ce manque **mesurable** plutôt qu'anecdotique, pas pour être corrigées tout de suite : cinq des codes manquants sont dans la table des dix de §5.2 et attendent les chiffres (règle 8).
 
-Prochain jalon : **B1**, et d'abord **un corpus réel figé plus large** — `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas : trois mutations d'un seul dépôt. C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
+**Le rapport a baissé de 4/10 à 5/14 en une journée, et c'est de la composition, pas une régression** : les quatre entrantes visaient les catégories de configuration, dont trois sont mécaniquement des TS2307. Aucune ligne de code n'a bougé entre les deux mesures.
+
+**2307 est maintenant le code le plus témoigné parmi ceux qui ne plient pas — et le seul dont la règle est déjà écrite.** §5.1 la spécifie depuis le premier jour, elle ne demande aucun code de capture supplémentaire, et le motif « le modèle n'a pas encore le spécificateur non résolu » était **faux** : `ProgramFacts.imports` porte tous les spécificateurs tels qu'écrits, résolus ou non (vérifié le 2026-07-28 ; le commentaire de `src/types.ts` disait le contraire, corrigé). Le vrai blocage était l'absence de fixture, et il est levé. Ce que les trois fixtures apprennent sur la forme de la règle est dans PROJECT.md §5.1 et `EVAL.md` — en résumé : la cascade est *de* 2307 et non *depuis* un 2307, la clé est le **spécificateur** et jamais le fichier, et regrouper tous les 2307 d'un projet serait un sur-regroupement.
+
+Prochain jalon : **B1**. Ce qu'il reste, dans l'ordre où ça se tient :
+
+1. **Quatre fixtures** pour atteindre les vingt de §8 — dont la seule catégorie de §7 encore non couverte, « import de type manquant ».
+2. **La règle 2307 de §5.1**, désormais débloquée et testable ; à concevoir en plan mode, comme toute règle de dérivation.
+3. **Un corpus réel figé plus large** — `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas : trois mutations d'un seul dépôt.
+4. **Le harnais d'agent**, qui demande une clé d'API et donc un feu vert explicite.
+
+C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
 
 `.plans/2026-07-27_p1-causality.md` est clos ; son tableau d'avancement porte ce que chaque tâche a réellement donné, y compris là où le plan s'est trompé.
 
@@ -216,7 +231,10 @@ En pratique :
 - Gérer les protocoles d'espace de travail : `workspace:`, `catalog:`, `link:`, `portal:` — c'est la fixture monorepo cross-package.
 - Rester factuel : « `zod` n'apparaît pas dans les `dependencies` de `package.json` », jamais « installe `zod` » (règle 1).
 
-Deux fixtures dédiées, à écrire dès que `2307` est abordé : **dépendance fantôme sous pnpm** et **projet Yarn PnP sans `node_modules`**.
+**Les deux fixtures dédiées existent depuis le 2026-07-28** : `phantom-dependency-pnpm` et `yarn-pnp-project`, arborescence installée commitée. Ce qu'elles ont déjà montré, avant qu'une ligne d'enrichisseur soit écrite :
+
+- **Le message TS est le même dans les quatre installateurs alors que la vérité derrière lui ne l'est pas.** `Cannot find module 'qs'` ne dit rien du hoisting, rien du fait que le paquet est installé et joignable un cran plus bas, rien du fait que le même code compile sous npm. Tout ce qui le dirait est dans des fichiers déclaratifs — c'est exactement le matériau de l'enrichisseur 2307.
+- **Sous Yarn PnP, `before/` ne contient aucun bug et sort quand même trois TS2307.** Le compilateur est lancé en processus Node nu et ne charge donc jamais la carte de résolution de `.pnp.cjs`. **tssift est un processus Node nu** : il produira la même sortie — plausible et entièrement fausse — s'il n'est pas lancé au travers du runtime (`yarn tssift`). À trancher : détecter un `.pnp.cjs` sans `process.versions.pnp` et sortir en 2 (règle 15) plutôt que de rendre un rapport propre sur une lecture cassée.
 
 ## Conventions de code
 
@@ -244,16 +262,16 @@ Périmètre V1 : les 10 codes de PROJECT.md §5.2, par ordre de rentabilité (27
 
 ```
 fixtures/<nom-kebab>/
-  meta.json     { rootCause, expectedFix, tags, difficulty, purpose? }
+  meta.json     { rootCause, expectedFix, tags, difficulty, purpose?, deviatesFromCanonicalConfig? }
   before/       projet cassé, ne compile pas
   after/        état corrigé attendu
 ```
 
-`rootCause` et `expectedFix` sont la vérité terrain que lira le harnais d'éval — ils décrivent le correctif, et c'est leur rôle ; la règle 1 porte sur les `Fact.text` produits par l'outil, pas sur les métadonnées de fixture. `tags` porte les codes TS attendus (`TS2769`…), ce qui rend visible en diff le jour où une version de TS change de code. `purpose` est **optionnel** et dit pourquoi la fixture existe — ce qu'elle est le seul témoin à couvrir, ou ce qu'elle ne doit jamais produire.
+`rootCause` et `expectedFix` sont la vérité terrain que lira le harnais d'éval — ils décrivent le correctif, et c'est leur rôle ; la règle 1 porte sur les `Fact.text` produits par l'outil, pas sur les métadonnées de fixture. `tags` porte les codes TS attendus (`TS2769`…), ce qui rend visible en diff le jour où une version de TS change de code. `purpose` est **optionnel** et dit pourquoi la fixture existe — ce qu'elle est le seul témoin à couvrir, ou ce qu'elle ne doit jamais produire. `deviatesFromCanonicalConfig` est **optionnel et obligatoire dès qu'il y a déviation** : il nomme ligne à ligne ce qui s'écarte du bloc canonique ci-dessous, sans quoi un lecteur ne peut pas distinguer un écart voulu d'une fixture écrite de travers.
 
-Catégories à couvrir (PROJECT.md §7) : barrel export cassé · renommage d'interface partiel · erreur de surcharge · générique mal contraint · module absent · nullabilité · union discriminée mal narrowée · import de type manquant · mauvais `paths` tsconfig · monorepo cross-package · dépendance fantôme sous pnpm · projet Yarn PnP.
+Catégories à couvrir (PROJECT.md §7) : barrel export cassé ✓ · renommage d'interface partiel ✓ · erreur de surcharge ✓ · générique mal contraint ✓ · module absent ✓ · nullabilité ✓ · union discriminée mal narrowée ✓ · **import de type manquant** · mauvais `paths` tsconfig ✓ · monorepo cross-package ✓ · dépendance fantôme sous pnpm ✓ · projet Yarn PnP ✓. **Il en reste une non couverte**, plus quelques fixtures libres pour atteindre les vingt de §8 lot B.
 
-Les deux dernières demandent une arborescence installée réaliste (liens symboliques `.pnpm`, ou `.pnp.cjs` sans `node_modules`). La commiter en `before/` plutôt que de la générer au moment du test : la fixture doit rester reproductible sans réseau et sans les gestionnaires installés localement.
+Les deux fixtures d'installateur demandaient une arborescence installée réaliste, et elle est **commitée** depuis le 2026-07-28 : `phantom-dependency-pnpm` porte les liens symboliques `node_modules/.pnpm/…` de pnpm, `yarn-pnp-project` porte un `.pnp.cjs` et un `.yarn/unplugged/` sans le moindre `node_modules`. La commiter plutôt que de la générer au moment du test est ce qui rend la fixture reproductible sans réseau et sans que pnpm ni yarn soient installés localement — ils ne le sont pas. Deux conséquences à connaître : `node_modules/`, `pnpm-lock.yaml` et `yarn.lock` sont réadmis sous `fixtures/` par des exceptions du `.gitignore`, et les lockfiles y sont **écrits à la main**, leurs `checksum` étant des marqueurs et non de vrais hachages — chaque fichier le dit dans son en-tête, parce qu'un faux hachage d'apparence crédible est un piège.
 
 Une fixture est **obligatoire et prioritaire** : `two-independent-roots`, deux racines réellement indépendantes. Zéro faux positif de causalité dessus est un critère de la Definition of Done.
 

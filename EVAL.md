@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-27 (après P1)
+**Dernière mise à jour :** 2026-07-28 (corpus de fixtures porté à seize)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -128,23 +128,34 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | misspelled-property | fixture | 5.9.3 | 2 | **2** | **0 %** | 254 | 486 | 191 % | 64 | 122 |
 | unconstrained-generic | fixture | 5.9.3 | 4 | **4** | **0 %** | 448 | 562 | 125 % | 112 | 141 |
 | value-used-as-type | fixture | 5.9.3 | 4 | **4** | **0 %** | 579 | 678 | 117 % | 145 | 170 |
+| wrong-tsconfig-paths | fixture | 5.9.3 | 4 | **4** | **0 %** | 477 | 578 | 121 % | 119 | 145 |
+| monorepo-cross-package | fixture | 5.9.3 | 4 | 1 | **75 %** | 416 | 569 | 137 % | 104 | 142 |
+| phantom-dependency-pnpm | fixture | 5.9.3 | 3 | **3** | **0 %** | 303 | 404 | 133 % | 76 | 101 |
+| yarn-pnp-project | fixture | 5.9.3 | 3 | **3** | **0 %** | 331 | 425 | 128 % | 83 | 106 |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 17 cibles mesurées : diagnostics A = 318 → entrées B = 52 (pliage de 84 %). Caractères A = 43 531, B = 13 611, soit B/A = 31 %.**
+**Totaux sur les 21 cibles mesurées : diagnostics A = 332 → entrées B = 63 (pliage de 81 %). Caractères A = 45 058, B = 15 587, soit B/A = 35 %.**
 
-### Le chiffre que douze fixtures permettent enfin de donner : **4 sur 10**
+*Les quatre dernières lignes de fixture datent du 2026-07-28, mesurées le même jour, même corpus, même TypeScript. Le total bouge de 31 % à 35 % pour la raison déjà écrite plus bas : quatre petites cibles de plus, toutes au-dessus de 100 %. À périmètre constant, rien n'a changé d'un caractère.*
 
-Douze fixtures, dont deux ne peuvent structurellement rien plier — `overload-mismatch` n'a qu'un diagnostic, et `two-independent-roots` est le témoin négatif dont le pliage nul **est** le critère. Restent **dix cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **quatre** :
+### Le chiffre que seize fixtures permettent de donner : **5 sur 14**
+
+Seize fixtures, dont deux ne peuvent structurellement rien plier — `overload-mismatch` n'a qu'un diagnostic, et `two-independent-roots` est le témoin négatif dont le pliage nul **est** le critère. Restent **quatorze cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **cinq** :
 
 | plie | ne plie pas |
 |---|---|
-| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) |
+| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `wrong-tsconfig-paths` (2307) · `phantom-dependency-pnpm` (2307) · `yarn-pnp-project` (2307) |
 
-**C'est la mesure la plus utile produite depuis le chiffre de H1, et elle n'est pas flatteuse.** Elle dit que le pliage ne repose pas sur une propriété générale des cascades TypeScript mais sur **la liste de six codes de `src/codes.ts`** : hors de cette liste, une cascade parfaitement réelle est rendue à plat. Elle dit aussi ce que coûterait l'inverse — les six non-pliages sortent entre **117 % et 225 %**, soit très exactement le surcoût de P0 que P1 était censé effacer.
+**C'est la mesure la plus utile produite depuis le chiffre de H1, et elle n'est pas flatteuse.** Elle dit que le pliage ne repose pas sur une propriété générale des cascades TypeScript mais sur **la liste de six codes de `src/codes.ts`** : hors de cette liste, une cascade parfaitement réelle est rendue à plat. Elle dit aussi ce que coûterait l'inverse — les non-pliages sortent entre **117 % et 225 %**, soit très exactement le surcoût de P0 que P1 était censé effacer.
 
-À noter que ce n'est pas un plafond de conception : cinq des six codes manquants (18047 · 2741 · 2322 · 2551, plus 2739) sont dans la table des dix de §5.2 et attendent les chiffres (règle 8). Le sixième, 2749, est différent — voir ci-dessous.
+**Le rapport a baissé en passant de douze à seize fixtures — 4/10 le 2026-07-28 au matin, 5/14 le soir — et c'est de la composition, pas une régression.** Les quatre entrantes visaient les catégories de **configuration** de §7 (mauvais `paths`, monorepo, pnpm, PnP), et trois d'entre elles sont mécaniquement des TS2307. Aucune ligne de code n'a bougé entre les deux mesures ; les cinq pliages et les six non-pliages du premier chiffre sont identiques au caractère près.
+
+À noter que ce n'est pas un plafond de conception, et le troisième lot le rend plus vrai qu'avant :
+
+- cinq des six codes du premier chiffre (18047 · 2741 · 2322 · 2551, plus 2739) sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; le sixième, 2749, est différent — voir plus bas ;
+- **2307 est désormais le code le plus témoigné de tous ceux qui ne plient pas** — trois fixtures, dix diagnostics — et il ne demande **aucun code de capture supplémentaire**. Sa règle de dérivation est écrite dans §5.1 depuis le premier jour et ne travaille que sur `ProgramFacts.imports`, que P0 remplit déjà. Elle n'était pas différée par manque de données mais par manque de fixture, et ce manque-là vient d'être comblé. Détail ci-dessous.
 
 ### `assignability-mismatch` tranche la question de conception n° 2 — et la réponse est non
 
@@ -163,7 +174,31 @@ Les deux fixtures se lisent donc ensemble : `missing-required-property` montre u
 
 Quatre diagnostics, une cause, et **rien à capturer** : ni `related`, ni déclaration résolvable. `OrderStatus` existe bel et bien — c'est un objet `const` — il n'a simplement aucun sens en position de type. Le compilateur n'a donc aucun lien structurel à offrir. Toute règle qui plierait cette cascade devrait travailler sur l'identifiant et `ProgramFacts.imports`, c'est-à-dire dériver sur « le même nom » — précisément ce que §5.1 interdit. Ce n'est pas un manque de capture, c'est la limite de ce que le seuil structurel peut atteindre, et il est utile de l'avoir commitée.
 
-**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les neuf lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+### Les trois fixtures 2307 débloquent une règle, et corrigent la raison pour laquelle elle était différée
+
+§5.1 laissait la règle 2307 — « tout ce qui importe le module non résolu est dérivé » — non écrite, avec deux motifs : aucune fixture ne portait de cascade 2307, et « la règle demande un champ que le modèle n'a pas encore (le spécificateur non résolu) ». **Le second motif était faux, et se vérifie en une commande.** `ProgramFacts.imports` porte tous les spécificateurs **tels qu'écrits**, résolus ou non — sur `phantom-dependency-pnpm`, `imports` contient `{"src/callback.ts":["qs"]}`, et `qs` est très exactement le module qui ne résout pas. Le champ était là depuis P0 ; c'est le commentaire de `src/types.ts` qui disait encore « resolved specifiers », en contradiction avec PROJECT.md §4 qui l'avait corrigé dès le 2026-07-27. Corrigé.
+
+Le premier motif, lui, était bien réel, et il est levé : dix TS2307 sur trois spécificateurs, dans trois topologies différentes. Ce qu'ils apprennent sur la forme que la règle devra prendre, et qu'aucun raisonnement à sec n'avait donné :
+
+1. **La cascade est *de* 2307, pas *depuis* un 2307.** Un import non résolu donne `any` aux liaisons importées et n'émet plus rien en aval : sur les trois fixtures, **tout** diagnostic est un 2307. La règle plie donc des 2307 entre eux — elle ne récolte pas « les erreurs des fichiers qui importent », il n'y en a aucune.
+2. **La clé est le spécificateur, jamais le fichier.** `src/api-client.ts` de `phantom-dependency-pnpm` importe `@acme/http`, qui résout, **et** `qs`, qui ne résout pas. `imports[file]` seul ne dit pas lequel a échoué ; l'appariement passe par le `column` du diagnostic, qui désigne le littéral de chaîne.
+3. **Regrouper tous les 2307 d'un projet serait un sur-regroupement.** `wrong-tsconfig-paths` en porte trois sur `@domain/order` et un sur `@domain/customer` — une cause unique en amont, la ligne `paths`, mais elle n'est dans **aucun fichier du programme**, donc rien dans les données ne la nomme. Deux entrées, pas une.
+
+Le point 3 est le plus intéressant des trois : c'est la première fixture dont la cause racine n'est pas dans le programme du tout. Aucun `declaredAt` ne peut la désigner, par construction — un module qui ne résout pas n'a pas de déclaration. C'est un bord du seuil différent de celui de `value-used-as-type` : là il n'y avait aucun lien à capturer, ici le lien existe et pointe une ligne de `tsconfig.json`.
+
+### `monorepo-cross-package` fait travailler le garde-fou plutôt que de le répéter
+
+Le garde-fou n° 1 de §5.1 refuse comme cause toute déclaration hors des fichiers du programme — `<ts-lib>/…`, `node_modules/…` — et il est né d'un TS2345 du corpus qui résolvait vers `interface Map`. Jusqu'ici toutes les fixtures qui plient avaient leur cause dans le même paquet, donc le garde-fou n'y était jamais mis en tension. Celle-ci a ses quatre diagnostics dans `packages/api` et `packages/web`, et sa cause dans `packages/core` : un paquet frère n'est ni `<ts-lib>/…` ni `node_modules/…`, donc le garde-fou doit **admettre**, et il admet. `ProgramFacts.files` fait autorité, pas un test de préfixe — c'est ce choix-là qui est vérifié ici.
+
+Accessoirement, c'est la première fixture à dépasser le plafond de trois sites en pliant : quatre diagnostics, trois affichés, `+1 more site`.
+
+### `yarn-pnp-project` est la seule fixture dont le `before/` ne contient aucun bug
+
+Le code y est correct, `@acme/http` est déclaré dans `package.json`, verrouillé dans `yarn.lock`, présent sur le disque sous `.yarn/unplugged/`, et référencé par `.pnp.cjs`. Les trois TS2307 ne disent rien du projet : ils disent que le compilateur a été lancé en processus Node nu, sans charger la carte de résolution de PnP. Toutes les autres fixtures sont du code cassé ; celle-ci est du code juste, mal lu.
+
+**Conséquence sur tssift lui-même, à écrire dans le README plutôt qu'à découvrir dans une issue : tssift est un processus Node nu.** Sous un projet PnP il produira exactement cette sortie — trois erreurs plausibles et entièrement fausses — s'il n'est pas lancé au travers du runtime (`yarn tssift`). C'est le mode de défaillance le plus coûteux imaginable pour un outil dont l'argument est « faites confiance à la hiérarchisation » : rien n'est signalé, la sortie a l'air normale. La règle 15 interdit le repli silencieux ; il faudra décider si détecter un `.pnp.cjs` sans `process.versions.pnp` relève de la sortie 2.
+
+**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les neuf lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
 
 ### Ce que les fixtures de pliage ont appris
 

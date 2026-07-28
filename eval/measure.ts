@@ -106,6 +106,22 @@ const TARGETS: Target[] = [
     project: "fixtures/unconstrained-generic/before",
   },
   { name: "value-used-as-type", kind: "fixture", project: "fixtures/value-used-as-type/before" },
+  {
+    name: "wrong-tsconfig-paths",
+    kind: "fixture",
+    project: "fixtures/wrong-tsconfig-paths/before",
+  },
+  {
+    name: "monorepo-cross-package",
+    kind: "fixture",
+    project: "fixtures/monorepo-cross-package/before",
+  },
+  {
+    name: "phantom-dependency-pnpm",
+    kind: "fixture",
+    project: "fixtures/phantom-dependency-pnpm/before",
+  },
+  { name: "yarn-pnp-project", kind: "fixture", project: "fixtures/yarn-pnp-project/before" },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

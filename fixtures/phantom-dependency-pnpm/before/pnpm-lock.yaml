@@ -1,0 +1,34 @@
+# Hand-written for the fixture, in the pnpm v9 lockfile shape. The `resolution`
+# integrity values are placeholders and are not real hashes: nothing here is ever
+# installed, and the only thing a declarative reader needs from this file is that
+# `qs` appears under `snapshots` as a dependency of `@acme/http` and never under
+# `importers['.'].dependencies`.
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@acme/http':
+        specifier: 1.2.0
+        version: 1.2.0
+
+packages:
+
+  '@acme/http@1.2.0':
+    resolution: {integrity: placeholder-not-a-real-hash}
+
+  qs@6.11.2:
+    resolution: {integrity: placeholder-not-a-real-hash}
+
+snapshots:
+
+  '@acme/http@1.2.0':
+    dependencies:
+      qs: 6.11.2
+
+  qs@6.11.2: {}

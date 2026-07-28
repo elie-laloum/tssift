@@ -1,0 +1,10 @@
+{
+  "name": "acme-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@4.5.0",
+  "dependencies": {
+    "@acme/http": "1.2.0"
+  }
+}

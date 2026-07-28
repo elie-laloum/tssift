@@ -12,10 +12,10 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 
 1. `AGENTS.md` (importé ci-dessus) — les règles dures
 2. `PROJECT.md` — la spec produit, seule source de vérité pour le modèle de données (§4) et la table des enrichisseurs (§5.2)
-3. `.plans/2026-07-27_p1-causality.md` — le plan courant : le séquencement exécutable de P1, avec critères d'acceptation. (`_p0-b0.md` est clos, `_prior-art.md` porte le verdict du créneau)
-4. `EVAL.md` s'il existe — les chiffres priment sur les intentions
+3. `.plans/` — les trois plans sont **clos** : `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau). **Il n'y a pas de plan courant pour B1** ; c'est la première chose à écrire si le jalon s'ouvre pour de bon.
+4. `EVAL.md` — les chiffres priment sur les intentions
 
-**P0 + B0 sont livrés** (2026-07-27). Le code existe : `src/` (types, codes, `sources/ts-api.ts`, `render/`, `run.ts`, `cli.ts`), `test/` (70 tests, 3 snapshots), `eval/`, `fixtures/`, `.github/workflows/`. En revanche **`src/pipeline/` n'existe pas du tout** — causalité, regroupement et enrichissement sont P1/P2.
+**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; seul `pipeline/enrich/` est vide, c'est P2 et il est fermé par la porte de décision §7. Depuis le 2026-07-28 le corpus de fixtures est à **16** (cible : 20) et la suite passe à **390 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 
@@ -41,9 +41,11 @@ Dans les autres cas : agir, et rapporter ce qui a été fait.
 
 Le contrat de sortie est désormais **arrêté** (PROJECT.md §6) : il ne relève plus du plan mode, il s'applique.
 
-Reste une seule chose pour laquelle le plan mode vaut le détour : la **détection de causalité** (`pipeline/causality.ts`) — composant à plus forte valeur, le plus facile à rendre faux, et le seuil de preuve de §5.1 est à respecter à la lettre. La condition posée — « à concevoir après l'existence des premiers snapshots » — est **remplie** depuis le 2026-07-27 : `test/__snapshots__/render.test.ts.snap` existe, et `ProgramFacts.imports` porte les spécificateurs tels qu'écrits, ce dont la règle 2307 de §5.1 a besoin. C'est donc la prochaine chose à concevoir, en plan mode.
+La **détection de causalité** (`pipeline/causality.ts`) reste la chose pour laquelle le plan mode vaut le détour — composant à plus forte valeur, le plus facile à rendre faux, et le seuil de preuve de §5.1 est à respecter à la lettre. Son premier jet est livré (P1), mais la consigne vaut pour **toute règle de dérivation ajoutée après coup**, pas seulement pour la première.
 
-Le reste est mécanique et se fait directement, en suivant le plan de `.plans/`.
+Concrètement, la prochaine à concevoir en plan mode est la **règle 2307** de §5.1, laissée non écrite en P1. Son blocage est levé depuis le 2026-07-28 : `ProgramFacts.imports` porte bien les spécificateurs tels qu'écrits, résolus ou non (le contraire, écrit dans §5.1 et dans `src/types.ts`, était faux et a été corrigé), et trois fixtures la testent enfin — `wrong-tsconfig-paths`, `phantom-dependency-pnpm`, `yarn-pnp-project`. Lire ce qu'elles ont appris (PROJECT.md §5.1, `EVAL.md`) **avant** de dessiner la règle : la clé est le spécificateur et non le fichier, et regrouper tous les 2307 d'un projet serait un sur-regroupement.
+
+Le reste est mécanique et se fait directement.
 
 ## Git
 
@@ -59,7 +61,7 @@ Après toute modification :
 mise exec -- bun run typecheck && mise exec -- bun run test && mise exec -- bun run check
 ```
 
-(scripts à créer en P0). Les snapshots sont le filet de sécurité du projet : un diff de snapshot se **lit**, il ne se régénère pas en aveugle.
+Les scripts existent depuis P0 ; `mise exec -- bun run fixtures:verify` s'y ajoute dès qu'une fixture est touchée — il vérifie que chaque `before/` échoue réellement sous **5.4.5 et 5.9.3**. Les snapshots sont le filet de sécurité du projet : un diff de snapshot se **lit**, il ne se régénère pas en aveugle.
 
 Toujours préfixer par `mise exec --`. Le shell des outils n'a pas nécessairement mise activé, et il traîne sur cette machine un bun hors mise (`~/.bun`) plus un Node système : les viser donnerait une version différente de celle épinglée, sans aucun message d'erreur. Si une commande échoue en `command not found`, la réponse est `mise install`, jamais un chemin absolu ni un repli sur npm.
 

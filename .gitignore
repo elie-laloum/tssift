@@ -10,6 +10,17 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# Sauf sous fixtures/ : là, l'arborescence installée et le lockfile *sont* le
+# sujet de la fixture. `phantom-dependency-pnpm` et `yarn-pnp-project` portent
+# une topologie commitée — liens symboliques .pnpm, .pnp.cjs, .yarn/unplugged —
+# parce qu'une fixture doit rester reproductible sans réseau et sans que pnpm ni
+# yarn soient installés (AGENTS.md § « Recette — ajouter une fixture »).
+# Ce ne sont pas des dépendances de tssift : rien n'y est jamais installé ni
+# résolu par nous, ce sont des fichiers déclaratifs à lire (règle 10).
+!fixtures/**/node_modules/
+!fixtures/**/pnpm-lock.yaml
+!fixtures/**/yarn.lock
+
 # Corpus réel matérialisé localement depuis eval/corpus.json.
 # Jamais commité : les dépôts sources sont privés, tssift est public.
 .corpus/

@@ -21,6 +21,10 @@ const FIXTURES = [
   "misspelled-property",
   "unconstrained-generic",
   "value-used-as-type",
+  "wrong-tsconfig-paths",
+  "monorepo-cross-package",
+  "phantom-dependency-pnpm",
+  "yarn-pnp-project",
 ] as const;
 
 /**

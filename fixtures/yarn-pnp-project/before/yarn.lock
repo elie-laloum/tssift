@@ -1,0 +1,32 @@
+# This file is hand-written for the fixture, in the Yarn berry lockfile shape.
+# The `checksum` values are placeholders and are not real hashes: nothing here is
+# ever installed. What a declarative reader needs from this file is the version
+# resolution and the dependency edge from @acme/http to qs.
+
+__metadata:
+  version: 8
+  cacheKey: 10c0
+
+"@acme/http@npm:1.2.0":
+  version: 1.2.0
+  resolution: "@acme/http@npm:1.2.0"
+  dependencies:
+    qs: "npm:6.11.2"
+  checksum: placeholder-not-a-real-hash
+  languageName: node
+  linkType: hard
+
+"acme-portal@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "acme-portal@workspace:."
+  dependencies:
+    "@acme/http": "npm:1.2.0"
+  languageName: unknown
+  linkType: soft
+
+"qs@npm:6.11.2":
+  version: 6.11.2
+  resolution: "qs@npm:6.11.2"
+  checksum: placeholder-not-a-real-hash
+  languageName: node
+  linkType: hard

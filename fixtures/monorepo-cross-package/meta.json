@@ -1,0 +1,8 @@
+{
+  "rootCause": "packages/core/src/invoice.ts renamed the `Invoice` field `total` to `amountDue`. The rename is complete inside packages/core — nothing there still reads `total` — but two consumer packages, @acme/api and @acme/web, read it four times between them.",
+  "expectedFix": "Read `amountDue` at the four call sites in packages/api and packages/web, or keep `total` on the interface in packages/core as a deprecated alias. The single decision is in packages/core/src/invoice.ts.",
+  "tags": ["monorepo", "workspace", "cross-package", "cross-file", "single-root", "TS2339"],
+  "difficulty": "medium",
+  "purpose": "Covers the `monorepo cross-package` category of §7, and is the only fixture where the cause lives in a different package from every diagnostic. That is a real test of the §5.1 guard, not a restatement of it: the guard refuses a declaration outside `ProgramFacts.files` — `<ts-lib>/…`, `node_modules/…` — and a sibling workspace package is neither. The declaration is in another package and still legitimately a cause, so the guard has to admit it. Also the first fixture with four sites, which is one over the three-site display cap, so the counter line is exercised on a folding cascade whose members span two packages.",
+  "deviatesFromCanonicalConfig": "Adds `baseUrl`, `paths` and an `include` covering packages/*/src. The workspace layout is the subject of the fixture (§7). Resolution goes through `paths` rather than through project references on purpose: a solution-style tsconfig (`files: []` + `references`) typechecks nothing at all, which is the keyzia/data-explorer case that tssift refuses with exit 2 (PROJECT.md §9, EVAL.md)."
+}

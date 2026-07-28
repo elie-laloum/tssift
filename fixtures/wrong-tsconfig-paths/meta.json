@@ -1,0 +1,8 @@
+{
+  "rootCause": "tsconfig.json maps `@domain/*` to `src/lib/*`, but the folder is `src/domain/`. The alias was written when the code lived under src/lib/ and was not updated when the folder was renamed. Every file that imports through the alias fails to resolve; the two modules under src/domain/ are perfectly valid and compile clean.",
+  "expectedFix": "Point the alias at the folder that exists: `\"@domain/*\": [\"src/domain/*\"]` in tsconfig.json. One line settles all four diagnostics.",
+  "tags": ["tsconfig", "paths", "module-resolution", "cross-file", "single-root", "cause-outside-program", "TS2307"],
+  "difficulty": "easy",
+  "purpose": "Covers the `mauvais paths tsconfig` category of §7, and is the first fixture whose root cause is not in a program file at all: it is a line of tsconfig.json. No `declaredAt` can ever point there — a module that does not resolve has no declaration by definition — so every rule keyed on a shared declaration is structurally unable to fold it. The only handle the data offers is the unresolved *specifier*, which is the §5.1 derivation rule for 2307 that P1 deferred for want of a fixture. This is that fixture: three of its four diagnostics name `@domain/order` and the fourth names `@domain/customer`, so a specifier-keyed rule folds 3 into 1 and must leave the fourth outside — a rule that merely grouped all 2307 together would merge two distinct aliases.",
+  "deviatesFromCanonicalConfig": "Adds `baseUrl` and `paths` to the canonical block. The configuration is the subject of the fixture (§7)."
+}

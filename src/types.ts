@@ -69,7 +69,12 @@ export interface ProgramFacts {
   root: string;
   /** Relative to `root`. */
   files: string[];
-  /** File → resolved specifiers. This channel is what makes "2307 ⇒ importers are derived" decidable. */
+  /**
+   * File → specifiers **as written**, resolved or not. This channel is what makes
+   * "2307 ⇒ importers are derived" decidable — a module that does not resolve has
+   * no resolution to index, so a table of successful resolutions could not answer
+   * the question the rule asks (PROJECT.md §4).
+   */
   imports: Record<string, string[]>;
   /** The compiler actually loaded. */
   typescript: { version: string; path: string };
