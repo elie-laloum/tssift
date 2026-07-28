@@ -1,7 +1,18 @@
 {
   "rootCause": "Two unrelated failures in one file. src/dashboard.ts declares `Widget` (with `id`/`label`) and `Gauge` (with `min`/`max`). `renderWidget` reads `w.title` and `w.caption`; `readGauge` reads `g.upper` and `g.lower`. The two interfaces share no member, no supertype and no usage — the only thing the four diagnostics have in common is the file they live in and the code TypeScript assigns them.",
   "expectedFix": "Two independent edits: read `label` in `renderWidget`, and read `min`/`max` in `readGauge`. Neither fix touches the other interface.",
-  "tags": ["negative-control", "two-roots", "same-file", "same-code", "single-file", "TS2339", "causality-false-positive-guard"],
+  "tags": [
+    "negative-control",
+    "two-roots",
+    "same-file",
+    "same-code",
+    "single-file",
+    "TS2339",
+    "causality-false-positive-guard"
+  ],
   "difficulty": "easy",
-  "purpose": "The harder negative control, sibling to `two-independent-roots`. That fixture separates two causes in two files with two different codes; this one puts two causes in ONE file under ONE code — TS2339 — the case where over-grouping is most tempting and, per §11, most destructive. §5.1 rule 3 (`same 2339 in the same file ⇒ one root`) is deliberately NOT applied, and this is its witness: each interface is misread twice, so a rule keyed on file+code would fold all four under a single header and hide one of the two bugs behind a counter. The engine instead keys on `declaredAt` and reports `4 errors · 1 file · 2 root causes` — Widget's two folded, Gauge's two folded, the two causes kept apart. Unlike `two-independent-roots` this fixture does fold within each cause, which is the point: it proves the split survives even when folding is active on both sides."
+  "purpose": "The harder negative control, sibling to `two-independent-roots`. That fixture separates two causes in two files with two different codes; this one puts two causes in ONE file under ONE code — TS2339 — the case where over-grouping is most tempting and, per §11, most destructive. §5.1 rule 3 (`same 2339 in the same file ⇒ one root`) is deliberately NOT applied, and this is its witness: each interface is misread twice, so a rule keyed on file+code would fold all four under a single header and hide one of the two bugs behind a counter. The engine instead keys on `declaredAt` and reports `4 errors · 1 file · 2 root causes` — Widget's two folded, Gauge's two folded, the two causes kept apart. Unlike `two-independent-roots` this fixture does fold within each cause, which is the point: it proves the split survives even when folding is active on both sides.",
+  "rootCauseFiles": [
+    "src/dashboard.ts"
+  ]
 }

@@ -10,5 +10,9 @@
     "causality-false-positive-guard"
   ],
   "difficulty": "easy",
-  "purpose": "Negative control. Zero causality false positives on this fixture is a Definition of Done criterion (PROJECT.md §12): the two diagnostics must never be reported as one root and one derived."
+  "purpose": "Negative control. Zero causality false positives on this fixture is a Definition of Done criterion (PROJECT.md §12): the two diagnostics must never be reported as one root and one derived.",
+  "rootCauseFiles": [
+    "src/reporting/export.ts",
+    "src/billing/invoice.ts"
+  ]
 }

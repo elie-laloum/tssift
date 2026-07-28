@@ -1,5 +1,5 @@
 {
-  "rootCause": "The barrel src/domain/index.ts re-exports its members explicitly, and `OrderId` was dropped from the list when a `export * from \"./order\"` was replaced by named re-exports. src/domain/order.ts still exports `OrderId` correctly. Three modules \u2014 src/billing/invoice.ts, src/shipping/label.ts and src/reporting/summary.ts \u2014 import that same symbol through the barrel and all three fail.",
+  "rootCause": "The barrel src/domain/index.ts re-exports its members explicitly, and `OrderId` was dropped from the list when a `export * from \"./order\"` was replaced by named re-exports. src/domain/order.ts still exports `OrderId` correctly. Three modules — src/billing/invoice.ts, src/shipping/label.ts and src/reporting/summary.ts — import that same symbol through the barrel and all three fail.",
   "expectedFix": "Re-export `OrderId` from src/domain/index.ts alongside `Order`. Neither src/domain/order.ts nor any of the three consumers should change.",
   "tags": [
     "barrel",
@@ -10,5 +10,8 @@
     "TS2724"
   ],
   "difficulty": "easy",
-  "purpose": "The only fixture where one root cause is consumed by three separate files, and the only one whose cause is a MODULE rather than a type declaration. It exists because of a negative result on real code: removing an export from a real barrel in `lekes` produced no cascade at all, its 11 importers each consuming a DIFFERENT symbol (eval/corpus.json records the entry that was withdrawn for this reason). A barrel only cascades when several modules want the same symbol, so this fixture is built that way on purpose. It is also the witness that keeps the trio from being two-thirds single-file. It is also the reason TS2724 is in CONTEXT_CAPTURE_CODES: TypeScript emits 2724 rather than 2305 here, because `Order` is a near match for `OrderId` \u2014 which of the two fires depends on the names, not on the failure."
+  "purpose": "The only fixture where one root cause is consumed by three separate files, and the only one whose cause is a MODULE rather than a type declaration. It exists because of a negative result on real code: removing an export from a real barrel in `lekes` produced no cascade at all, its 11 importers each consuming a DIFFERENT symbol (eval/corpus.json records the entry that was withdrawn for this reason). A barrel only cascades when several modules want the same symbol, so this fixture is built that way on purpose. It is also the witness that keeps the trio from being two-thirds single-file. It is also the reason TS2724 is in CONTEXT_CAPTURE_CODES: TypeScript emits 2724 rather than 2305 here, because `Order` is a near match for `OrderId` — which of the two fires depends on the names, not on the failure.",
+  "rootCauseFiles": [
+    "src/domain/index.ts"
+  ]
 }

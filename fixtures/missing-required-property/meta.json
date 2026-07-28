@@ -1,7 +1,20 @@
 {
   "rootCause": "src/accounts/profile.ts declares `Profile` with a required `locale`, added when the product went multilingual. Three construction sites still build the two-field shape: src/accounts/signup.ts, src/testing/fixtures.ts and src/import/csv.ts.",
   "expectedFix": "Supply a locale at the three construction sites, or make `locale` optional in src/accounts/profile.ts. One decision at the declaration settles all three diagnostics.",
-  "tags": ["missing-property", "object-literal", "cross-file", "single-root", "related-info", "TS2741"],
+  "tags": [
+    "missing-property",
+    "object-literal",
+    "cross-file",
+    "single-root",
+    "related-info",
+    "TS2741"
+  ],
   "difficulty": "easy",
-  "purpose": "The sharpest open question in the project, committed as a fixture. Like `nullable-chain` it does not fold — 2741 is not captured, so three lone roots are reported. Unlike `nullable-chain`, THE STRUCTURAL LINK IS ALREADY PRINTED: every one of the three carries a relatedInformation reading `src/accounts/profile.ts:10:3: 'locale' is declared here.` So the report names the shared cause three times and still declines to group on it. That is design question 2 of the P1 plan — does a related span count as a declaredAt? — which was closed as MOOT because TS2554 resolved through getResolvedSignature() instead. This fixture is the case where it is not moot, and it is deliberately left unfolded until the eval justifies the rule (rule 8, PROJECT.md §5.1). Loosening on a related span is not free: a related points wherever the compiler found it useful, which is not always the cause."
+  "purpose": "The sharpest open question in the project, committed as a fixture. Like `nullable-chain` it does not fold — 2741 is not captured, so three lone roots are reported. Unlike `nullable-chain`, THE STRUCTURAL LINK IS ALREADY PRINTED: every one of the three carries a relatedInformation reading `src/accounts/profile.ts:10:3: 'locale' is declared here.` So the report names the shared cause three times and still declines to group on it. That is design question 2 of the P1 plan — does a related span count as a declaredAt? — which was closed as MOOT because TS2554 resolved through getResolvedSignature() instead. This fixture is the case where it is not moot, and it is deliberately left unfolded until the eval justifies the rule (rule 8, PROJECT.md §5.1). Loosening on a related span is not free: a related points wherever the compiler found it useful, which is not always the cause.",
+  "rootCauseFiles": [
+    "src/accounts/profile.ts",
+    "src/accounts/signup.ts",
+    "src/testing/fixtures.ts",
+    "src/import/csv.ts"
+  ]
 }

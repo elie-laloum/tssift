@@ -1,7 +1,16 @@
 {
   "rootCause": "A typo, not a change. src/http/response.ts spells `statusCode` correctly; src/http/logging.ts and src/http/retry.ts both read `statusCod`, having been written by copying one another.",
   "expectedFix": "Spell `statusCode` at the two call sites. src/http/response.ts is correct.",
-  "tags": ["typo", "suggestion", "do-not-degrade", "TS2551"],
+  "tags": [
+    "typo",
+    "suggestion",
+    "do-not-degrade",
+    "TS2551"
+  ],
   "difficulty": "easy",
-  "purpose": "The guard for the one recipe rule that says LEAVE IT ALONE: 'TS2551 is already good natively — above all do not degrade it' (AGENTS.md, enricher recipe, step 7). TypeScript's own message carries the answer in it — `Did you mean 'statusCode'?` — so any enricher tempted to restate it can only lose. The snapshot pins that suggestion verbatim, so a future P2 enricher that reformats 2551 breaks a test rather than quietly shipping a worse message. Also the only fixture whose root cause is not a change to a declaration: nothing in response.ts was ever edited, which is why nothing here is derived from anything."
+  "purpose": "The guard for the one recipe rule that says LEAVE IT ALONE: 'TS2551 is already good natively — above all do not degrade it' (AGENTS.md, enricher recipe, step 7). TypeScript's own message carries the answer in it — `Did you mean 'statusCode'?` — so any enricher tempted to restate it can only lose. The snapshot pins that suggestion verbatim, so a future P2 enricher that reformats 2551 breaks a test rather than quietly shipping a worse message. Also the only fixture whose root cause is not a change to a declaration: nothing in response.ts was ever edited, which is why nothing here is derived from anything.",
+  "rootCauseFiles": [
+    "src/http/logging.ts",
+    "src/http/retry.ts"
+  ]
 }

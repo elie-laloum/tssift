@@ -1,7 +1,17 @@
 {
   "rootCause": "src/geometry/shape.ts declares `Rect` with four required members; `width` and `height` were added when the layout engine moved from points to boxes. Three construction sites in src/layout/canvas.ts still build the two-field `{ x, y }` shape, so each is missing the same two members.",
   "expectedFix": "Supply `width` and `height` at the three construction sites, or give them defaults in the `Rect` declaration. One decision at the declaration settles all three diagnostics.",
-  "tags": ["missing-property", "object-literal", "cross-file", "single-root", "TS2739"],
+  "tags": [
+    "missing-property",
+    "object-literal",
+    "cross-file",
+    "single-root",
+    "TS2739"
+  ],
   "difficulty": "easy",
-  "purpose": "The witness for TS2739, the twin of 2741 in the ten of §5.2, which had no fixture. 2739 fires when two or more required members are missing and 2741 when exactly one is, so this fixture is the multi-missing counterpart of `missing-required-property`: same single cause at a declaration, three usage sites, but the compiler names two members instead of one. Like its twin it does not fold — neither 2739 nor 2741 is captured — so the three diagnostics are reported as three lone roots sharing the `Rect` declaration, the exact case a future 2739/2741 enricher would collapse on `declaredAt`. Committed to make that gap a number, not an intention (rule 8)."
+  "purpose": "The witness for TS2739, the twin of 2741 in the ten of §5.2, which had no fixture. 2739 fires when two or more required members are missing and 2741 when exactly one is, so this fixture is the multi-missing counterpart of `missing-required-property`: same single cause at a declaration, three usage sites, but the compiler names two members instead of one. Like its twin it does not fold — neither 2739 nor 2741 is captured — so the three diagnostics are reported as three lone roots sharing the `Rect` declaration, the exact case a future 2739/2741 enricher would collapse on `declaredAt`. Committed to make that gap a number, not an intention (rule 8).",
+  "rootCauseFiles": [
+    "src/geometry/shape.ts",
+    "src/layout/canvas.ts"
+  ]
 }

@@ -13,5 +13,8 @@
     "related-information"
   ],
   "difficulty": "easy",
-  "purpose": "The worked example of PROJECT.md §6, and the only witness for a TS2345 carrying both a message chain (TS2345 → TS2741) and a related entry pointing at the declaration in another file."
+  "purpose": "The worked example of PROJECT.md §6, and the only witness for a TS2345 carrying both a message chain (TS2345 → TS2741) and a related entry pointing at the declaration in another file.",
+  "rootCauseFiles": [
+    "src/api/user.ts"
+  ]
 }

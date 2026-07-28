@@ -1,8 +1,17 @@
 {
   "rootCause": "Nothing in the project's own code is wrong. The project is installed under Yarn Plug'n'Play: there is no node_modules directory at all, and `@acme/http` lives at .yarn/unplugged/@acme-http-npm-1.2.0-a1b2c3d4e5/node_modules/@acme/http, reachable only through the map in .pnp.cjs. A compiler run as a plain Node process never loads that map, so its module resolution walks node_modules directories that do not exist and reports three unresolved imports of a package that is present, declared in package.json, and pinned in yarn.lock.",
   "expectedFix": "Run the typechecker under the PnP runtime — `yarn tsc --noEmit`, which loads .pnp.cjs first — or install the editor SDKs (`yarn dlx @yarnpkg/sdks`). The source files are correct and no edit to them makes the diagnostics go away.",
-  "tags": ["yarn-pnp", "installer-topology", "no-node-modules", "module-resolution", "cross-file", "false-cascade", "TS2307"],
+  "tags": [
+    "yarn-pnp",
+    "installer-topology",
+    "no-node-modules",
+    "module-resolution",
+    "cross-file",
+    "false-cascade",
+    "TS2307"
+  ],
   "difficulty": "hard",
   "purpose": "Covers the `projet Yarn PnP, sans node_modules` category of §7 and §9.1, and is the only fixture whose `before/` contains no bug. Every other fixture here is broken source; this one is correct source read by a process that cannot resolve it, so its three diagnostics are an artefact of how the compiler was launched. That makes it two witnesses in one. It is the second of the two fixtures the deferred §5.1 derivation rule for 2307 is waiting for — all three diagnostics name the same specifier — and it is the standing reminder that tssift itself is a plain Node process: under PnP it will produce exactly this output unless it is launched through the runtime, which is a property of the tool worth stating in the README rather than discovering in an issue.",
-  "deviatesFromCanonicalConfig": "Keeps the canonical compilerOptions block and adds `include: [\"src\"]`, so the committed .yarn/unplugged tree is not pulled in as sources. The committed install is the deviation: yarn.lock is git-ignored at the repo root and re-included under fixtures/ on purpose (.gitignore). Two things here are hand-written rather than generated, and both say so in their own header: .pnp.cjs carries the registry data in the older readable `packageRegistryData` shape without the resolution hook a real one installs (Yarn >= 3.3 emits a `RAW_RUNTIME_STATE` JSON string instead), and the yarn.lock checksums are placeholders. Nothing here is ever installed or executed — these are files to be read (rule 10)."
+  "deviatesFromCanonicalConfig": "Keeps the canonical compilerOptions block and adds `include: [\"src\"]`, so the committed .yarn/unplugged tree is not pulled in as sources. The committed install is the deviation: yarn.lock is git-ignored at the repo root and re-included under fixtures/ on purpose (.gitignore). Two things here are hand-written rather than generated, and both say so in their own header: .pnp.cjs carries the registry data in the older readable `packageRegistryData` shape without the resolution hook a real one installs (Yarn >= 3.3 emits a `RAW_RUNTIME_STATE` JSON string instead), and the yarn.lock checksums are placeholders. Nothing here is ever installed or executed — these are files to be read (rule 10).",
+  "rootCauseFiles": []
 }

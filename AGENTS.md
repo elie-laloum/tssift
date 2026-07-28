@@ -75,8 +75,8 @@ Jalon en cours : **B1**, plan d'exécution `.plans/2026-07-28_b1.md`, avec crit�
 1. ~~**Quatre fixtures** pour atteindre les vingt de §8~~ — **T0 livré le 2026-07-28.** La dernière catégorie de §7 (`missing-type-import`, TS1484) est couverte ; toutes les catégories de §7 le sont désormais. Les trois créneaux libres ont pris `cannot-find-name` (TS2304, la seconde moitié de la liste de racines de §5.1), `missing-multiple-properties` (TS2739) et `two-roots-one-file` (le témoin négatif dur).
 2. ~~**La règle 2307 de §5.1**~~ — **T1 livré le 2026-07-28.** Écrite dans `pipeline/causality.ts` (seconde passe, clé = spécificateur non résolu) ; `phantom`/`yarn-pnp` 3 → 1, `wrong-tsconfig-paths` 4 → 2, pliage à cause unique porté à **8/17**.
 3. **La garde Yarn PnP** (T2) — refus en sortie 2 en couche `run.ts` quand `.pnp.cjs` est présent hors runtime PnP et qu'au moins un TS2307 est rendu ; la bibliothèque continue de plier `yarn-pnp-project`.
-4. **Un corpus réel figé plus large** (T3) — `EVAL.md` § « Limites du corpus » : trois mutations d'un seul dépôt.
-5. **Le bras modèle B1** (T4), harnais maison sur l'API Messages, qui demande une clé d'API.
+4. **Un corpus réel figé plus large** (T3) — `EVAL.md` § « Limites du corpus » : trois mutations d'un seul dépôt. **Non commencé.**
+5. **Le bras modèle B1** (T4) — **harnais livré et validé le 2026-07-28**, `eval/agent/` (`mise exec -- bun run eval:agent`), boucle tool-use sur `fetch` sans dépendance, deux bras A/B, trois outils, `claude-sonnet-4-5` `temperature: 0`, n=5, `rootCauseFiles` ajouté à chaque `meta.json` comme vérité terrain du faux départ. **Le balayage payant (230 runs) attend `ANTHROPIC_API_KEY`** — non présente dans l'environnement ; aucun run modèle fait. Détail et protocole dans `EVAL.md` § B1.
 
 C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
 

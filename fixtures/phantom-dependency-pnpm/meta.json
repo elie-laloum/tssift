@@ -1,8 +1,22 @@
 {
   "rootCause": "Three source files import `qs`, which is not in the `dependencies` of package.json. It is a transitive dependency of `@acme/http`, and pnpm's node_modules is not flat: `qs` is linked into node_modules/.pnpm/@acme+http@1.2.0/node_modules/ and never at the top level, so nothing the project itself imports can reach it. Under npm, yarn (node-modules) or bun the same code resolves, because hoisting puts `qs` at the top level.",
   "expectedFix": "Declare `qs` in the `dependencies` of package.json — the project uses it directly, so it is its dependency, not @acme/http's. Alternatively route the calls through @acme/http, which is the package that legitimately depends on it.",
-  "tags": ["pnpm", "phantom-dependency", "installer-topology", "module-resolution", "cross-file", "single-root", "TS2307"],
+  "tags": [
+    "pnpm",
+    "phantom-dependency",
+    "installer-topology",
+    "module-resolution",
+    "cross-file",
+    "single-root",
+    "TS2307"
+  ],
   "difficulty": "medium",
   "purpose": "Covers the `dépendance fantôme sous installateur strict` category of §7 and §9.1, and is one of the two fixtures the deferred §5.1 derivation rule for 2307 is waiting for. What it is alone in carrying is that the TS message is *the same message* in all four installers while the truth behind it is installer-specific: `Cannot find module 'qs'` says nothing about hoisting, nothing about the package being installed and reachable one level down, and nothing about the same source compiling under npm. Everything that would say it is in files a declarative reader can open — package.json, pnpm-lock.yaml, and the .pnpm layout — which is exactly the material the P2 2307 enricher is specified to read (rule 10: read, never invoke a package manager). @acme/http is committed alongside and resolves correctly, so the fixture also witnesses the negative: the topology is real, not simply absent.",
-  "deviatesFromCanonicalConfig": "Keeps the canonical compilerOptions block and adds `include: [\"src\"]`, so that the committed node_modules/ tree is not pulled into the program as sources. The committed tree itself is the deviation: node_modules/ and pnpm-lock.yaml are git-ignored at the repo root and re-included under fixtures/ on purpose (.gitignore). The symlinks are pnpm's real layout; a Windows checkout without symlink support would not reproduce it, and Windows is out of scope for v0.1."
+  "deviatesFromCanonicalConfig": "Keeps the canonical compilerOptions block and adds `include: [\"src\"]`, so that the committed node_modules/ tree is not pulled into the program as sources. The committed tree itself is the deviation: node_modules/ and pnpm-lock.yaml are git-ignored at the repo root and re-included under fixtures/ on purpose (.gitignore). The symlinks are pnpm's real layout; a Windows checkout without symlink support would not reproduce it, and Windows is out of scope for v0.1.",
+  "rootCauseFiles": [
+    "package.json",
+    "src/api-client.ts",
+    "src/callback.ts",
+    "src/upload.ts"
+  ]
 }

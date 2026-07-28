@@ -347,3 +347,33 @@ Deux pièges rencontrés en le construisant, tous deux encodés dans le script :
 `nextp/dev-tools/cursor-rules/hooks` porte **TypeScript 6.0.3**. Il n'était pas prévu au protocole, et il rend sur du code réel le service que le job de garde CI est censé rendre en laboratoire : `tssift` y **sort en 2** avec un message qui nomme la version résolue, son chemin et la plage supportée. Aucun mode dégradé, aucun avertissement sur stderr suivi d'un run bancal.
 
 C'est la première confirmation hors laboratoire que le refus fonctionne, et elle vaut d'être notée : un dépôt en TS 6 traînait déjà sur la machine de développement avant que la première ligne de code du projet soit écrite. La contrainte de PROJECT.md §3 n'est pas une précaution théorique.
+
+---
+
+## B1 — le bras modèle (harnais construit, T4 de B1)
+
+**Étage B1, distinct de B0.** B0 (tout ce qui précède) ne compare que deux textes et n'appelle aucun modèle. B1 met un vrai agent dans la boucle et mesure son **comportement** — c'est là que H1 se teste sur autre chose qu'un compte de caractères.
+
+### Protocole (reproductible depuis cette section seule)
+
+Harnais maison sous `eval/agent/` (`mise exec -- bun run eval:agent`), **sans dépendance runtime** : boucle tool-use sur `fetch` global de Node 20 contre `POST https://api.anthropic.com/v1/messages`, pas de SDK. Par cible, deux bras qui ne diffèrent **que** par le cadrage initial du diagnostic :
+
+- **A** = la sortie brute de `tsc --noEmit --pretty false`.
+- **B** = la sortie du **CLI réel** de tssift (`run()`), en `agent-text` — donc B reflète aussi les refus de la garde PnP (T2) : sur `yarn-pnp-project`, le bras B reçoit la sortie 2 « Yarn PnP », pas un rapport.
+
+Même **prompt système** fixe, mêmes **trois outils que nous implémentons** (`read_file`, `write_file`, `run_typecheck`, confinés à une copie jetable de `before/`), même plafond de tours (**12**). Modèle **`claude-sonnet-4-5`**, `temperature: 0` (reproductible run à run ; ce modèle l'accepte, contrairement aux tiers à thinking adaptatif), **n = 5**. Cible : les **20 fixtures** + les **3 entrées de corpus** = 23 cibles × 2 bras × 5 = **230 runs**.
+
+### Les quatre métriques, et d'où elles sortent
+
+| métrique | ce qu'elle teste | source dans le harnais |
+|---|---|---|
+| correction au 1er essai | H2 | `run_typecheck` final à 0 diagnostic |
+| tours avant vert | H1 + H2 | compteur de boucle |
+| **taux de faux départ** | **H1, le cœur** | un `write_file` **hors** de l'ensemble racine autorisé, intercepté à l'appel |
+| régressions | garde-fou | run non résolu après édition |
+
+**Le faux départ est la métrique porteuse**, et elle exige une vérité terrain machine-lisible : `rootCauseFiles` a été ajouté à chaque `meta.json` (T4-prep) — l'ensemble des chemins qu'un correctif valide (au sens de `expectedFix`) peut toucher. Écrire hors de cet ensemble est un faux départ. `yarn-pnp-project` porte `rootCauseFiles: []` : son `before/` n'a aucun bug, donc **toute** écriture y est un faux départ — et c'est la démonstration nette de H1 attendue là, le bras B refusant (l'agent ne touche rien) quand le bras A montre trois TS2307 bidons qui poussent à éditer du code correct.
+
+### État : harnais livré et validé, balayage en attente de la clé
+
+Le harnais compile, passe biome, et sa machinerie hors-API est **vérifiée** : le bac à sable copie `before/`, `run_typecheck` relance le `tsc` du dépôt, le bras A rend le `tsc` brut, le bras B rend l'`agent-text` (et le refus PnP en sortie 2), `write_file` enregistre chaque chemin, et une écriture hors racine est refusée. **Aucun run modèle n'a encore été fait** : `ANTHROPIC_API_KEY` n'est pas dans l'environnement de cette session. Le balayage payant (~quelques dizaines de $, tarifs à vérifier au lancement) attend la clé — `ANTHROPIC_API_KEY=… mise exec -- bun run eval:agent`, avec `AGENT_SMOKE=1` d'abord pour un contrôle de boucle gratuit (une fixture, n=1) avant les 230 runs. **Les chiffres seront reportés ici tels qu'obtenus, y compris s'ils n'infirment pas H2.**

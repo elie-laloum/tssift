@@ -12,5 +12,8 @@
     "deep-chain"
   ],
   "difficulty": "medium",
-  "purpose": "The only witness for deep and branching message chains. TS2769 nests three TS2772 siblings at depth 1, each carrying one leaf at depth 2, and attaches three TS6500 related entries. The prefix-traversal encoding of PROJECT.md §4 has to survive this shape."
+  "purpose": "The only witness for deep and branching message chains. TS2769 nests three TS2772 siblings at depth 1, each carrying one leaf at depth 2, and attaches three TS6500 related entries. The prefix-traversal encoding of PROJECT.md §4 has to survive this shape.",
+  "rootCauseFiles": [
+    "src/transport/client.ts"
+  ]
 }

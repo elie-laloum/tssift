@@ -11,5 +11,11 @@
     "TS2339"
   ],
   "difficulty": "medium",
-  "purpose": "Two things no other fixture covers. First, a cause that is a TYPE ALIAS OF A UNION rather than an interface or a module — the corpus showed that 2339 on a union can resolve to the type-literal (result.ts:12:4) while 2353 on the same type resolves to the alias (result.ts:11:1), which is the sub-grouping asymmetry PROJECT.md §5.1 accepts; here all eight resolve to the alias and fold completely, so the two behaviours are both committed and comparable. Second, it is the only fixture where one root cause produces a SECOND ORDER of diagnostics: the failed narrowing on `kind` leaves the value un-narrowed, so `.radius` and `.side` fail as a consequence of a consequence. Both orders fold onto the same declaration, which is the behaviour to watch if the causality threshold is ever loosened."
+  "purpose": "Two things no other fixture covers. First, a cause that is a TYPE ALIAS OF A UNION rather than an interface or a module — the corpus showed that 2339 on a union can resolve to the type-literal (result.ts:12:4) while 2353 on the same type resolves to the alias (result.ts:11:1), which is the sub-grouping asymmetry PROJECT.md §5.1 accepts; here all eight resolve to the alias and fold completely, so the two behaviours are both committed and comparable. Second, it is the only fixture where one root cause produces a SECOND ORDER of diagnostics: the failed narrowing on `kind` leaves the value un-narrowed, so `.radius` and `.side` fail as a consequence of a consequence. Both orders fold onto the same declaration, which is the behaviour to watch if the causality threshold is ever loosened.",
+  "rootCauseFiles": [
+    "src/geometry/shape.ts",
+    "src/geometry/area.ts",
+    "src/render/label.ts",
+    "src/render/legend.ts"
+  ]
 }

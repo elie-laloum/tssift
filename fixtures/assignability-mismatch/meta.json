@@ -1,7 +1,20 @@
 {
   "rootCause": "src/pricing/currency.ts line 6 declares `type Currency = \"EUR\" | \"USD\"`. The member \"GBP\" was dropped when the UK price list was retired. Three modules still use it: src/pricing/catalog.ts and src/billing/quote.ts build a `Rate` with it, and src/reporting/ledger.ts annotates a constant with `Currency` directly.",
   "expectedFix": "Restore \"GBP\" in the `Currency` union at src/pricing/currency.ts:6, or stop using it at the three sites. Nothing about `Rate` or its `currency` property is wrong.",
-  "tags": ["union-member-removed", "assignability", "cross-file", "single-root", "related-info", "TS2322"],
+  "tags": [
+    "union-member-removed",
+    "assignability",
+    "cross-file",
+    "single-root",
+    "related-info",
+    "TS2322"
+  ],
   "difficulty": "easy",
-  "purpose": "THE COUNTER-EXAMPLE THAT SETTLES DESIGN QUESTION 2 OF THE P1 PLAN — may a relatedInformation span be used as a group key? This fixture answers no, by construction rather than by argument. Two of its three diagnostics carry a related pointing at src/pricing/currency.ts:9:3, the `currency` PROPERTY of `Rate`. That line is correct code and the reader must not change it; the cause is line 6, the union that lost a member. The third diagnostic — a direct annotation in src/reporting/ledger.ts — carries no related at all. So a related-span rule would fold two of three, head the group with a line that needs no edit, and silently leave the third out. A related points wherever the compiler found it useful for explaining THAT diagnostic, which is not the same thing as the cause. Compare with `missing-required-property`, where the related does point at the cause: the two fixtures together show the rule is unsound, not merely unproven."
+  "purpose": "THE COUNTER-EXAMPLE THAT SETTLES DESIGN QUESTION 2 OF THE P1 PLAN — may a relatedInformation span be used as a group key? This fixture answers no, by construction rather than by argument. Two of its three diagnostics carry a related pointing at src/pricing/currency.ts:9:3, the `currency` PROPERTY of `Rate`. That line is correct code and the reader must not change it; the cause is line 6, the union that lost a member. The third diagnostic — a direct annotation in src/reporting/ledger.ts — carries no related at all. So a related-span rule would fold two of three, head the group with a line that needs no edit, and silently leave the third out. A related points wherever the compiler found it useful for explaining THAT diagnostic, which is not the same thing as the cause. Compare with `missing-required-property`, where the related does point at the cause: the two fixtures together show the rule is unsound, not merely unproven.",
+  "rootCauseFiles": [
+    "src/pricing/currency.ts",
+    "src/pricing/catalog.ts",
+    "src/billing/quote.ts",
+    "src/reporting/ledger.ts"
+  ]
 }
