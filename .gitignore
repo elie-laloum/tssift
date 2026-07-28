@@ -4,6 +4,10 @@ dist/
 coverage/
 .DS_Store
 
+# Local endpoint config for the B1 model arm (eval/agent). Holds an API key —
+# never commit it. Loaded by `bun run eval:agent` via node --env-file-if-exists.
+.env
+
 # Un seul lockfile est commité : bun.lock. Un second lockfile commité est un
 # piège à dérive de versions — AGENTS.md § « Stack & commandes », PROJECT.md §9.1.
 package-lock.json

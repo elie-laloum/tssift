@@ -65,7 +65,9 @@ function fixtureTargets(repoRoot: string): Target[] {
       const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as {
         rootCauseFiles?: string[];
       };
-      if (!meta.rootCauseFiles?.length) {
+      // An empty array is valid — yarn-pnp-project has no bug, so any write is a
+      // false start. Only a genuinely absent field is the T4 prerequisite error.
+      if (!Array.isArray(meta.rootCauseFiles)) {
         throw new Error(`fixtures/${name}/meta.json is missing rootCauseFiles (T4 prerequisite)`);
       }
       return { name, before: join(root, name, "before"), rootCauseFiles: meta.rootCauseFiles };
@@ -105,13 +107,17 @@ function tssiftText(sandboxDir: string): string {
 async function main(): Promise<void> {
   const baseUrl = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
   const apiKey = process.env.OPENAI_API_KEY;
-  // A key is required for a hosted endpoint; a custom base URL (a local server)
-  // may not need one, so we only insist when the default host is in play.
-  if (!apiKey && !process.env.OPENAI_BASE_URL) {
+  // A key is required for any remote host; only a localhost server may go
+  // keyless. This catches an empty key against a hosted endpoint before the
+  // sweep fires a doomed 401.
+  const localHost = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|\/|$)/i.test(
+    baseUrl,
+  );
+  if (!apiKey && !localHost) {
     process.stderr.write(
-      "Cannot run the model arm: no OpenAI-compatible endpoint is configured.\n" +
-        "  looked for: process.env.OPENAI_API_KEY (and OPENAI_BASE_URL)\n" +
-        "  set OPENAI_API_KEY for the default host, or OPENAI_BASE_URL to point at a local server, and re-run.\n",
+      "Cannot run the model arm: OPENAI_API_KEY is empty for a remote endpoint.\n" +
+        `  base URL: ${baseUrl}\n` +
+        "  set OPENAI_API_KEY (in .env or the environment), or point OPENAI_BASE_URL at a local server, and re-run.\n",
     );
     process.exitCode = 2;
     return;
