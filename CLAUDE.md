@@ -12,7 +12,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 
 1. `AGENTS.md` (importé ci-dessus) — les règles dures
 2. `PROJECT.md` — la spec produit, seule source de vérité pour le modèle de données (§4) et la table des enrichisseurs (§5.2)
-3. `.plans/` — les trois plans sont **clos** : `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau). **Il n'y a pas de plan courant pour B1** ; c'est la première chose à écrire si le jalon s'ouvre pour de bon.
+3. `.plans/2026-07-28_b1.md` — **le plan courant** : le séquencement exécutable de B1 (vingt fixtures, règle 2307, corpus élargi, harnais modèle), avec critères d'acceptation et ce qui demande un feu vert humain. Les trois autres sont **clos** : `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
 4. `EVAL.md` — les chiffres priment sur les intentions
 
 **P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; seul `pipeline/enrich/` est vide, c'est P2 et il est fermé par la porte de décision §7. Depuis le 2026-07-28 le corpus de fixtures est à **16** (cible : 20) et la suite passe à **390 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.

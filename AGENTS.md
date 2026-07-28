@@ -66,7 +66,7 @@ La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md
 
 **2307 est maintenant le code le plus témoigné parmi ceux qui ne plient pas — et le seul dont la règle est déjà écrite.** §5.1 la spécifie depuis le premier jour, elle ne demande aucun code de capture supplémentaire, et le motif « le modèle n'a pas encore le spécificateur non résolu » était **faux** : `ProgramFacts.imports` porte tous les spécificateurs tels qu'écrits, résolus ou non (vérifié le 2026-07-28 ; le commentaire de `src/types.ts` disait le contraire, corrigé). Le vrai blocage était l'absence de fixture, et il est levé. Ce que les trois fixtures apprennent sur la forme de la règle est dans PROJECT.md §5.1 et `EVAL.md` — en résumé : la cascade est *de* 2307 et non *depuis* un 2307, la clé est le **spécificateur** et jamais le fichier, et regrouper tous les 2307 d'un projet serait un sur-regroupement.
 
-Prochain jalon : **B1**. Ce qu'il reste, dans l'ordre où ça se tient :
+Prochain jalon : **B1**, et son plan d'exécution est écrit — `.plans/2026-07-28_b1.md`, avec critères d'acceptation et ce qui demande un feu vert humain. Ce qu'il reste, dans l'ordre où ça se tient :
 
 1. **Quatre fixtures** pour atteindre les vingt de §8 — dont la seule catégorie de §7 encore non couverte, « import de type manquant ».
 2. **La règle 2307 de §5.1**, désormais débloquée et testable ; à concevoir en plan mode, comme toute règle de dérivation.
@@ -75,7 +75,7 @@ Prochain jalon : **B1**. Ce qu'il reste, dans l'ordre où ça se tient :
 
 C'est la porte de décision de PROJECT.md §7 : **P2 (enrichissement) et le serveur MCP restent fermés tant que B1 n'a pas parlé** (règle 8).
 
-`.plans/2026-07-27_p1-causality.md` est clos ; son tableau d'avancement porte ce que chaque tâche a réellement donné, y compris là où le plan s'est trompé.
+`.plans/2026-07-27_p1-causality.md` est clos, comme `_p0-b0.md` et `_prior-art.md` ; leurs tableaux d'avancement portent ce que chaque tâche a réellement donné, y compris là où le plan s'est trompé.
 
 **Six faits établis en P1 et confirmés depuis, qu'il ne faut pas redécouvrir :**
 - **Une cause n'est presque jamais un diagnostic.** Dans 100 % des groupes mesurés, aucun membre ne se trouve sur sa propre cause — renommer un champ laisse la déclaration valide et casse ses *usages*. D'où un groupe dont l'en-tête est une **déclaration** (`DiagnosticGroup`, PROJECT.md §4 et §6).
