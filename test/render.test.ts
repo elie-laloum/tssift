@@ -25,6 +25,10 @@ const FIXTURES = [
   "monorepo-cross-package",
   "phantom-dependency-pnpm",
   "yarn-pnp-project",
+  "missing-type-import",
+  "cannot-find-name",
+  "missing-multiple-properties",
+  "two-roots-one-file",
 ] as const;
 
 /**

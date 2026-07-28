@@ -15,7 +15,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 3. `.plans/2026-07-28_b1.md` — **le plan courant** : le séquencement exécutable de B1 (vingt fixtures, règle 2307, corpus élargi, harnais modèle), avec critères d'acceptation et ce qui demande un feu vert humain. Les trois autres sont **clos** : `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
 4. `EVAL.md` — les chiffres priment sur les intentions
 
-**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; seul `pipeline/enrich/` est vide, c'est P2 et il est fermé par la porte de décision §7. Depuis le 2026-07-28 le corpus de fixtures est à **16** (cible : 20) et la suite passe à **390 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
+**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; seul `pipeline/enrich/` est vide, c'est P2 et il est fermé par la porte de décision §7. Depuis le 2026-07-28 le corpus de fixtures est à **20** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **452 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 

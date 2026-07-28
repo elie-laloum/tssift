@@ -1,0 +1,7 @@
+{
+  "rootCause": "`Cents` was a shared type alias declared in src/money.ts. That module was deleted in a refactor and its import removed from src/billing/invoice.ts, but the seven references to the name were left in place. Each is now an undeclared name.",
+  "expectedFix": "Restore the `Cents` alias — reintroduce src/money.ts and its import, or declare the type locally. One declaration settles all seven diagnostics; they are not seven independent bugs.",
+  "tags": ["undeclared-name", "single-file", "single-root", "cascade", "TS2304"],
+  "difficulty": "easy",
+  "purpose": "The first fixture to exercise TS2304 (`Cannot find name`), which §5.1 classes a quasi-certain root alongside 2307 yet which no fixture produced until now — the threshold had never been confronted with half of its own root list. Seven references to one missing name in one file: a genuine single-cause cascade whose structure mirrors 2307 (the name gives every use an error type and nothing cascades further, so all seven are 2304, none derived from anything else). It does not fold today — 2304 is not in `src/codes.ts` and no 2304 derivation is written — so it stands as the measurable gap a future name-keyed root rule would close, the sibling of the still-unwritten 2307 rule. The key would be the missing name, never the line."
+}

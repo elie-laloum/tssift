@@ -21,7 +21,7 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**390 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **16**, premier morceau de B1 (§8 lot B : « 20 fixtures »). Les quatre dernières épuisent les catégories de **configuration** de §7 et sont les seules à dévier du tsconfig canonique ; deux d'entre elles portent une **arborescence installée commitée** (liens `.pnpm`, projet PnP sans `node_modules`), ce qui demande les exceptions `!fixtures/**/…` du `.gitignore`.
+**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**452 tests**). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **20** — la cible de §8 lot B est atteinte (**T0 de B1**). Un lot intermédiaire a dévié du tsconfig canonique pour épuiser les catégories de **configuration** de §7, dont deux fixtures portent une **arborescence installée commitée** (liens `.pnpm`, projet PnP sans `node_modules`) demandant les exceptions `!fixtures/**/…` du `.gitignore` ; le dernier lot (T0) ajoute la dernière catégorie de §7, `missing-type-import`, deux cascades témoins et un second témoin négatif.
 
 Ce qui existe : les **16** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7.
 
@@ -39,37 +39,41 @@ Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
-**Les seize fixtures et ce que chacune est seule à couvrir.**
+**Les vingt fixtures et ce que chacune est seule à couvrir.**
 
 | fixture | codes | plie | ce qu'elle est seule à porter |
 |---|---|---|---|
 | `partial-interface-rename` | 2353 · 2339 · 2345 | 3 → 1 | l'exemple de §6 ; trois codes sur une déclaration |
-| `two-independent-roots` | 2307 · 2339 | **0 %** | le témoin négatif de la DoD (§12) |
+| `two-independent-roots` | 2307 · 2339 | **0 %** | le témoin négatif de la DoD (§12) ; deux racines, deux fichiers, deux codes |
 | `overload-mismatch` | 2769 | — | chaîne à trois niveaux, trois `related` |
 | `broken-barrel-export` | 2724 | 3 → 1 | cause = **module** ; trois fichiers sur un symbole |
 | `arity-changed` | 2554 | 4 → 1 | le jumeau **commité** de la plus grosse cascade de l'éval ; seule à dépasser le plafond d'affichage |
 | `narrowed-union-member` | 2339 | 8 → 1 | cause = **alias d'union** ; seule cascade **de second ordre** |
 | `nullable-chain` | 18047 | **0 %** | cascade réelle que le seuil refuse — rien n'est capturé |
 | `missing-required-property` | 2741 | **0 %** | un `related` qui **désigne bien** la cause, et reste inutilisé |
+| `missing-multiple-properties` | 2739 | **0 %** | le jumeau **multi-membres** de 2741 ; le témoin qui manquait à 2739 |
 | `assignability-mismatch` | 2322 | **0 %** | un `related` qui **désigne la mauvaise ligne** — la réfutation de la règle « related » |
 | `misspelled-property` | 2551 | **0 %** | le garde du « ne pas dégrader » : la suggestion native est épinglée au snapshot |
 | `unconstrained-generic` | 2536 · 2322 | **0 %** | la seule où les diagnostics sont **sur** leur propre cause |
 | `value-used-as-type` | 2749 | **0 %** | **aucun** lien structurel d'aucune sorte — le bord extérieur du seuil |
+| `missing-type-import` | 1484 | **0 %** | la dernière catégorie de §7 ; un **type importé comme valeur** (`verbatimModuleSyntax`) |
+| `cannot-find-name` | 2304 | **0 %** | la **seconde moitié** de la liste de racines de §5.1 ; une cascade d'un seul nom manquant |
 | `wrong-tsconfig-paths` | 2307 | **0 %** | cause = une ligne de **`tsconfig.json`**, donc dans aucun fichier du programme |
 | `monorepo-cross-package` | 2339 | 4 → 1 | cause dans un **autre paquet** ; le garde-fou « hors programme » doit ici *admettre* |
 | `phantom-dependency-pnpm` | 2307 | **0 %** | topologie **pnpm** commitée ; même message TS pour une vérité propre à l'installateur |
 | `yarn-pnp-project` | 2307 | **0 %** | le seul `before/` **sans bug** : du code juste, mal lu, faute du runtime PnP |
+| `two-roots-one-file` | 2339 | 4 → **2** | le témoin négatif **dur** : deux racines, **un fichier, un code** — deux groupes, pas un |
 
-**Le chiffre à connaître : sur les quatorze fixtures qui sont des cascades à cause unique, le seuil en plie cinq.** Les neuf autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage ne tient donc pas à une propriété générale des cascades TypeScript mais à **la liste de six codes de `src/codes.ts`**. Elles sont commitées pour rendre ce manque **mesurable** plutôt qu'anecdotique, pas pour être corrigées tout de suite : cinq des codes manquants sont dans la table des dix de §5.2 et attendent les chiffres (règle 8).
+**Le chiffre à connaître : sur les dix-sept fixtures qui sont des cascades à cause unique, le seuil en plie cinq.** Les douze autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage ne tient donc pas à une propriété générale des cascades TypeScript mais à **la liste de six codes de `src/codes.ts`**. Elles sont commitées pour rendre ce manque **mesurable** plutôt qu'anecdotique, pas pour être corrigées tout de suite : plusieurs des codes manquants sont dans la table des dix de §5.2 et attendent les chiffres (règle 8). *(Les trois exclues du dénombrement : `overload-mismatch`, un seul diagnostic, et les deux témoins négatifs à plusieurs racines, `two-independent-roots` et `two-roots-one-file`.)*
 
-**Le rapport a baissé de 4/10 à 5/14 en une journée, et c'est de la composition, pas une régression** : les quatre entrantes visaient les catégories de configuration, dont trois sont mécaniquement des TS2307. Aucune ligne de code n'a bougé entre les deux mesures.
+**Le rapport a baissé de 4/10 à 5/14 puis à 5/17 sur la journée, et c'est de la composition, pas une régression** : chaque lot entrant visait des catégories que le seuil ne plie pas — configuration (dont trois TS2307), puis la dernière catégorie de §7 et deux cascades témoins. Aucune ligne de code moteur n'a bougé entre les mesures ; les cinq pliages sont identiques au caractère près.
 
 **2307 est maintenant le code le plus témoigné parmi ceux qui ne plient pas — et le seul dont la règle est déjà écrite.** §5.1 la spécifie depuis le premier jour, elle ne demande aucun code de capture supplémentaire, et le motif « le modèle n'a pas encore le spécificateur non résolu » était **faux** : `ProgramFacts.imports` porte tous les spécificateurs tels qu'écrits, résolus ou non (vérifié le 2026-07-28 ; le commentaire de `src/types.ts` disait le contraire, corrigé). Le vrai blocage était l'absence de fixture, et il est levé. Ce que les trois fixtures apprennent sur la forme de la règle est dans PROJECT.md §5.1 et `EVAL.md` — en résumé : la cascade est *de* 2307 et non *depuis* un 2307, la clé est le **spécificateur** et jamais le fichier, et regrouper tous les 2307 d'un projet serait un sur-regroupement.
 
-Prochain jalon : **B1**, et son plan d'exécution est écrit — `.plans/2026-07-28_b1.md`, avec critères d'acceptation et ce qui demande un feu vert humain. Ce qu'il reste, dans l'ordre où ça se tient :
+Jalon en cours : **B1**, plan d'exécution `.plans/2026-07-28_b1.md`, avec critères d'acceptation et ce qui demande un feu vert humain. Ce qu'il reste, dans l'ordre où ça se tient :
 
-1. **Quatre fixtures** pour atteindre les vingt de §8 — dont la seule catégorie de §7 encore non couverte, « import de type manquant ».
-2. **La règle 2307 de §5.1**, désormais débloquée et testable ; à concevoir en plan mode, comme toute règle de dérivation.
+1. ~~**Quatre fixtures** pour atteindre les vingt de §8~~ — **T0 livré le 2026-07-28.** La dernière catégorie de §7 (`missing-type-import`, TS1484) est couverte ; toutes les catégories de §7 le sont désormais. Les trois créneaux libres ont pris `cannot-find-name` (TS2304, la seconde moitié de la liste de racines de §5.1), `missing-multiple-properties` (TS2739) et `two-roots-one-file` (le témoin négatif dur).
+2. **La règle 2307 de §5.1**, désormais débloquée et testable ; à concevoir en plan mode, comme toute règle de dérivation. **C'est le prochain travail.**
 3. **Un corpus réel figé plus large** — `EVAL.md` § « Limites du corpus » explique pourquoi celui d'aujourd'hui ne suffit pas : trois mutations d'un seul dépôt.
 4. **Le harnais d'agent**, qui demande une clé d'API et donc un feu vert explicite.
 
@@ -269,7 +273,7 @@ fixtures/<nom-kebab>/
 
 `rootCause` et `expectedFix` sont la vérité terrain que lira le harnais d'éval — ils décrivent le correctif, et c'est leur rôle ; la règle 1 porte sur les `Fact.text` produits par l'outil, pas sur les métadonnées de fixture. `tags` porte les codes TS attendus (`TS2769`…), ce qui rend visible en diff le jour où une version de TS change de code. `purpose` est **optionnel** et dit pourquoi la fixture existe — ce qu'elle est le seul témoin à couvrir, ou ce qu'elle ne doit jamais produire. `deviatesFromCanonicalConfig` est **optionnel et obligatoire dès qu'il y a déviation** : il nomme ligne à ligne ce qui s'écarte du bloc canonique ci-dessous, sans quoi un lecteur ne peut pas distinguer un écart voulu d'une fixture écrite de travers.
 
-Catégories à couvrir (PROJECT.md §7) : barrel export cassé ✓ · renommage d'interface partiel ✓ · erreur de surcharge ✓ · générique mal contraint ✓ · module absent ✓ · nullabilité ✓ · union discriminée mal narrowée ✓ · **import de type manquant** · mauvais `paths` tsconfig ✓ · monorepo cross-package ✓ · dépendance fantôme sous pnpm ✓ · projet Yarn PnP ✓. **Il en reste une non couverte**, plus quelques fixtures libres pour atteindre les vingt de §8 lot B.
+Catégories à couvrir (PROJECT.md §7) : barrel export cassé ✓ · renommage d'interface partiel ✓ · erreur de surcharge ✓ · générique mal contraint ✓ · module absent ✓ · nullabilité ✓ · union discriminée mal narrowée ✓ · import de type manquant ✓ (`missing-type-import`, TS1484) · mauvais `paths` tsconfig ✓ · monorepo cross-package ✓ · dépendance fantôme sous pnpm ✓ · projet Yarn PnP ✓. **Toutes les catégories de §7 sont couvertes**, et les vingt de §8 lot B sont atteintes (T0 de B1).
 
 Les deux fixtures d'installateur demandaient une arborescence installée réaliste, et elle est **commitée** depuis le 2026-07-28 : `phantom-dependency-pnpm` porte les liens symboliques `node_modules/.pnpm/…` de pnpm, `yarn-pnp-project` porte un `.pnp.cjs` et un `.yarn/unplugged/` sans le moindre `node_modules`. La commiter plutôt que de la générer au moment du test est ce qui rend la fixture reproductible sans réseau et sans que pnpm ni yarn soient installés localement — ils ne le sont pas. Deux conséquences à connaître : `node_modules/`, `pnpm-lock.yaml` et `yarn.lock` sont réadmis sous `fixtures/` par des exceptions du `.gitignore`, et les lockfiles y sont **écrits à la main**, leurs `checksum` étant des marqueurs et non de vrais hachages — chaque fichier le dit dans son en-tête, parce qu'un faux hachage d'apparence crédible est un piège.
 

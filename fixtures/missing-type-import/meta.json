@@ -1,0 +1,8 @@
+{
+  "rootCause": "tsconfig.json sets `verbatimModuleSyntax: true`. src/model/user.ts is a types-only module, but src/api/handler.ts and src/audit/log.ts pull `User` and `Session` in with plain value imports. Under verbatim module syntax an import of a name used only as a type must carry the `type` modifier, or the emitter would keep an import of a runtime binding that was never emitted.",
+  "expectedFix": "Add the `type` modifier at each import: `import type { User, Session }` in src/api/handler.ts and `import type { User }` in src/audit/log.ts. The types resolve and are declared correctly; only the form of the import is wrong.",
+  "tags": ["type-only-import", "verbatim-module-syntax", "cross-file", "TS1484"],
+  "difficulty": "easy",
+  "purpose": "Covers the `import de type manquant` category of §7 — the last §7 category without a witness. It is the only fixture in the family of value-vs-type import errors (TS1484), the complement of `value-used-as-type` (a value used where a type is expected, TS2749): here a type is imported as though it were a value. It does not fold — TS1484 is not in the ten of §5.2 and not captured — and it is a cross-file pattern rather than a single slip, so it also witnesses that three diagnostics of one code across two files are reported as three lone roots when no derivation rule links them. The module resolves cleanly, so this is emphatically not a TS2307: the fix is a keyword, not a dependency.",
+  "deviatesFromCanonicalConfig": "Adds `verbatimModuleSyntax: true` to the canonical block. The strictness of the import form is the subject of the fixture (§7)."
+}

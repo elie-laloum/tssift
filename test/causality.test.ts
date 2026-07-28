@@ -83,6 +83,34 @@ describe("causality · two-independent-roots (Definition of Done, PROJECT.md §1
   });
 });
 
+describe("causality · two-roots-one-file (the harder negative control)", () => {
+  // Two independent causes in ONE file under ONE code (TS2339): the case where
+  // §5.1 rule 3 ("same 2339 in the same file ⇒ one root") is most tempting to
+  // apply and most destructive if applied. Grouping keys on `declaredAt`, so the
+  // two interfaces must yield two groups — folding within each, never across.
+  const { report } = analyse("two-roots-one-file");
+
+  it("splits into two groups on two distinct declarations, not one merged group", () => {
+    expect(report.groups).toHaveLength(2);
+    const causes = report.groups
+      .map((g) => g.cause.symbol)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    expect(causes.map((s) => s.name)).toEqual(["Gauge", "Widget"]);
+    expect(causes.every((s) => s.kind === "interface")).toBe(true);
+    expect(causes.every((s) => s.declaredAt.file === "src/dashboard.ts")).toBe(true);
+    // Distinct declaration sites — the reason they are not merged.
+    expect(causes[0]?.declaredAt.line).not.toBe(causes[1]?.declaredAt.line);
+  });
+
+  it("folds two diagnostics under each cause, all TS2339", () => {
+    for (const group of report.groups) {
+      expect(group.members).toHaveLength(2);
+    }
+    expect(report.diagnostics).toHaveLength(4);
+    expect(report.diagnostics.every((d) => d.code === 2339)).toBe(true);
+  });
+});
+
 describe("causality · partial-interface-rename", () => {
   const { report } = analyse("partial-interface-rename");
 

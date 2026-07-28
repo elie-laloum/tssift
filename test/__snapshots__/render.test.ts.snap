@@ -86,6 +86,70 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export with -
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders cannot-find-name 1`] = `
+"root: fixtures/cannot-find-name/before
+7 errors · 1 file
+
+[1] src/billing/invoice.ts:5:13 error TS2304: Cannot find name 'Cents'.
+
+[2] src/billing/invoice.ts:6:8 error TS2304: Cannot find name 'Cents'.
+
+[3] src/billing/invoice.ts:7:10 error TS2304: Cannot find name 'Cents'.
+
+[4] src/billing/invoice.ts:10:40 error TS2304: Cannot find name 'Cents'.
+
+[5] src/billing/invoice.ts:14:29 error TS2304: Cannot find name 'Cents'.
+
+[6] src/billing/invoice.ts:14:39 error TS2304: Cannot find name 'Cents'.
+
+[7] src/billing/invoice.ts:14:47 error TS2304: Cannot find name 'Cents'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders cannot-find-name with --all 1`] = `
+"root: fixtures/cannot-find-name/before
+7 errors · 1 file
+
+[1] src/billing/invoice.ts:5:13 error TS2304: Cannot find name 'Cents'.
+
+[2] src/billing/invoice.ts:6:8 error TS2304: Cannot find name 'Cents'.
+
+[3] src/billing/invoice.ts:7:10 error TS2304: Cannot find name 'Cents'.
+
+[4] src/billing/invoice.ts:10:40 error TS2304: Cannot find name 'Cents'.
+
+[5] src/billing/invoice.ts:14:29 error TS2304: Cannot find name 'Cents'.
+
+[6] src/billing/invoice.ts:14:39 error TS2304: Cannot find name 'Cents'.
+
+[7] src/billing/invoice.ts:14:47 error TS2304: Cannot find name 'Cents'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-multiple-properties 1`] = `
+"root: fixtures/missing-multiple-properties/before
+3 errors · 1 file
+
+[1] src/layout/canvas.ts:6:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+
+[2] src/layout/canvas.ts:9:3 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+
+[3] src/layout/canvas.ts:12:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-multiple-properties with --all 1`] = `
+"root: fixtures/missing-multiple-properties/before
+3 errors · 1 file
+
+[1] src/layout/canvas.ts:6:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+
+[2] src/layout/canvas.ts:9:3 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+
+[3] src/layout/canvas.ts:12:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property 1`] = `
 "root: fixtures/missing-required-property/before
 3 errors · 3 files
@@ -113,6 +177,30 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property w
 
 [3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
     related src/accounts/profile.ts:10:3: 'locale' is declared here.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-type-import 1`] = `
+"root: fixtures/missing-type-import/before
+3 errors · 2 files
+
+[1] src/api/handler.ts:4:10 error TS1484: 'User' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+
+[2] src/api/handler.ts:4:16 error TS1484: 'Session' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+
+[3] src/audit/log.ts:3:10 error TS1484: 'User' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-type-import with --all 1`] = `
+"root: fixtures/missing-type-import/before
+3 errors · 2 files
+
+[1] src/api/handler.ts:4:10 error TS1484: 'User' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+
+[2] src/api/handler.ts:4:16 error TS1484: 'Session' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+
+[3] src/audit/log.ts:3:10 error TS1484: 'User' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
 "
 `;
 
@@ -344,6 +432,36 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with 
 [1] src/billing/invoice.ts:10:15 error TS2339: Property 'quantity' does not exist on type 'LineItem'.
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders two-roots-one-file 1`] = `
+"root: fixtures/two-roots-one-file/before
+4 errors · 1 file · 2 root causes
+
+[1] cause: interface 'Gauge' declared at src/dashboard.ts:11:1
+    2 diagnostics, all TS2339
+    src/dashboard.ts:23:12 error TS2339: Property 'upper' does not exist on type 'Gauge'.
+    src/dashboard.ts:23:22 error TS2339: Property 'lower' does not exist on type 'Gauge'.
+
+[2] cause: interface 'Widget' declared at src/dashboard.ts:6:1
+    2 diagnostics, all TS2339
+    src/dashboard.ts:18:15 error TS2339: Property 'title' does not exist on type 'Widget'.
+    src/dashboard.ts:18:28 error TS2339: Property 'caption' does not exist on type 'Widget'.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders two-roots-one-file with --all 1`] = `
+"root: fixtures/two-roots-one-file/before
+4 errors · 1 file
+
+[1] src/dashboard.ts:18:15 error TS2339: Property 'title' does not exist on type 'Widget'.
+
+[2] src/dashboard.ts:18:28 error TS2339: Property 'caption' does not exist on type 'Widget'.
+
+[3] src/dashboard.ts:23:12 error TS2339: Property 'upper' does not exist on type 'Gauge'.
+
+[4] src/dashboard.ts:23:22 error TS2339: Property 'lower' does not exist on type 'Gauge'.
 "
 `;
 

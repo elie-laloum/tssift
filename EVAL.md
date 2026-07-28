@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-28 (corpus de fixtures porté à seize)
+**Dernière mise à jour :** 2026-07-28 (corpus de fixtures porté à vingt — T0 de B1)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -132,29 +132,33 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | monorepo-cross-package | fixture | 5.9.3 | 4 | 1 | **75 %** | 416 | 569 | 137 % | 104 | 142 |
 | phantom-dependency-pnpm | fixture | 5.9.3 | 3 | **3** | **0 %** | 303 | 404 | 133 % | 76 | 101 |
 | yarn-pnp-project | fixture | 5.9.3 | 3 | **3** | **0 %** | 331 | 425 | 128 % | 83 | 106 |
+| missing-type-import | fixture | 5.9.3 | 3 | **3** | **0 %** | 430 | 527 | 123 % | 108 | 132 |
+| cannot-find-name | fixture | 5.9.3 | 7 | **7** | **0 %** | 493 | 598 | 121 % | 123 | 150 |
+| missing-multiple-properties | fixture | 5.9.3 | 3 | **3** | **0 %** | 429 | 533 | 124 % | 107 | 133 |
+| **two-roots-one-file** | fixture | 5.9.3 | 4 | **2** | **50 %** | 356 | 654 | 184 % | 89 | 164 |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 21 cibles mesurées : diagnostics A = 332 → entrées B = 63 (pliage de 81 %). Caractères A = 45 058, B = 15 587, soit B/A = 35 %.**
+**Totaux sur les 25 cibles mesurées : diagnostics A = 349 → entrées B = 78 (pliage de 78 %). Caractères A = 46 766, B = 17 899, soit B/A = 38 %.**
 
-*Les quatre dernières lignes de fixture datent du 2026-07-28, mesurées le même jour, même corpus, même TypeScript. Le total bouge de 31 % à 35 % pour la raison déjà écrite plus bas : quatre petites cibles de plus, toutes au-dessus de 100 %. À périmètre constant, rien n'a changé d'un caractère.*
+*Les quatre lignes `missing-type-import`, `cannot-find-name`, `missing-multiple-properties` et `two-roots-one-file` datent du 2026-07-28 (T0 de B1), mesurées le même jour, même corpus, même TypeScript. Le total bouge de 35 % à 38 % pour la raison déjà écrite plus bas : trois petites cibles de plus à 121–124 %, plus `two-roots-one-file` à 184 %. À périmètre constant, rien n'a changé d'un caractère — retirer ces quatre lignes redonne exactement A = 332 → B = 63 et 35 %.*
 
-### Le chiffre que seize fixtures permettent de donner : **5 sur 14**
+### Le chiffre que vingt fixtures permettent de donner : **5 sur 17**
 
-Seize fixtures, dont deux ne peuvent structurellement rien plier — `overload-mismatch` n'a qu'un diagnostic, et `two-independent-roots` est le témoin négatif dont le pliage nul **est** le critère. Restent **quatorze cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **cinq** :
+Vingt fixtures, dont trois ne sont pas des cascades à cause unique : `overload-mismatch` n'a qu'un diagnostic, et **deux témoins négatifs à plusieurs racines** — `two-independent-roots` (deux causes, deux fichiers, deux codes) et `two-roots-one-file` (deux causes, un fichier, un code). Restent **dix-sept cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **cinq** :
 
 | plie | ne plie pas |
 |---|---|
-| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `wrong-tsconfig-paths` (2307) · `phantom-dependency-pnpm` (2307) · `yarn-pnp-project` (2307) |
+| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `missing-multiple-properties` (2739) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `missing-type-import` (1484) · `cannot-find-name` (2304) · `wrong-tsconfig-paths` (2307) · `phantom-dependency-pnpm` (2307) · `yarn-pnp-project` (2307) |
 
 **C'est la mesure la plus utile produite depuis le chiffre de H1, et elle n'est pas flatteuse.** Elle dit que le pliage ne repose pas sur une propriété générale des cascades TypeScript mais sur **la liste de six codes de `src/codes.ts`** : hors de cette liste, une cascade parfaitement réelle est rendue à plat. Elle dit aussi ce que coûterait l'inverse — les non-pliages sortent entre **117 % et 225 %**, soit très exactement le surcoût de P0 que P1 était censé effacer.
 
-**Le rapport a baissé en passant de douze à seize fixtures — 4/10 le 2026-07-28 au matin, 5/14 le soir — et c'est de la composition, pas une régression.** Les quatre entrantes visaient les catégories de **configuration** de §7 (mauvais `paths`, monorepo, pnpm, PnP), et trois d'entre elles sont mécaniquement des TS2307. Aucune ligne de code n'a bougé entre les deux mesures ; les cinq pliages et les six non-pliages du premier chiffre sont identiques au caractère près.
+**Le rapport a baissé de fixture en fixture — 4/10 le 2026-07-28 au matin, 5/14 dans la journée, 5/17 le soir (T0 de B1) — et c'est de la composition, pas une régression.** Le troisième lot visait les catégories de **configuration** de §7, trois d'entre elles des TS2307 ; le quatrième (T0) ajoute la dernière catégorie de §7 non couverte, `missing-type-import` (TS1484), plus deux cascades témoins de codes non capturés — `cannot-find-name` (TS2304) et `missing-multiple-properties` (TS2739) — et un second témoin négatif, `two-roots-one-file`, qui n'entre pas au dénominateur puisqu'il a deux racines. Aucune ligne de code moteur n'a bougé d'une mesure à l'autre ; les cinq pliages sont identiques au caractère près, seule la liste des non-pliages s'allonge.
 
-À noter que ce n'est pas un plafond de conception, et le troisième lot le rend plus vrai qu'avant :
+À noter que ce n'est pas un plafond de conception, et chaque lot le rend plus vrai qu'avant :
 
-- cinq des six codes du premier chiffre (18047 · 2741 · 2322 · 2551, plus 2739) sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; le sixième, 2749, est différent — voir plus bas ;
+- 18047 · 2741 · 2739 · 2322 · 2551 sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; 2749 et 1484 sont hors table (format natif assumé), et 2304 est la deuxième moitié de la liste de racines de §5.1 — voir plus bas ;
 - **2307 est désormais le code le plus témoigné de tous ceux qui ne plient pas** — trois fixtures, dix diagnostics — et il ne demande **aucun code de capture supplémentaire**. Sa règle de dérivation est écrite dans §5.1 depuis le premier jour et ne travaille que sur `ProgramFacts.imports`, que P0 remplit déjà. Elle n'était pas différée par manque de données mais par manque de fixture, et ce manque-là vient d'être comblé. Détail ci-dessous.
 
 ### `assignability-mismatch` tranche la question de conception n° 2 — et la réponse est non
@@ -198,7 +202,16 @@ Le code y est correct, `@acme/http` est déclaré dans `package.json`, verrouill
 
 **Conséquence sur tssift lui-même, à écrire dans le README plutôt qu'à découvrir dans une issue : tssift est un processus Node nu.** Sous un projet PnP il produira exactement cette sortie — trois erreurs plausibles et entièrement fausses — s'il n'est pas lancé au travers du runtime (`yarn tssift`). C'est le mode de défaillance le plus coûteux imaginable pour un outil dont l'argument est « faites confiance à la hiérarchisation » : rien n'est signalé, la sortie a l'air normale. La règle 15 interdit le repli silencieux ; il faudra décider si détecter un `.pnp.cjs` sans `process.versions.pnp` relève de la sortie 2.
 
-**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les neuf lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+### Les quatre fixtures de T0 — la dernière catégorie de §7, et le témoin négatif dur
+
+Le quatrième lot porte le corpus à vingt et **ferme la liste des catégories de §7**. Aucun des quatre ne plie, et pour trois d'entre eux c'est le comportement voulu.
+
+- **`missing-type-import` (TS1484)** couvre la dernière catégorie de §7 sans témoin, « import de type manquant ». `verbatimModuleSyntax` est activé et deux fichiers importent des types avec un import de valeur : trois TS1484, le module résolvant parfaitement — ce n'est donc pas un TS2307, le correctif est un mot-clé et non une dépendance. C'est le complément de `value-used-as-type` (une valeur en position de type, 2749) : ici un type en position de valeur. Hors table des dix, il sort au format natif, et il témoigne au passage que trois diagnostics d'un même code sur deux fichiers restent trois racines isolées faute de lien de dérivation.
+- **`cannot-find-name` (TS2304)** est la première fixture à produire 2304, que §5.1 classe **racine quasi certaine** au même titre que 2307 et qu'aucune fixture n'exerçait — le seuil n'avait jamais vu que la moitié de sa propre liste de racines. Sept références à un seul nom manquant dans un fichier : une vraie cascade à cause unique dont la structure calque celle de 2307 (le nom donne un type d'erreur à chaque usage, rien ne cascade au-delà). Elle ne plie pas — 2304 n'est ni capturé ni dérivé — donc elle chiffre le manque qu'une future règle indexée sur le nom manquant comblerait, sœur de la règle 2307 non écrite.
+- **`missing-multiple-properties` (TS2739)** est le jumeau multi-membres de `missing-required-property` (2741) : trois sites de construction, deux membres requis manquants au lieu d'un, tous pointant la déclaration de `Rect`. Comme son jumeau il ne plie pas — ni 2739 ni 2741 n'est capturé — et il donne enfin un témoin à 2739, présent dans la table des dix sans fixture jusqu'ici.
+- **`two-roots-one-file` (TS2339)** est le témoin négatif dur, sœur de `two-independent-roots`. Là où celle-ci sépare deux causes dans deux fichiers sous deux codes, celle-ci met **deux causes dans un fichier sous un seul code** — le cas où le sur-regroupement est le plus tentant et, selon §11, le plus destructeur. La règle 3 de §5.1 (« mêmes 2339 dans le même fichier ⇒ une racine ») est délibérément **non** appliquée, et c'est ici qu'elle se vérifie : chaque interface est mal lue deux fois, donc une règle indexée sur fichier + code replierait les quatre sous un seul en-tête et cacherait un des deux bugs derrière un compteur. Le moteur indexe sur `declaredAt` et rend `4 errors · 1 file · 2 root causes` — les deux de `Widget` pliés, les deux de `Gauge` pliés, les deux causes tenues à part. Contrairement à `two-independent-roots`, cette fixture **plie** de chaque côté (4 → 2), et c'est précisément l'intérêt : la séparation survit même quand le pliage est actif sur les deux racines. Un test nommé la garde.
+
+**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize, 38 % à vingt : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les treize lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
 
 ### Ce que les fixtures de pliage ont appris
 

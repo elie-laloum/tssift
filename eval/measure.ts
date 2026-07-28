@@ -122,6 +122,18 @@ const TARGETS: Target[] = [
     project: "fixtures/phantom-dependency-pnpm/before",
   },
   { name: "yarn-pnp-project", kind: "fixture", project: "fixtures/yarn-pnp-project/before" },
+  {
+    name: "missing-type-import",
+    kind: "fixture",
+    project: "fixtures/missing-type-import/before",
+  },
+  { name: "cannot-find-name", kind: "fixture", project: "fixtures/cannot-find-name/before" },
+  {
+    name: "missing-multiple-properties",
+    kind: "fixture",
+    project: "fixtures/missing-multiple-properties/before",
+  },
+  { name: "two-roots-one-file", kind: "fixture", project: "fixtures/two-roots-one-file/before" },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },
