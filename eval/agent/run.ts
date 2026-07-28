@@ -4,19 +4,24 @@
  * difference is the initial diagnostic framing. Each arm runs n times on a fresh
  * sandbox copy, and the four §7 metrics fall straight out of the loop.
  *
- *   ANTHROPIC_API_KEY=…  mise exec -- bun run eval:agent
+ * Drives an OpenAI-compatible Chat Completions endpoint:
  *
- * Env knobs: AGENT_N (runs per arm, default 5), AGENT_MODEL, AGENT_MAX_TURNS,
- * AGENT_SMOKE=1 (one fixture, n=1 — a free-ish loop check before the sweep),
- * AGENT_TARGETS=a,b,c (restrict to named targets).
+ *   OPENAI_API_KEY=…  mise exec -- bun run eval:agent
+ *   OPENAI_BASE_URL=http://localhost:1234/v1  AGENT_MODEL=…  mise exec -- bun run eval:agent
+ *
+ * Env knobs: OPENAI_BASE_URL (default https://api.openai.com/v1), OPENAI_API_KEY
+ * (required unless a custom base URL is set — local servers often need none),
+ * AGENT_MODEL (default gpt-4o-mini), AGENT_N (runs per arm, default 5),
+ * AGENT_MAX_TURNS (default 12), AGENT_SMOKE=1 (one fixture, n=1 — a cheap loop
+ * check before the sweep), AGENT_TARGETS=a,b,c (restrict to named targets).
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { run as tssiftRun } from "../../src/run.js";
-import { runAgent } from "./anthropic.js";
 import { aggregate, type RunResult, toTable } from "./metrics.js";
+import { type ModelEndpoint, runAgent } from "./model.js";
 import { makeSandbox } from "./sandbox.js";
 import { executeTool, TOOLS, type ToolContext, typecheck } from "./tools.js";
 
@@ -98,12 +103,15 @@ function tssiftText(sandboxDir: string): string {
 }
 
 async function main(): Promise<void> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  const baseUrl = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+  const apiKey = process.env.OPENAI_API_KEY;
+  // A key is required for a hosted endpoint; a custom base URL (a local server)
+  // may not need one, so we only insist when the default host is in play.
+  if (!apiKey && !process.env.OPENAI_BASE_URL) {
     process.stderr.write(
-      "Cannot run the model arm: ANTHROPIC_API_KEY is not set.\n" +
-        "  looked for: process.env.ANTHROPIC_API_KEY\n" +
-        "  this arm makes paid Anthropic Messages API calls; export the key and re-run.\n",
+      "Cannot run the model arm: no OpenAI-compatible endpoint is configured.\n" +
+        "  looked for: process.env.OPENAI_API_KEY (and OPENAI_BASE_URL)\n" +
+        "  set OPENAI_API_KEY for the default host, or OPENAI_BASE_URL to point at a local server, and re-run.\n",
     );
     process.exitCode = 2;
     return;
@@ -115,7 +123,11 @@ async function main(): Promise<void> {
   const tscPath = join(dirname(tsMain), "tsc.js");
   const typescriptDir = dirname(dirname(tsMain));
 
-  const model = process.env.AGENT_MODEL ?? "claude-sonnet-4-5";
+  const endpoint: ModelEndpoint = {
+    baseUrl,
+    apiKey,
+    model: process.env.AGENT_MODEL ?? "gpt-4o-mini",
+  };
   const maxTurns = Number(process.env.AGENT_MAX_TURNS) || 12;
   const smoke = process.env.AGENT_SMOKE === "1";
   const n = smoke ? 1 : Number(process.env.AGENT_N) || 5;
@@ -129,7 +141,7 @@ async function main(): Promise<void> {
   }
 
   process.stderr.write(
-    `Model arm: ${model}, ${targets.length} targets × 2 arms × ${n} = ${targets.length * 2 * n} runs\n`,
+    `Model arm: ${endpoint.model} @ ${endpoint.baseUrl}, ${targets.length} targets × 2 arms × ${n} = ${targets.length * 2 * n} runs\n`,
   );
 
   const results: RunResult[] = [];
@@ -143,8 +155,7 @@ async function main(): Promise<void> {
             arm === "A" ? typecheck(tscPath, sandbox.dir).output : tssiftText(sandbox.dir);
           const ctx: ToolContext = { root: sandbox.dir, tscPath, writes: [] };
           const runInfo = await runAgent({
-            apiKey,
-            model,
+            endpoint,
             system: SYSTEM,
             initialUser: initialUser(diagnostics),
             tools: TOOLS,
