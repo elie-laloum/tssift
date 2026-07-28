@@ -24,15 +24,22 @@
  * member as "the root" would have pointed the agent at a test file in 100 % of
  * measured cases.
  *
- * ## Rules NOT implemented here, and why
+ * ## TS2307 — grouped by the unresolved specifier
  *
- * §5.1 also names TS2307 as a near-certain root, deriving through
- * `ProgramFacts.imports`. It is deferred, deliberately and in writing: no corpus
- * entry and no current fixture contains a 2307 *cascade*, and the rule needs a
- * field this model does not yet have (the unresolved specifier — an unresolved
- * module has no declaration to key on). It lands with the fixture that can
- * actually test it. TS2305 needs no such rule: its module *does* resolve, so it
- * is already an identical-`declaredAt` case (12/12 on the corpus).
+ * §5.1 names TS2307 a near-certain root, and the three installer/config fixtures
+ * taught its shape. It is a cascade *of* 2307, not *from* one: an unresolved
+ * import gives its bindings `any`, so nothing downstream errors — every
+ * diagnostic is itself a 2307. And an unresolved module has no declaration to
+ * key on, so the link is the **specifier** (`'qs'`, `'@domain/order'`), read
+ * from the verbatim message and confirmed against `ProgramFacts.imports` for the
+ * failing file. That confirmation is the correctness guard: a specifier the
+ * imports table does not carry — a message whose wording drifted, a form
+ * `collectImports` skips — is left an isolated root rather than risking a merge.
+ * Relative specifiers are never grouped: `./types` from two directories are two
+ * modules, and folding them would be the §11-critical over-group.
+ *
+ * TS2305 needs none of this: its module *does* resolve, so it is already an
+ * identical-`declaredAt` case (12/12 on the corpus).
  *
  * No `typescript` import here, ever (rule 4) — asserted by
  * `test/architecture.test.ts`.
@@ -71,6 +78,32 @@ function groupId(cause: string, site: string): string {
  */
 function anchorOf(diagnostic: NormalizedDiagnostic): SymbolRef | undefined {
   return diagnostic.context?.subject ?? diagnostic.context?.expected;
+}
+
+/** The comparable identity of a cause, per arm — a total order for the ranking. */
+function causeKey(group: DiagnosticGroup): string {
+  return group.cause.kind === "module"
+    ? `module|${group.cause.specifier}`
+    : siteOf(group.cause.symbol.declaredAt);
+}
+
+/**
+ * The unresolved module a TS2307 names — the key its group folds on.
+ *
+ * Read from the verbatim message (`Cannot find module 'X' …`, stable 5.4→5.9)
+ * and only trusted when `ProgramFacts.imports` for the same file carries it. A
+ * relative specifier is never returned: `./x` is file-relative, so the same
+ * string from two directories is two different modules, and grouping them would
+ * be the §11-critical over-group. Anything the imports table cannot confirm is
+ * `undefined`, and the diagnostic stays an isolated root — never a merge.
+ */
+function unresolvedSpecifier(
+  diagnostic: NormalizedDiagnostic,
+  imports: ProgramFacts["imports"],
+): string | undefined {
+  const specifier = /module '([^']+)'/.exec(diagnostic.message)?.[1];
+  if (!specifier || specifier.startsWith(".") || specifier.startsWith("/")) return undefined;
+  return imports[diagnostic.primary.file]?.includes(specifier) ? specifier : undefined;
 }
 
 /**
@@ -147,13 +180,37 @@ export function detectCausality(
     }
   }
 
+  // Second pass — TS2307, keyed on the unresolved specifier. Disjoint from the
+  // declaration pass by construction (a 2307 has no `context`, so it never
+  // anchored above); `!membership.has` keeps the "≤ 1 group per diagnostic"
+  // invariant even if that ever changes. A module has no in-program declaration,
+  // so no member sits on the cause — every member is derived, and the header is
+  // the specifier, not one of its uses.
+  const specBuckets = new Map<string, NormalizedDiagnostic[]>();
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.code !== 2307 || membership.has(diagnostic.id)) continue;
+    const specifier = unresolvedSpecifier(diagnostic, facts.imports);
+    if (!specifier) continue;
+    const bucket = specBuckets.get(specifier);
+    if (bucket) bucket.push(diagnostic);
+    else specBuckets.set(specifier, [diagnostic]);
+  }
+
+  for (const [specifier, members] of specBuckets) {
+    if (members.length < MIN_GROUP_SIZE) continue;
+
+    const id = groupId("module", specifier);
+    groups.push({ id, cause: { kind: "module", specifier }, members: members.map((m) => m.id) });
+    for (const member of members) {
+      membership.set(member.id, { group: id, root: undefined });
+    }
+  }
+
   // Ranked by explanatory power: the first thing the agent reads must be the
-  // thing that explains the most (§5.1). Ties broken on the cause site so the
+  // thing that explains the most (§5.1). Ties broken on the cause key so the
   // order is total and a snapshot cannot flap.
   groups.sort(
-    (a, b) =>
-      b.members.length - a.members.length ||
-      siteOf(a.cause.symbol.declaredAt).localeCompare(siteOf(b.cause.symbol.declaredAt)),
+    (a, b) => b.members.length - a.members.length || causeKey(a).localeCompare(causeKey(b)),
   );
 
   const enriched = diagnostics.map<EnrichedDiagnostic>((diagnostic) => {

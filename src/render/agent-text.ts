@@ -78,7 +78,11 @@ function diagnosticLines(diagnostic: EnrichedDiagnostic, indent: string): string
  * members would put a test file where the explanation belongs.
  */
 function causeLine(group: DiagnosticGroup): string {
-  const { symbol } = group.cause;
+  const { cause } = group;
+  // A module has no declaration to point at: the header names the specifier and
+  // stops. A declaration names its kind, name and site.
+  if (cause.kind === "module") return `cause: unresolved module '${cause.specifier}'`;
+  const { symbol } = cause;
   return `cause: ${symbol.kind} '${symbol.name}' declared at ${at(symbol.declaredAt)}`;
 }
 

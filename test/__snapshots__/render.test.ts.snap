@@ -393,13 +393,13 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename wi
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders phantom-dependency-pnpm 1`] = `
 "root: fixtures/phantom-dependency-pnpm/before
-3 errors · 3 files
+3 errors · 3 files · 1 root cause
 
-[1] src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
-
-[2] src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
-
-[3] src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+[1] cause: unresolved module 'qs'
+    3 diagnostics, all TS2307
+    src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+    src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+    src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
 "
 `;
 
@@ -525,15 +525,15 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders value-used-as-type with --a
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths 1`] = `
 "root: fixtures/wrong-tsconfig-paths/before
-4 errors · 4 files
+4 errors · 4 files · 1 root cause
 
-[1] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
+[1] cause: unresolved module '@domain/order'
+    3 diagnostics, all TS2307
+    src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+    src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+    src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
 
-[2] src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
-
-[3] src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
-
-[4] src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+[2] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
 "
 `;
 
@@ -553,13 +553,13 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths with -
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders yarn-pnp-project 1`] = `
 "root: fixtures/yarn-pnp-project/before
-3 errors · 3 files
+3 errors · 3 files · 1 root cause
 
-[1] src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
-
-[2] src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
-
-[3] src/telemetry.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+[1] cause: unresolved module '@acme/http'
+    3 diagnostics, all TS2307
+    src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+    src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+    src/telemetry.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
 "
 `;
 

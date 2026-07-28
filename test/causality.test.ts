@@ -12,7 +12,12 @@ import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { detectCausality } from "../src/pipeline/causality.js";
 import { MAX_SHOWN_MEMBERS } from "../src/pipeline/group.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
-import type { NormalizedDiagnostic, ProgramFacts, SymbolRef } from "../src/types.js";
+import type {
+  DiagnosticGroup,
+  NormalizedDiagnostic,
+  ProgramFacts,
+  SymbolRef,
+} from "../src/types.js";
 
 function analyse(name: string) {
   const project = fileURLToPath(new URL(`../fixtures/${name}/before`, import.meta.url));
@@ -21,6 +26,14 @@ function analyse(name: string) {
     captureFor: CONTEXT_CAPTURE_CODES,
   });
   return { report: detectCausality(diagnostics, facts), raw: diagnostics, facts };
+}
+
+/** Narrows a group's cause to the declaration arm — and asserts it, for the many tests that read `.symbol`. */
+function declSymbolOf(group: DiagnosticGroup | undefined): SymbolRef {
+  if (group?.cause.kind !== "declaration") {
+    throw new Error(`expected a declaration cause, got ${group?.cause.kind ?? "no group"}`);
+  }
+  return group.cause.symbol;
 }
 
 /* ------------------------------------------------------------------ */
@@ -83,6 +96,80 @@ describe("causality · two-independent-roots (Definition of Done, PROJECT.md §1
   });
 });
 
+describe("causality · phantom-dependency-pnpm (TS2307 folds on the specifier)", () => {
+  // The two-imports-one-fails case. src/api-client.ts imports `@acme/http`
+  // (resolves) AND `qs` (does not). The rule must fold the three `qs` failures
+  // and never touch `@acme/http` — proof the key is the specifier, not the file.
+  const { report } = analyse("phantom-dependency-pnpm");
+
+  it("forms one module group on 'qs', three members", () => {
+    expect(report.groups).toHaveLength(1);
+    const cause = report.groups[0]?.cause;
+    expect(cause?.kind).toBe("module");
+    if (cause?.kind !== "module") throw new Error("expected a module cause");
+    expect(cause.specifier).toBe("qs");
+    expect(report.groups[0]?.members).toHaveLength(3);
+  });
+
+  it("never mentions the specifier that resolves", () => {
+    const specifiers = report.groups.flatMap((g) =>
+      g.cause.kind === "module" ? [g.cause.specifier] : [],
+    );
+    expect(specifiers).not.toContain("@acme/http");
+  });
+
+  it("marks every member derived, none root, all TS2307", () => {
+    expect(report.diagnostics.every((d) => d.code === 2307)).toBe(true);
+    expect(report.diagnostics.every((d) => d.role === "derived")).toBe(true);
+    expect(report.diagnostics.every((d) => d.derivedFrom.length === 0)).toBe(true);
+    expect(new Set(report.diagnostics.map((d) => d.group)).size).toBe(1);
+  });
+});
+
+describe("causality · wrong-tsconfig-paths (one group per specifier, never one for all)", () => {
+  // Four TS2307: three on `@domain/order`, one on `@domain/customer`. The shared
+  // upstream cause (the `paths` line) is in no program file, so the rule keys on
+  // the specifier: `@domain/order` folds 3→1, `@domain/customer` stays a lone
+  // root under MIN_GROUP_SIZE. Grouping all four together would merge two aliases.
+  const { report } = analyse("wrong-tsconfig-paths");
+
+  it("folds only the specifier with two or more sites", () => {
+    expect(report.groups).toHaveLength(1);
+    const cause = report.groups[0]?.cause;
+    if (cause?.kind !== "module") throw new Error("expected a module cause");
+    expect(cause.specifier).toBe("@domain/order");
+    expect(report.groups[0]?.members).toHaveLength(3);
+  });
+
+  it("leaves the lone specifier ungrouped — never merged with the other", () => {
+    const ungrouped = report.diagnostics.filter((d) => d.group === undefined);
+    expect(ungrouped).toHaveLength(1);
+    expect(ungrouped[0]?.message).toContain("@domain/customer");
+    expect(ungrouped[0]?.role).toBe("root");
+  });
+
+  it("renders as two entries, not one", () => {
+    // One folded group plus one lone root = two things the agent reads.
+    const grouped = report.groups.length;
+    const lone = report.diagnostics.filter((d) => d.group === undefined).length;
+    expect(grouped + lone).toBe(2);
+  });
+});
+
+describe("causality · yarn-pnp-project (folds at the library, independent of the CLI guard)", () => {
+  // The T2 PnP refusal lives in run.ts, not the source, so the library still
+  // folds this fixture — which is what makes the 3→1 measurable in the eval.
+  const { report } = analyse("yarn-pnp-project");
+
+  it("folds three '@acme/http' failures into one module group", () => {
+    expect(report.groups).toHaveLength(1);
+    const cause = report.groups[0]?.cause;
+    if (cause?.kind !== "module") throw new Error("expected a module cause");
+    expect(cause.specifier).toBe("@acme/http");
+    expect(report.groups[0]?.members).toHaveLength(3);
+  });
+});
+
 describe("causality · two-roots-one-file (the harder negative control)", () => {
   // Two independent causes in ONE file under ONE code (TS2339): the case where
   // §5.1 rule 3 ("same 2339 in the same file ⇒ one root") is most tempting to
@@ -93,7 +180,7 @@ describe("causality · two-roots-one-file (the harder negative control)", () => 
   it("splits into two groups on two distinct declarations, not one merged group", () => {
     expect(report.groups).toHaveLength(2);
     const causes = report.groups
-      .map((g) => g.cause.symbol)
+      .map((g) => declSymbolOf(g))
       .sort((a, b) => a.name.localeCompare(b.name));
     expect(causes.map((s) => s.name)).toEqual(["Gauge", "Widget"]);
     expect(causes.every((s) => s.kind === "interface")).toBe(true);
@@ -120,10 +207,10 @@ describe("causality · partial-interface-rename", () => {
   });
 
   it("heads the group with the declaration, not with a member", () => {
-    const cause = report.groups[0]?.cause;
-    expect(cause?.kind).toBe("declaration");
-    expect(cause?.symbol.name).toBe("CreateUserInput");
-    expect(cause?.symbol.declaredAt.file).toBe("src/types/user.ts");
+    expect(report.groups[0]?.cause.kind).toBe("declaration");
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.name).toBe("CreateUserInput");
+    expect(symbol.declaredAt.file).toBe("src/types/user.ts");
     // No member sits on the cause, so no member may claim to be the root.
     expect(report.diagnostics.every((d) => d.role === "derived")).toBe(true);
     expect(report.diagnostics.every((d) => d.derivedFrom.length === 0)).toBe(true);
@@ -156,10 +243,10 @@ describe("causality · broken-barrel-export", () => {
   it("names the barrel as the cause, not the module that still exports the symbol", () => {
     // src/domain/order.ts is correct and unchanged. The barrel is what stopped
     // re-exporting, and it is what the reader has to open.
-    const cause = report.groups[0]?.cause;
-    expect(cause?.symbol.kind).toBe("module");
-    expect(cause?.symbol.declaredAt.file).toBe("src/domain/index.ts");
-    expect(cause?.symbol.declaredAt.line).toBe(1);
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.kind).toBe("module");
+    expect(symbol.declaredAt.file).toBe("src/domain/index.ts");
+    expect(symbol.declaredAt.line).toBe(1);
   });
 
   it("folds TS2724, which is what TypeScript actually emits here", () => {
@@ -181,9 +268,10 @@ describe("causality · arity-changed", () => {
   it("folds four call sites onto the signature they all miss an argument for", () => {
     expect(report.groups).toHaveLength(1);
     expect(report.groups[0]?.members).toHaveLength(4);
-    expect(report.groups[0]?.cause.symbol.kind).toBe("function");
-    expect(report.groups[0]?.cause.symbol.name).toBe("auditEvent");
-    expect(report.groups[0]?.cause.symbol.declaredAt.file).toBe("src/audit/event.ts");
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.kind).toBe("function");
+    expect(symbol.name).toBe("auditEvent");
+    expect(symbol.declaredAt.file).toBe("src/audit/event.ts");
   });
 
   it("folds two call sites living in the same file", () => {
@@ -208,8 +296,9 @@ describe("causality · narrowed-union-member", () => {
   it("folds eight diagnostics onto the union's type alias", () => {
     expect(report.groups).toHaveLength(1);
     expect(report.groups[0]?.members).toHaveLength(8);
-    expect(report.groups[0]?.cause.symbol.kind).toBe("type-alias");
-    expect(report.groups[0]?.cause.symbol.name).toBe("Shape");
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.kind).toBe("type-alias");
+    expect(symbol.name).toBe("Shape");
   });
 
   it("folds the second-order diagnostics too", () => {
@@ -401,7 +490,7 @@ describe("causality · roles and ranking", () => {
       FACTS,
     );
     expect(report.groups.map((g) => g.members.length)).toEqual([3, 2]);
-    expect(report.groups[0]?.cause.symbol.name).toBe("Large");
+    expect(declSymbolOf(report.groups[0]).name).toBe("Large");
   });
 
   it("is deterministic, ids included", () => {

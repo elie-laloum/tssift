@@ -120,18 +120,28 @@ export interface EnrichedDiagnostic extends NormalizedDiagnostic {
 /**
  * What the members of a group share.
  *
- * A discriminated union with one arm today. The second arm is already named and
- * dated: TS2307 groups by an *unresolved* module specifier, which by definition
- * has no declaration to point at, so it cannot reuse this one.
+ * A discriminated union. The `declaration` arm is the common case: every member
+ * points at the same declaration. The `module` arm is TS2307's — an *unresolved*
+ * module specifier, which by definition has no declaration to point at, so it
+ * keys on the specifier string itself.
  */
-export type GroupCause = {
-  kind: "declaration";
-  /** The declaration every member points at. `symbol.declaredAt` is the group key. */
-  symbol: SymbolRef;
-};
+export type GroupCause =
+  | {
+      kind: "declaration";
+      /** The declaration every member points at. `symbol.declaredAt` is the group key. */
+      symbol: SymbolRef;
+    }
+  | {
+      kind: "module";
+      /** The unresolved specifier every member imports, as written. It is the group key. */
+      specifier: string;
+    };
 
 export interface DiagnosticGroup {
-  /** sha256(kind|file|line|column) of the cause, first 12 hex — same discipline as `id`. */
+  /**
+   * First 12 hex of a sha256, same discipline as `id`. The key depends on the
+   * cause arm: `declaration` → `kind|file|line|column`, `module` → `module|specifier`.
+   */
   id: string;
   cause: GroupCause;
   /** Member diagnostic ids, in report order. Never fewer than two. */

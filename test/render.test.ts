@@ -185,7 +185,11 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
       const json = JSON.parse(renderJson(input)) as {
         root: string;
         counts: { errors: number; groups: number };
-        groups: Array<{ cause: { symbol: { name: string; declaredAt: { file: string } } } }>;
+        groups: Array<{
+          cause:
+            | { kind: "declaration"; symbol: { name: string; declaredAt: { file: string } } }
+            | { kind: "module"; specifier: string };
+        }>;
         diagnostics: Array<{
           id: string;
           code: number;
@@ -199,10 +203,15 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
       expect(text).toContain(`root: ${json.root}`);
 
       // Group headers rendered in text must be findable in json — this is the
-      // direction rule 14 forbids reversing.
+      // direction rule 14 forbids reversing. A module cause names its specifier
+      // and no declaration site; a declaration cause names its symbol and file.
       for (const group of json.groups) {
-        expect(text).toContain(`'${group.cause.symbol.name}'`);
-        expect(text).toContain(group.cause.symbol.declaredAt.file);
+        if (group.cause.kind === "module") {
+          expect(text).toContain(`'${group.cause.specifier}'`);
+        } else {
+          expect(text).toContain(`'${group.cause.symbol.name}'`);
+          expect(text).toContain(group.cause.symbol.declaredAt.file);
+        }
       }
 
       for (const diagnostic of json.diagnostics) {

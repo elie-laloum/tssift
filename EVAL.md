@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-28 (corpus de fixtures porté à vingt — T0 de B1)
+**Dernière mise à jour :** 2026-07-28 (T1 de B1 — règle 2307 écrite, pliage à 8/17)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -128,10 +128,10 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | misspelled-property | fixture | 5.9.3 | 2 | **2** | **0 %** | 254 | 486 | 191 % | 64 | 122 |
 | unconstrained-generic | fixture | 5.9.3 | 4 | **4** | **0 %** | 448 | 562 | 125 % | 112 | 141 |
 | value-used-as-type | fixture | 5.9.3 | 4 | **4** | **0 %** | 579 | 678 | 117 % | 145 | 170 |
-| wrong-tsconfig-paths | fixture | 5.9.3 | 4 | **4** | **0 %** | 477 | 578 | 121 % | 119 | 145 |
+| wrong-tsconfig-paths | fixture | 5.9.3 | 4 | 2 | **50 %** | 477 | 666 | 140 % | 119 | 167 |
 | monorepo-cross-package | fixture | 5.9.3 | 4 | 1 | **75 %** | 416 | 569 | 137 % | 104 | 142 |
-| phantom-dependency-pnpm | fixture | 5.9.3 | 3 | **3** | **0 %** | 303 | 404 | 133 % | 76 | 101 |
-| yarn-pnp-project | fixture | 5.9.3 | 3 | **3** | **0 %** | 331 | 425 | 128 % | 83 | 106 |
+| phantom-dependency-pnpm | fixture | 5.9.3 | 3 | 1 | **67 %** | 303 | 481 | 159 % | 76 | 120 |
+| yarn-pnp-project | fixture | 5.9.3 | 3 | 1 | **67 %** | 331 | 510 | 154 % | 83 | 128 |
 | missing-type-import | fixture | 5.9.3 | 3 | **3** | **0 %** | 430 | 527 | 123 % | 108 | 132 |
 | cannot-find-name | fixture | 5.9.3 | 7 | **7** | **0 %** | 493 | 598 | 121 % | 123 | 150 |
 | missing-multiple-properties | fixture | 5.9.3 | 3 | **3** | **0 %** | 429 | 533 | 124 % | 107 | 133 |
@@ -140,26 +140,28 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 25 cibles mesurées : diagnostics A = 349 → entrées B = 78 (pliage de 78 %). Caractères A = 46 766, B = 17 899, soit B/A = 38 %.**
+**Totaux sur les 25 cibles mesurées : diagnostics A = 349 → entrées B = 72 (pliage de 79 %). Caractères A = 46 766, B = 18 149, soit B/A = 39 %.**
 
-*Les quatre lignes `missing-type-import`, `cannot-find-name`, `missing-multiple-properties` et `two-roots-one-file` datent du 2026-07-28 (T0 de B1), mesurées le même jour, même corpus, même TypeScript. Le total bouge de 35 % à 38 % pour la raison déjà écrite plus bas : trois petites cibles de plus à 121–124 %, plus `two-roots-one-file` à 184 %. À périmètre constant, rien n'a changé d'un caractère — retirer ces quatre lignes redonne exactement A = 332 → B = 63 et 35 %.*
+*Les quatre lignes `missing-type-import`, `cannot-find-name`, `missing-multiple-properties` et `two-roots-one-file` datent du 2026-07-28 (T0 de B1). Les trois lignes 2307 — `wrong-tsconfig-paths`, `phantom-dependency-pnpm`, `yarn-pnp-project` — ont été **remesurées le même jour après T1** : elles plient désormais (78 → 72 entrées). Fait à ne pas mélire : leur `B/A` de caractères **monte** (121–133 % → 140–159 %) alors qu'elles plient. C'est le même effet que `partial-interface-rename` — sous le plafond de trois sites tous les diagnostics s'impriment encore, et l'en-tête de cause (`cause: unresolved module 'qs'` + la ligne de compte) s'ajoute par-dessus. **Le gain de T1 y est structurel — le lecteur apprend que la panne est UN module absent, pas trois — pas volumétrique.** Le total passe donc de 38 % à 39 % en pliant, exactement pour cette raison.*
 
-### Le chiffre que vingt fixtures permettent de donner : **5 sur 17**
+### Le chiffre que vingt fixtures permettent de donner : **8 sur 17** (5 avant T1)
 
-Vingt fixtures, dont trois ne sont pas des cascades à cause unique : `overload-mismatch` n'a qu'un diagnostic, et **deux témoins négatifs à plusieurs racines** — `two-independent-roots` (deux causes, deux fichiers, deux codes) et `two-roots-one-file` (deux causes, un fichier, un code). Restent **dix-sept cascades à cause unique**, et le seuil de §5.1 avec ses six codes capturés en plie **cinq** :
+Vingt fixtures, dont trois ne sont pas des cascades à cause unique : `overload-mismatch` n'a qu'un diagnostic, et **deux témoins négatifs à plusieurs racines** — `two-independent-roots` (deux causes, deux fichiers, deux codes) et `two-roots-one-file` (deux causes, un fichier, un code). Restent **dix-sept cascades à cause unique**. Avant T1 le seuil en pliait cinq ; **la règle 2307 (T1, 2026-07-28) en ajoute trois**, portant le compte à **huit** :
 
 | plie | ne plie pas |
 |---|---|
-| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) | `nullable-chain` (18047) · `missing-required-property` (2741) · `missing-multiple-properties` (2739) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `missing-type-import` (1484) · `cannot-find-name` (2304) · `wrong-tsconfig-paths` (2307) · `phantom-dependency-pnpm` (2307) · `yarn-pnp-project` (2307) |
+| `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) · **`wrong-tsconfig-paths` (4 → 2)** · **`phantom-dependency-pnpm` (3 → 1)** · **`yarn-pnp-project` (3 → 1)** | `nullable-chain` (18047) · `missing-required-property` (2741) · `missing-multiple-properties` (2739) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `missing-type-import` (1484) · `cannot-find-name` (2304) |
 
-**C'est la mesure la plus utile produite depuis le chiffre de H1, et elle n'est pas flatteuse.** Elle dit que le pliage ne repose pas sur une propriété générale des cascades TypeScript mais sur **la liste de six codes de `src/codes.ts`** : hors de cette liste, une cascade parfaitement réelle est rendue à plat. Elle dit aussi ce que coûterait l'inverse — les non-pliages sortent entre **117 % et 225 %**, soit très exactement le surcoût de P0 que P1 était censé effacer.
+`wrong-tsconfig-paths` plie **4 → 2** et non 4 → 1 : ses deux spécificateurs (`@domain/order` ×3, `@domain/customer` ×1) sont deux modules distincts, et le second, seul, reste sous le minimum de deux membres. Regrouper deux alias sous un en-tête serait le sur-regroupement que §11 classe critique — la règle sort donc deux entrées, à dessein.
 
-**Le rapport a baissé de fixture en fixture — 4/10 le 2026-07-28 au matin, 5/14 dans la journée, 5/17 le soir (T0 de B1) — et c'est de la composition, pas une régression.** Le troisième lot visait les catégories de **configuration** de §7, trois d'entre elles des TS2307 ; le quatrième (T0) ajoute la dernière catégorie de §7 non couverte, `missing-type-import` (TS1484), plus deux cascades témoins de codes non capturés — `cannot-find-name` (TS2304) et `missing-multiple-properties` (TS2739) — et un second témoin négatif, `two-roots-one-file`, qui n'entre pas au dénominateur puisqu'il a deux racines. Aucune ligne de code moteur n'a bougé d'une mesure à l'autre ; les cinq pliages sont identiques au caractère près, seule la liste des non-pliages s'allonge.
+**C'est la mesure la plus utile produite depuis le chiffre de H1.** Jusqu'à T1 elle disait que le pliage ne reposait pas sur une propriété générale des cascades mais sur **la liste de six codes de `src/codes.ts`** ; T1 l'a nuancée. **2307 plie sans être dans cette liste** — il ne demande aucun code de capture, il travaille sur `ProgramFacts.imports` et le message verbatim. Le pliage tient donc à deux mécanismes : un `declaredAt` identique (les cinq premiers) et un spécificateur non résolu partagé (les trois 2307). Hors de ces deux liens, une cascade parfaitement réelle est encore rendue à plat, et les neuf non-pliages sortent entre **117 % et 225 %**, le surcoût de P0.
 
-À noter que ce n'est pas un plafond de conception, et chaque lot le rend plus vrai qu'avant :
+**Le rapport a monté puis rebaissé selon ce qui entrait — 4/10, 5/14, 5/17 (T0), puis 8/17 (T1) — et rien de tout cela n'est une régression.** T0 ajoutait des cascades de codes non capturés (`missing-type-import` TS1484, `cannot-find-name` TS2304, `missing-multiple-properties` TS2739) plus le témoin négatif `two-roots-one-file` ; le rapport tombait donc. T1, le même jour, a écrit la règle 2307 et fait plier les trois fixtures qui la débloquaient : `wrong-tsconfig-paths` (4 → 2), `phantom-dependency-pnpm` et `yarn-pnp-project` (3 → 1). Les cinq pliages `declaredAt` sont inchangés au caractère près.
 
-- 18047 · 2741 · 2739 · 2322 · 2551 sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; 2749 et 1484 sont hors table (format natif assumé), et 2304 est la deuxième moitié de la liste de racines de §5.1 — voir plus bas ;
-- **2307 est désormais le code le plus témoigné de tous ceux qui ne plient pas** — trois fixtures, dix diagnostics — et il ne demande **aucun code de capture supplémentaire**. Sa règle de dérivation est écrite dans §5.1 depuis le premier jour et ne travaille que sur `ProgramFacts.imports`, que P0 remplit déjà. Elle n'était pas différée par manque de données mais par manque de fixture, et ce manque-là vient d'être comblé. Détail ci-dessous.
+À noter que ce n'est pas un plafond de conception :
+
+- 18047 · 2741 · 2739 · 2322 · 2551 sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; 2749 et 1484 sont hors table (format natif assumé), et 2304 est la deuxième moitié de la liste de racines de §5.1, sœur non écrite de la règle 2307 ;
+- **2307 est désormais un pliage acquis, pas un manque.** Sa règle de dérivation (T1) ne travaille que sur `ProgramFacts.imports` et le message, sans capture de contexte ; elle n'était pas différée par manque de données mais par manque de fixture, et ce manque a été comblé au T0 précédent. Détail ci-dessous.
 
 ### `assignability-mismatch` tranche la question de conception n° 2 — et la réponse est non
 
@@ -178,17 +180,15 @@ Les deux fixtures se lisent donc ensemble : `missing-required-property` montre u
 
 Quatre diagnostics, une cause, et **rien à capturer** : ni `related`, ni déclaration résolvable. `OrderStatus` existe bel et bien — c'est un objet `const` — il n'a simplement aucun sens en position de type. Le compilateur n'a donc aucun lien structurel à offrir. Toute règle qui plierait cette cascade devrait travailler sur l'identifiant et `ProgramFacts.imports`, c'est-à-dire dériver sur « le même nom » — précisément ce que §5.1 interdit. Ce n'est pas un manque de capture, c'est la limite de ce que le seuil structurel peut atteindre, et il est utile de l'avoir commitée.
 
-### Les trois fixtures 2307 débloquent une règle, et corrigent la raison pour laquelle elle était différée
+### La règle 2307, écrite en T1 — ce que les trois fixtures lui ont imposé
 
-§5.1 laissait la règle 2307 — « tout ce qui importe le module non résolu est dérivé » — non écrite, avec deux motifs : aucune fixture ne portait de cascade 2307, et « la règle demande un champ que le modèle n'a pas encore (le spécificateur non résolu) ». **Le second motif était faux, et se vérifie en une commande.** `ProgramFacts.imports` porte tous les spécificateurs **tels qu'écrits**, résolus ou non — sur `phantom-dependency-pnpm`, `imports` contient `{"src/callback.ts":["qs"]}`, et `qs` est très exactement le module qui ne résout pas. Le champ était là depuis P0 ; c'est le commentaire de `src/types.ts` qui disait encore « resolved specifiers », en contradiction avec PROJECT.md §4 qui l'avait corrigé dès le 2026-07-27. Corrigé.
-
-Le premier motif, lui, était bien réel, et il est levé : dix TS2307 sur trois spécificateurs, dans trois topologies différentes. Ce qu'ils apprennent sur la forme que la règle devra prendre, et qu'aucun raisonnement à sec n'avait donné :
+§5.1 laissait la règle 2307 — « tout ce qui importe le module non résolu est dérivé » — non écrite. **Elle l'est depuis T1 (2026-07-28)**, et elle plie les TS2307 par spécificateur : `phantom-dependency-pnpm` et `yarn-pnp-project` 3 → 1, `wrong-tsconfig-paths` 4 → 2, le 2307 solitaire de `two-independent-roots` inchangé. Trois choses que ces fixtures ont imposées à sa forme, et qu'aucun raisonnement à sec n'avait données :
 
 1. **La cascade est *de* 2307, pas *depuis* un 2307.** Un import non résolu donne `any` aux liaisons importées et n'émet plus rien en aval : sur les trois fixtures, **tout** diagnostic est un 2307. La règle plie donc des 2307 entre eux — elle ne récolte pas « les erreurs des fichiers qui importent », il n'y en a aucune.
-2. **La clé est le spécificateur, jamais le fichier.** `src/api-client.ts` de `phantom-dependency-pnpm` importe `@acme/http`, qui résout, **et** `qs`, qui ne résout pas. `imports[file]` seul ne dit pas lequel a échoué ; l'appariement passe par le `column` du diagnostic, qui désigne le littéral de chaîne.
-3. **Regrouper tous les 2307 d'un projet serait un sur-regroupement.** `wrong-tsconfig-paths` en porte trois sur `@domain/order` et un sur `@domain/customer` — une cause unique en amont, la ligne `paths`, mais elle n'est dans **aucun fichier du programme**, donc rien dans les données ne la nomme. Deux entrées, pas une.
+2. **La clé est le spécificateur, jamais le fichier.** `src/api-client.ts` de `phantom-dependency-pnpm` importe `@acme/http`, qui résout, **et** `qs`, qui ne résout pas. `imports[file]` seul ne dit pas lequel a échoué ; le **message verbatim** nomme le spécificateur en échec (`Cannot find module 'qs' …`), et ce nom, recoupé avec `imports[file]`, donne la clé. Ce recoupement est le garde de correction : tout ce que la table d'imports ne confirme pas — gabarit dérivé, spécificateur relatif, forme non parcourue — reste une racine isolée, jamais une fusion.
+3. **Regrouper tous les 2307 d'un projet serait un sur-regroupement.** `wrong-tsconfig-paths` en porte trois sur `@domain/order` et un sur `@domain/customer` — une cause unique en amont, la ligne `paths`, mais elle n'est dans **aucun fichier du programme**, donc rien dans les données ne la nomme. La règle sort **deux entrées**, une par spécificateur, et non une.
 
-Le point 3 est le plus intéressant des trois : c'est la première fixture dont la cause racine n'est pas dans le programme du tout. Aucun `declaredAt` ne peut la désigner, par construction — un module qui ne résout pas n'a pas de déclaration. C'est un bord du seuil différent de celui de `value-used-as-type` : là il n'y avait aucun lien à capturer, ici le lien existe et pointe une ligne de `tsconfig.json`.
+Le point 3 est le plus intéressant des trois : `wrong-tsconfig-paths` est la fixture dont la cause racine n'est pas dans le programme du tout. Aucun `declaredAt` ne peut la désigner, par construction — un module qui ne résout pas n'a pas de déclaration —, d'où l'en-tête d'un genre nouveau, `cause: unresolved module '<spec>'`, sans « declared at ». C'est un bord du seuil différent de celui de `value-used-as-type` : là il n'y avait aucun lien à capturer, ici le lien est le spécificateur lui-même.
 
 ### `monorepo-cross-package` fait travailler le garde-fou plutôt que de le répéter
 
@@ -211,7 +211,7 @@ Le quatrième lot porte le corpus à vingt et **ferme la liste des catégories d
 - **`missing-multiple-properties` (TS2739)** est le jumeau multi-membres de `missing-required-property` (2741) : trois sites de construction, deux membres requis manquants au lieu d'un, tous pointant la déclaration de `Rect`. Comme son jumeau il ne plie pas — ni 2739 ni 2741 n'est capturé — et il donne enfin un témoin à 2739, présent dans la table des dix sans fixture jusqu'ici.
 - **`two-roots-one-file` (TS2339)** est le témoin négatif dur, sœur de `two-independent-roots`. Là où celle-ci sépare deux causes dans deux fichiers sous deux codes, celle-ci met **deux causes dans un fichier sous un seul code** — le cas où le sur-regroupement est le plus tentant et, selon §11, le plus destructeur. La règle 3 de §5.1 (« mêmes 2339 dans le même fichier ⇒ une racine ») est délibérément **non** appliquée, et c'est ici qu'elle se vérifie : chaque interface est mal lue deux fois, donc une règle indexée sur fichier + code replierait les quatre sous un seul en-tête et cacherait un des deux bugs derrière un compteur. Le moteur indexe sur `declaredAt` et rend `4 errors · 1 file · 2 root causes` — les deux de `Widget` pliés, les deux de `Gauge` pliés, les deux causes tenues à part. Contrairement à `two-independent-roots`, cette fixture **plie** de chaque côté (4 → 2), et c'est précisément l'intérêt : la séparation survit même quand le pliage est actif sur les deux racines. Un test nommé la garde.
 
-**Le total se dégrade à chaque fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize, 38 % à vingt : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, sans qu'une ligne de code ait changé. **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les treize lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+**Le total se dégrade à chaque petite fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize, 38 % à vingt (T0), 39 % après T1 : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, et le pliage 2307 de T1 en ajoute même un peu — sur une cible minuscule, plier ajoute un en-tête sans rien retrancher (toutes les lignes tiennent sous le plafond). **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les treize lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
 
 ### Ce que les fixtures de pliage ont appris
 
