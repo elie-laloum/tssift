@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgs, run, type Streams } from "../src/run.js";
+import { isPnpMisread, parseArgs, run, type Streams } from "../src/run.js";
 
 function capture(argv: string[]): { code: number; out: string; err: string } {
   let out = "";
@@ -52,6 +52,39 @@ describe("cli · exit codes", () => {
     expect(code).toBe(2);
     expect(err).toContain("Unknown --format");
     expect(err).toContain("agent-text, json");
+  });
+
+  it("refuses a Yarn PnP project read by bare Node, naming what it found", () => {
+    // yarn-pnp-project has a .pnp.cjs and no bug; its three TS2307 are the
+    // artefact of a bare-Node read. Refusing beats a clean-looking, wrong
+    // report (§15). The library still folds it — this is a run-layer guard only.
+    const { code, out, err } = capture(["--project", "fixtures/yarn-pnp-project/before"]);
+    expect(code).toBe(2);
+    expect(out).toBe("");
+    expect(err).toContain("Yarn PnP");
+    expect(err).toContain(".pnp.cjs");
+    expect(err).toContain("yarn tssift");
+  });
+});
+
+describe("cli · isPnpMisread predicate", () => {
+  const pnpRoot = "fixtures/yarn-pnp-project/before";
+  const plainRoot = "fixtures/two-independent-roots/before";
+
+  it("is true only when off-runtime, a 2307 is present, and a manifest exists", () => {
+    expect(isPnpMisread(pnpRoot, false, [2307, 2307])).toBe(true);
+  });
+
+  it("is false under the PnP runtime — the map would be loaded", () => {
+    expect(isPnpMisread(pnpRoot, true, [2307])).toBe(false);
+  });
+
+  it("is false without a TS2307 — a real error is not a resolution artefact", () => {
+    expect(isPnpMisread(pnpRoot, false, [2339])).toBe(false);
+  });
+
+  it("is false without a .pnp.cjs, even with a 2307", () => {
+    expect(isPnpMisread(plainRoot, false, [2307])).toBe(false);
   });
 });
 

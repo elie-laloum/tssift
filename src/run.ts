@@ -1,4 +1,5 @@
-import { relative } from "node:path";
+import { existsSync } from "node:fs";
+import { join, relative } from "node:path";
 import { CONTEXT_CAPTURE_CODES } from "./codes.js";
 import { TssiftUnrunnable } from "./errors.js";
 import { dedupe, detectCausality } from "./pipeline/index.js";
@@ -6,6 +7,36 @@ import { renderAgentText } from "./render/agent-text.js";
 import { countErrors, isRenderFormat, RENDER_FORMATS, type RenderFormat } from "./render/index.js";
 import { renderJson } from "./render/json.js";
 import { TsApiSource } from "./sources/ts-api.js";
+
+/** The two names Yarn writes its resolution map to; the newer one first. */
+const PNP_MANIFESTS = [".pnp.cjs", ".pnp.js"] as const;
+
+/** The manifest present at `root`, if any — the declarative signal of a PnP project (no subprocess, rule 10). */
+function pnpManifestAt(root: string): string | undefined {
+  return PNP_MANIFESTS.map((name) => join(root, name)).find((path) => existsSync(path));
+}
+
+/**
+ * Is this a Yarn PnP project being read by a bare Node process?
+ *
+ * A `.pnp.cjs` at the project root with `process.versions.pnp` unset means the
+ * compiler never loaded the resolution map, so every unresolved import is a
+ * false negative rather than a real error — the most expensive failure mode for
+ * a tool whose whole argument is "trust the hierarchy" (EVAL.md § yarn-pnp).
+ *
+ * Gated on an actual TS2307 in the report, deliberately: a PnP project with only
+ * genuine type errors runs fine, and the refusal fires only when the misread
+ * would actually mislead. This is a run-layer guard, never in the source — the
+ * library and the eval still fold `yarn-pnp-project`, so the 2307 rule stays
+ * measured; only the shipped CLI refuses (§15).
+ */
+export function isPnpMisread(
+  root: string,
+  hasPnpRuntime: boolean,
+  codes: readonly number[],
+): boolean {
+  return !hasPnpRuntime && codes.includes(2307) && pnpManifestAt(root) !== undefined;
+}
 
 export const USAGE = `tssift — groups tsc diagnostics for an agent, and never says what to fix.
 
@@ -141,6 +172,25 @@ export function run(argv: readonly string[], streams: Streams): number {
     // the complete table plus a ranked index over it, and `--all` decides only
     // whether the renderer walks that index (rule 2).
     const report = detectCausality(dedupe(ingested, facts), facts);
+
+    // A bare-Node read of a Yarn PnP project produces plausible, entirely false
+    // TS2307s. Refusing beats rendering a clean-looking, wrong hierarchy (§15).
+    const codes = report.diagnostics.map((diagnostic) => diagnostic.code);
+    if (isPnpMisread(facts.root, Boolean(process.versions.pnp), codes)) {
+      const manifest = pnpManifestAt(facts.root) ?? join(facts.root, PNP_MANIFESTS[0]);
+      const unresolved = codes.filter((code) => code === 2307).length;
+      throw new TssiftUnrunnable(
+        [
+          "Cannot analyse a Yarn PnP project from a bare Node process.",
+          `  found: ${manifest}`,
+          "  process.versions.pnp: undefined",
+          `  ${unresolved} of the diagnostics are TS2307 "Cannot find module", which under Yarn`,
+          "  PnP are resolution artefacts, not real errors: this process never loaded the",
+          "  .pnp.cjs resolution map, so every unresolved import is a false negative.",
+          "  run tssift through the PnP runtime instead: `yarn tssift …`",
+        ].join("\n"),
+      );
+    }
 
     const input = {
       report,
