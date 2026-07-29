@@ -80,7 +80,16 @@ async function post(endpoint: ModelEndpoint, body: unknown): Promise<ChatRespons
   if (endpoint.apiKey) headers.authorization = `Bearer ${endpoint.apiKey}`;
 
   for (let attempt = 0; ; attempt += 1) {
-    const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    // A network blip (`fetch failed`) throws before any response — treat it as
+    // retryable too, else one transient hiccup kills a 50-run sweep.
+    let response: Response;
+    try {
+      response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    } catch (error) {
+      if (attempt >= 6) throw error;
+      await new Promise((r) => setTimeout(r, Math.min(30_000, (attempt + 1) * 5_000)));
+      continue;
+    }
     if (response.ok) return (await response.json()) as ChatResponse;
 
     // Retry the retryable statuses with backoff, honouring `retry-after` when
