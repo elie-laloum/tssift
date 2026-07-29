@@ -1,6 +1,6 @@
 # EVAL — mesures
 
-**Dernière mise à jour :** 2026-07-28 (T4 de B1 — premier balayage du bras modèle, 230 runs)
+**Dernière mise à jour :** 2026-07-29 (T3+T4 — corpus figé, et le bras modèle qui appuie enfin H1)
 **Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
 **Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
 
@@ -441,3 +441,51 @@ Même **prompt système** fixe, mêmes **trois outils que nous implémentons** (
 | corpus/lekes-ok-arity-changed | B | 5 | 100 % | 4.2 | 0 % | 11 191 |
 
 *`~tokens` = `usage.total_tokens` cumulés sur la boucle, dominés par le cadrage initial réémis à chaque tour. Reproductible : `mise exec -- bun run eval:agent`, endpoint dans `.env`.*
+
+### Résultats sur le corpus figé — le vrai test de H1 (2026-07-29)
+
+Le premier balayage (ci-dessus) tournait sur des fixtures trop faciles : le modèle corrigeait tout, sans faux départ, quel que soit le cadrage. Le **corpus figé** (§ « le vrai test de H1 » — cinq cascades profondes de 20 à 65 diagnostics, une cause, des dizaines de sites, correctif ambigu) est écrit pour que le bruit morde. Balayage sur les 5 entrées, deux modèles, `temperature: 0`, n=5 : `cx/gpt-5.6-terra` (fort) et `cx/gpt-5.4-mini` (faible). **Cette fois H1 a une prise, et le signal est positif.**
+
+**gpt-5.6-terra (fort) :**
+
+| cible | bras | vert | tours | faux départ | ~tokens |
+|---|---|---:|---:|---:|---:|
+| dispatch-arity-changed | A | 100 % | 5.0 | 0 % | 16 503 |
+| dispatch-arity-changed | B | 100 % | 4.8 | 0 % | 7 189 |
+| mapper-argtype-changed | A | 100 % | 5.4 | 0 % | 23 071 |
+| mapper-argtype-changed | B | 100 % | 5.2 | 0 % | 10 726 |
+| **order-book-field-renamed** | A | 80 % | 7.2 | **100 %** | 25 215 |
+| **order-book-field-renamed** | B | 100 % | 5.2 | **0 %** | 7 063 |
+| registry-barrel-dropped | A | 100 % | 4.8 | 0 % | 8 809 |
+| registry-barrel-dropped | B | 100 % | 5.0 | 0 % | 6 318 |
+| shape-tag-renamed | A | 80 % | 8.8 | 100 % | 41 454 |
+| shape-tag-renamed | B | 100 % | 7.6 | 100 % | 15 988 |
+
+**gpt-5.4-mini (faible) :**
+
+| cible | bras | vert | tours | faux départ | ~tokens |
+|---|---|---:|---:|---:|---:|
+| dispatch-arity-changed | A | 100 % | 5.0 | 0 % | 15 171 |
+| dispatch-arity-changed | B | 100 % | 4.4 | 0 % | 5 832 |
+| mapper-argtype-changed | A | 100 % | 5.2 | 0 % | 18 048 |
+| mapper-argtype-changed | B | 100 % | 5.0 | 0 % | 8 073 |
+| **order-book-field-renamed** | A | 100 % | 5.0 | **100 %** | 18 997 |
+| **order-book-field-renamed** | B | 100 % | 7.6 | **60 %** | 16 873 |
+| registry-barrel-dropped | A | 100 % | 5.0 | 0 % | 8 649 |
+| registry-barrel-dropped | B | 100 % | 4.0 | 0 % | 4 795 |
+| shape-tag-renamed | A | 100 % | 9.6 | 100 % | 66 593 |
+| shape-tag-renamed | B | 100 % | 7.4 | 100 % | 21 942 |
+
+**Ce que ça dit, honnêtement — et c'est plus encourageant que le premier run.**
+
+1. **Tokens : le bras B fait à peu près moitié moins, sur les deux modèles.** Total fort 115 052 → 47 284 (**41 %**), faible 127 458 → 57 515 (**45 %**). Le pliage du cadrage initial se paie en contexte réémis à chaque tour, et un petit modèle le paie cher. La revendication volumétrique de H1 tient nettement.
+
+2. **Faux départ : le bras B les réduit — le cœur de H1, enfin visible.** Fort **10/25 → 5/25** (divisé par deux), faible **10/25 → 8/25**. Le cas d'école est **`order-book-field-renamed`** (un champ d'entité renommé, lu à 17 sites) : le rapport plat pousse **les deux modèles à patcher les 17 sites** (100 % de faux départ), alors que le rapport plié — qui nomme `interface Order declared at src/domain/order.ts` — envoie le modèle fort sur **la seule déclaration** (0 %) et le faible bien mieux (60 %, contre 100 %). C'est très exactement la thèse de H1, démontrée.
+
+3. **Correction : le bras B l'améliore aussi sur les cascades dures.** Côté fort, `order-book` et `shape-tag` passent de 80 % à 100 % de vert — le rapport plat a fait échouer un run (12 tours à patcher des sites sans converger) là où le rapport plié réussit à chaque fois.
+
+4. **Mais ce n'est pas une garantie : `shape-tag-renamed` résiste.** 100 % de faux départ des deux côtés, sur les deux modèles. Nommer la cause (le tag d'union renommé) ne suffit pas : les modèles éditent quand même les consommateurs et la factory plutôt que de revenir sur la déclaration. Le pliage aide fortement quand la cause est une déclaration nette et la tentation « patcher N sites » ; il n'immunise pas contre un modèle qui décide de traiter les symptômes.
+
+**Verdict corpus.** Sur du code profond — le cas d'usage réel, pas les fixtures — le pliage **économise ~la moitié des tokens et réduit les faux départs**, le plus nettement là où le nombre de sites rend le patch-par-symptôme tentant. Le premier run « H1 non soutenue » était largement un artefact de tâches trop faciles ; ce corpus figé, lui, soutient H1 sur les tokens et l'appuie sur le faux départ, sans le sur-vendre (`shape-tag` reste un contre-exemple honnête).
+
+*Reproductible : `AGENT_TARGETS=corpus/… AGENT_MODEL=… mise exec -- bun run eval:agent`. Corpus committé sous `corpus/`, endpoint dans `.env`.*
