@@ -83,12 +83,15 @@ async function post(endpoint: ModelEndpoint, body: unknown): Promise<ChatRespons
     const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
     if (response.ok) return (await response.json()) as ChatResponse;
 
-    // Retry the retryable statuses a few times with linear backoff, then give up.
+    // Retry the retryable statuses with backoff, honouring `retry-after` when
+    // present, then give up. Patient enough to ride out a brief shared-pool
+    // rate-limit, but not so patient that a sustained one hangs the sweep.
     const retryable = response.status === 429 || response.status >= 500;
-    if (!retryable || attempt >= 4) {
+    if (!retryable || attempt >= 6) {
       throw new Error(`Chat API ${response.status}: ${await response.text()}`);
     }
-    const wait = Number(response.headers.get("retry-after")) * 1000 || (attempt + 1) * 2000;
+    const retryAfter = Number(response.headers.get("retry-after")) * 1000;
+    const wait = retryAfter || Math.min(30_000, (attempt + 1) * 5_000);
     await new Promise((r) => setTimeout(r, wait));
   }
 }
