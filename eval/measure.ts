@@ -14,7 +14,7 @@
  * exercise — it is the baseline P1 will be measured against.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -268,14 +268,33 @@ function corpusTargets(): Target[] {
     .filter((target) => existsSync(resolve(repoRoot, target.project)));
 }
 
+/**
+ * The frozen, committed, anonymized corpus under `corpus/` — larger single-cause
+ * cascades that, unlike the private materialised corpus, are in the repository:
+ * they never move and need no private repo. Auto-discovered so any valid entry
+ * is picked up.
+ */
+function committedCorpusTargets(): Target[] {
+  const root = join(repoRoot, "corpus");
+  if (!existsSync(root)) return [];
+  return readdirSync(root)
+    .filter((name) => existsSync(join(root, name, "before", "tsconfig.json")))
+    .sort()
+    .map((name) => ({
+      name: `corpus/${name}`,
+      kind: "corpus" as const,
+      project: join("corpus", name, "before"),
+    }));
+}
+
 const corpus = corpusTargets();
 if (corpus.length === 0) {
   process.stderr.write(
-    "note: the real corpus is not built — run `bun run corpus:build`. Measuring fixtures and live repos only.\n",
+    "note: the private corpus is not built — run `bun run corpus:build`. Measuring fixtures, committed corpus and live repos only.\n",
   );
 }
 
-const rows = [...TARGETS, ...corpus].map(measure);
+const rows = [...TARGETS, ...committedCorpusTargets(), ...corpus].map(measure);
 
 const lines: string[] = [];
 lines.push(

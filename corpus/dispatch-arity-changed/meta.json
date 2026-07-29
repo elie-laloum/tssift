@@ -1,0 +1,8 @@
+{
+  "rootCause": "src/events/dispatch.ts declares `emit(event: DomainEvent, actor: string)`. A required second parameter, `actor`, was added when the audit trail started recording who performed each action, but `emit` used to take only the event. Every call site still passes a single argument. There are 24 such call sites spread across four layers — src/services/ (9 calls in account-service, billing-service, notification-service, profile-service, session-service, inventory-service), src/handlers/ (6 calls in signup-, login-, logout-, password-reset-, and webhook-handler), src/jobs/ (4 calls in cleanup-, digest-, reminder-, reconcile-job), and src/api/ (5 calls in users-, orders-, admin-, reports-route) — each raising TS2554 'Expected 2 arguments, but got 1'.",
+  "expectedFix": "Give `actor` a default in the declaration in src/events/dispatch.ts, which settles all 24 diagnostics at once. Passing an actor at each of the 24 call sites also compiles, but the call sites are not independent bugs: one decision at the declaration is the fix.",
+  "tags": ["arity", "signature-change", "cross-file", "deep-cascade", "single-root", "TS2554"],
+  "difficulty": "medium",
+  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2554 cascade across 21 files, committed so it never moves and needs no private repo. The fix is one declaration; passing the argument at each of the many call sites is the tempting false start this entry exists to measure.",
+  "rootCauseFiles": ["src/events/dispatch.ts"]
+}

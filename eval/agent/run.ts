@@ -74,6 +74,28 @@ function fixtureTargets(repoRoot: string): Target[] {
     });
 }
 
+/** The frozen, committed, anonymized corpus under `corpus/` — auto-discovered, ground truth from each meta.json. */
+function committedCorpusTargets(repoRoot: string): Target[] {
+  const root = join(repoRoot, "corpus");
+  if (!existsSync(root)) return [];
+  return readdirSync(root)
+    .filter((name) => existsSync(join(root, name, "before", "tsconfig.json")))
+    .sort()
+    .map((name) => {
+      const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as {
+        rootCauseFiles?: string[];
+      };
+      if (!Array.isArray(meta.rootCauseFiles)) {
+        throw new Error(`corpus/${name}/meta.json is missing rootCauseFiles`);
+      }
+      return {
+        name: `corpus/${name}`,
+        before: join(root, name, "before"),
+        rootCauseFiles: meta.rootCauseFiles,
+      };
+    });
+}
+
 function corpusTargets(repoRoot: string): Target[] {
   const manifest = join(repoRoot, "eval", "corpus.json");
   if (!existsSync(manifest)) return [];
@@ -138,7 +160,11 @@ async function main(): Promise<void> {
   const smoke = process.env.AGENT_SMOKE === "1";
   const n = smoke ? 1 : Number(process.env.AGENT_N) || 5;
 
-  let targets = [...fixtureTargets(repoRoot), ...corpusTargets(repoRoot)];
+  let targets = [
+    ...fixtureTargets(repoRoot),
+    ...committedCorpusTargets(repoRoot),
+    ...corpusTargets(repoRoot),
+  ];
   if (process.env.AGENT_TARGETS) {
     const wanted = new Set(process.env.AGENT_TARGETS.split(",").map((s) => s.trim()));
     targets = targets.filter((t) => wanted.has(t.name));

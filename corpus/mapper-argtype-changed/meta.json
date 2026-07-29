@@ -1,0 +1,8 @@
+{
+  "rootCause": "In src/render/user-view.ts the widely-used `render` (and its sibling `renderCompact`) had its parameter tightened from the in-memory `User` to the stored `PersistedUser`, which additionally requires `id: string` and `createdAt: number`. 26 call sites across src/api/, src/services/, src/jobs/ and src/testing/ still hold a plain, well-formed `User`, so each `render(...)`/`renderCompact(...)` now raises TS2345: 'User' is not assignable to parameter of type 'PersistedUser' (missing 'id', 'createdAt'). One tightened parameter is the single root of all 26 diagnostics.",
+  "expectedFix": "Loosen the parameter type back to `User` at the declaration in src/render/user-view.ts (and drop the `id`/`createdAt` reads) to settle all 26 call sites at once; the alternative — supplying `id` and `createdAt` at every one of the 26 call sites — is the tempting false start this entry exists to measure.",
+  "tags": ["arg-type", "assignability", "cross-file", "deep-cascade", "single-root", "TS2345"],
+  "difficulty": "medium",
+  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2345 cascade across 23 files, committed so it never moves and needs no private repo. The fix is one declaration; fixing each call site is the tempting false start this entry exists to measure.",
+  "rootCauseFiles": ["src/render/user-view.ts"]
+}

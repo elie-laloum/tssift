@@ -1,0 +1,8 @@
+{
+  "rootCause": "The barrel src/domain/index.ts re-exports its members explicitly, and `Money` was dropped from the list when a set of `export *` re-exports was replaced by named re-exports during a tidy-up. src/domain/money.ts still exports `Money` correctly and does not change. Twenty-four importer files across four layers — src/services (7), src/api (6), src/pricing (6), src/reporting (5) — all `import { Money } from \"../domain\"` through the barrel and each fails with TS2305: Module '\"../domain\"' has no exported member 'Money'. The barrel itself resolves; only the one member is missing.",
+  "expectedFix": "Re-export `Money` from src/domain/index.ts alongside the other domain members (e.g. `export type { Money } from \"./money\";`). Neither src/domain/money.ts nor any of the twenty-four importers should change.",
+  "tags": ["barrel", "broken-export", "cross-file", "deep-cascade", "single-root", "TS2305"],
+  "difficulty": "medium",
+  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2305 barrel cascade across 28 files (24 importers over four layers), committed so it never moves and needs no private repo. The fix is one line in the barrel; editing importers is the tempting false start this entry exists to measure. Other barrel export names are kept dissimilar to 'Money' on purpose so the compiler emits 2305 (no exported member) rather than 2724 (did you mean).",
+  "rootCauseFiles": ["src/domain/index.ts"]
+}

@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!fixtures",
+      "!corpus",
       "!dist",
       "!.eval-dist",
       "!**/__snapshots__",
