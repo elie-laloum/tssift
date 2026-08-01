@@ -4,6 +4,7 @@
   "workspaces": {
     "": {
       "name": "tssift",
+      "version": "0.0.1",
       "devDependencies": {
         "@biomejs/biome": "^2.5.5",
         "@types/node": "^20",

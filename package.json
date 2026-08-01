@@ -1,9 +1,28 @@
 {
   "name": "tssift",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Groups tsc diagnostics by root cause and ranks them by explanatory power, for agents that run tsc --noEmit in a shell.",
   "license": "MIT",
   "author": "Elie Laloum",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elielaloum/tssift.git"
+  },
+  "homepage": "https://github.com/elielaloum/tssift#readme",
+  "bugs": {
+    "url": "https://github.com/elielaloum/tssift/issues"
+  },
+  "keywords": [
+    "typescript",
+    "tsc",
+    "diagnostics",
+    "typecheck",
+    "cli",
+    "ai-agents"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -24,6 +43,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run fixtures:verify && bunx biome ci",
     "test:watch": "vitest",
     "check": "biome check --write",
     "eval": "tsc -p tsconfig.eval.json && node .eval-dist/eval/measure.js",
