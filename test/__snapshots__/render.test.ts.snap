@@ -140,13 +140,14 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders cannot-find-name with --all
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders missing-multiple-properties 1`] = `
 "root: fixtures/missing-multiple-properties/before
-3 errors · 1 file
+3 errors · 1 file · 1 root cause
 
-[1] src/layout/canvas.ts:6:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
-
-[2] src/layout/canvas.ts:9:3 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
-
-[3] src/layout/canvas.ts:12:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+[1] cause: interface 'Rect' declared at src/geometry/shape.ts:3:1
+      4 properties: x, y, width, height
+    3 diagnostics, all TS2739
+    src/layout/canvas.ts:6:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+    src/layout/canvas.ts:9:3 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+    src/layout/canvas.ts:12:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
 "
 `;
 
@@ -155,25 +156,29 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders missing-multiple-properties
 3 errors · 1 file
 
 [1] src/layout/canvas.ts:6:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+    required by: interface 'Rect' at src/geometry/shape.ts:3:1
 
 [2] src/layout/canvas.ts:9:3 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+    required by: interface 'Rect' at src/geometry/shape.ts:3:1
 
 [3] src/layout/canvas.ts:12:14 error TS2739: Type '{ x: number; y: number; }' is missing the following properties from type 'Rect': width, height
+    required by: interface 'Rect' at src/geometry/shape.ts:3:1
 "
 `;
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property 1`] = `
 "root: fixtures/missing-required-property/before
-3 errors · 3 files
+3 errors · 3 files · 1 root cause
 
-[1] src/accounts/signup.ts:4:3 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
-    related src/accounts/profile.ts:10:3: 'locale' is declared here.
-
-[2] src/import/csv.ts:4:9 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
-    related src/accounts/profile.ts:10:3: 'locale' is declared here.
-
-[3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
-    related src/accounts/profile.ts:10:3: 'locale' is declared here.
+[1] cause: interface 'Profile' declared at src/accounts/profile.ts:7:1
+      3 properties: id, displayName, locale
+    3 diagnostics, all TS2741
+    src/accounts/signup.ts:4:3 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+      related src/accounts/profile.ts:10:3: 'locale' is declared here.
+    src/import/csv.ts:4:9 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+      related src/accounts/profile.ts:10:3: 'locale' is declared here.
+    src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
+      related src/accounts/profile.ts:10:3: 'locale' is declared here.
 "
 `;
 
@@ -183,12 +188,15 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders missing-required-property w
 
 [1] src/accounts/signup.ts:4:3 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
     related src/accounts/profile.ts:10:3: 'locale' is declared here.
+    required by: interface 'Profile' at src/accounts/profile.ts:7:1
 
 [2] src/import/csv.ts:4:9 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
     related src/accounts/profile.ts:10:3: 'locale' is declared here.
+    required by: interface 'Profile' at src/accounts/profile.ts:7:1
 
 [3] src/testing/fixtures.ts:3:7 error TS2741: Property 'locale' is missing in type '{ id: string; displayName: string; }' but required in type 'Profile'.
     related src/accounts/profile.ts:10:3: 'locale' is declared here.
+    required by: interface 'Profile' at src/accounts/profile.ts:7:1
 "
 `;
 

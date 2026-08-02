@@ -33,6 +33,13 @@
  * - **18047/18048** (`Possibly null`) — the origin of the nullability is a
  *   control-flow question; nothing captured answers it.
  *
+ * **2739/2741 shipped on 2026-08-02, and the measurement corrected §5.2 on the
+ * way.** That table asks them for "the exact list of the missing" because
+ * TypeScript is said to truncate its own. It does not: 1 missing gives TS2741,
+ * 2 to 5 give TS2739 with the list complete, and only **TS2740** — absent from
+ * the table of ten — elides at four. So what these two add is the declaration
+ * site of the target type, which no message of theirs ever carries.
+ *
  * **2307 shipped on 2026-08-02**, and it is the one enricher that reads no
  * `context`: its facts are about the *installed topology* — declared or not in
  * `package.json`, PnP, `paths` — which is file reading a pipeline stage may not
@@ -66,6 +73,7 @@ import { enrich2339 } from "./2339.js";
 import { enrich2345 } from "./2345.js";
 import { enrich2353 } from "./2353.js";
 import { enrich2554 } from "./2554.js";
+import { enrich2739 } from "./2739.js";
 
 /**
  * Both channels of rule 4 reach an enricher: `NormalizedDiagnostic.context`,
@@ -84,6 +92,9 @@ const ENRICHERS: Record<number, Enricher | undefined> = {
   2345: enrich2345,
   2353: enrich2353,
   2554: enrich2554,
+  2739: enrich2739,
+  // Same enricher, same failure — see the comment on `2739.ts`.
+  2741: enrich2739,
 };
 
 /** The codes an enricher is registered for. Exported for the architecture test. */

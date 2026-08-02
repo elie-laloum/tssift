@@ -609,3 +609,99 @@ Une seule phrase de TypeScript, trois vérités différentes derrière — le co
 ### Vérification
 
 `typecheck`, **534 tests** (518 avant ce jalon), `check` — tous verts. Les **8 snapshots** régénérés ont été relus : le diff est **purement additif**, 24 insertions et 0 suppression, et ne touche que les quatre cibles portant un TS2307. Les deux témoins négatifs gardent leur compte d'entrées.
+
+---
+
+## P2 / 2739 · 2741 — la mesure qui a corrigé §5.2 (2026-08-02)
+
+Huitième et neuvième codes enrichis. Mais l'essentiel de ce jalon n'est pas dans
+l'enrichissement : c'est une **entrée dans `CONTEXT_CAPTURE_CODES`**, donc un
+gain de **causalité**, et c'est une mesure faite avant d'écrire une ligne qui a
+révélé que §5.2 se trompait de code.
+
+### TS2739 ne tronque pas. TS2740 tronque, et il n'est pas dans la table des dix
+
+§5.2 demande à 2739/2741 « la liste exacte des manquants, sans le reste du
+type », au motif explicite que TypeScript tronque la sienne. Sondé sur 5.9.3
+avec une interface de 1 à 8 propriétés manquantes :
+
+| propriétés manquantes | code émis | liste |
+|---:|---|---|
+| 1 | **TS2741** | la nomme (`Property 'p0' is missing …`) |
+| 2 | TS2739 | `p0, p1` |
+| 3 | TS2739 | `p0, p1, p2` |
+| 4 | TS2739 | `p0, p1, p2, p3` |
+| 5 | TS2739 | `p0, p1, p2, p3, p4` |
+| 6 | **TS2740** | `p0, p1, p2, p3, and 2 more.` |
+| 7 | **TS2740** | `p0, p1, p2, p3, and 3 more.` |
+| 8 | **TS2740** | `p0, p1, p2, p3, and 4 more.` |
+
+**La troncature décrite par §5.2 appartient à TS2740, qui n'est pas dans sa
+table des dix.** Pour 2739 et 2741, la liste est déjà complète à l'écran, et la
+répéter serait exactement ce que `facts.ts` interdit : un fait qui redit le
+message. Le payload que §5.2 leur attribuait n'existe donc pas pour eux.
+
+C'est le troisième cas où une table a désigné le mauvais code (après 2724 trouvé
+par la fixture, et 2769 rétrogradé par `chain`), et le troisième où la règle
+d'AGENTS.md a payé : **avant d'ajouter un code à une table, vérifier sur une
+fixture réelle lequel sort vraiment.**
+
+### Ce que ces deux codes apportent vraiment : une cause partagée
+
+Le type cible (`Rect`, `Profile`) est nommé dans chacun de ces messages et
+**jamais situé**. Or c'est une cause partagée : N sites de construction d'une
+interface cassent ensemble le jour où elle gagne un membre requis. Les deux
+codes entrent donc dans `CONTEXT_CAPTURE_CODES`, et le gain est un gain de §5.1.
+
+Deux formes de nœud arrivent au résolveur, mesurées avant implémentation :
+
+| forme | occurrences | ce qui résout |
+|---|---:|---|
+| nom d'une `VariableDeclaration` (`const origin: Rect = { … }`) | 4/6 | `getTypeAtLocation` **est** déjà le type cible |
+| `ReturnStatement` (`return { x, y }`) | 2/6 | le type de retour de la signature englobante — `getTypeAtLocation` y rend `any` |
+
+La seconde branche n'est pas une optimisation : sans elle, 2 diagnostics sur 6
+ne résolvent rien, et une cascade plierait 2 sites sur 3 — **pire que ne pas
+plier**, le membre resté dehors se lisant comme une seconde cause. Avec les
+deux : **6/6, un `declaredAt` par fixture.**
+
+### Le résultat, mesuré
+
+| | sans capture 2739/2741 | avec | delta |
+|---|---:|---:|---:|
+| **total, 25 cibles** | 16 635 | 16 948 | **+1,9 %** (B/A 53 % → 54 %) |
+| **entrées rendues** | 52 | **48** | **−4** |
+| `missing-required-property` | 732 (3 entrées) | 896 (**1 entrée**) | +164 |
+| `missing-multiple-properties` | 506 (3 entrées) | 655 (**1 entrée**) | +149 |
+
+**Pliage à cause unique : 8/17 → 10/17.** Le lien structurel `declaredAt`
+identique passe de cinq à sept fixtures.
+
+**Et les caractères montent alors que les entrées baissent — c'est attendu, et
+il faut le dire plutôt que de le cacher.** C'est le même effet que sur
+`partial-interface-rename` : sous le plafond d'affichage de trois sites, les
+trois diagnostics s'impriment encore et l'en-tête de cause s'ajoute par-dessus.
+**Le gain est structurel, pas volumétrique** — sur une fixture de trois erreurs,
+`tsc` n'a pas de problème de bruit. Ce que ces deux fixtures démontrent est que
+le lien existe et se capture ; ce qu'elles ne démontrent pas est une économie,
+et aucune cascade de corpus ne porte ces codes pour le trancher.
+
+### Un test qui a fait son travail
+
+`test/causality.test.ts` portait depuis P1 une assertion `groups: []` sur
+`missing-required-property`, avec en commentaire : *« ces tests existent pour
+que, le jour où la capture est étendue, le changement apparaisse comme un échec
+ici plutôt que comme une amélioration silencieuse que personne n'a mesurée. »*
+Il a échoué exactement comme prévu. Il est réécrit pour enregistrer le pliage —
+et il garde sa moitié la plus tranchante : **le pliage se fait sur l'interface
+(`profile.ts:7:1`), pas sur le `related` (`profile.ts:10:3`)**. Deux positions
+distinctes, donc la question 2 du plan P1 reste close dans le sens où
+`assignability-mismatch` l'avait close.
+
+### Vérification
+
+`typecheck`, **539 tests** (534 avant), `check` — verts. **4 snapshots** relus :
+les deux fixtures passent de 3 entrées à 1, et sous `--all` chaque diagnostic
+porte sa ligne `required by:`. 23 insertions, 15 suppressions — les suppressions
+sont les lignes `[2]`/`[3]` que le pliage remplace, pas des diagnostics perdus
+(`--all` les restitue tous, règle 2).

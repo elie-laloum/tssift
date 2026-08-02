@@ -314,11 +314,16 @@ describe("causality · narrowed-union-member", () => {
 });
 
 describe("causality · the cascades the §5.1 threshold declines to fold", () => {
-  // Both fixtures below are single-cause cascades that a human would group at a
-  // glance, and both are reported as lone roots. That is the threshold working
-  // as specified, not a defect — and these tests exist so that the day capture
-  // is extended, the change shows up as a failure here rather than as a silent
-  // improvement nobody measured. Rule 8 keeps them unfolded until B1.
+  // Both fixtures below were single-cause cascades reported as lone roots — the
+  // threshold working as specified, not a defect — and these tests existed so
+  // that the day capture was extended, the change would surface as a failure
+  // here rather than as a silent improvement nobody measured.
+  //
+  // It worked. `missing-required-property` folded on 2026-08-02 when 2739/2741
+  // joined CONTEXT_CAPTURE_CODES, and its test below records that instead of
+  // asserting it away. `nullable-chain` is still unfolded, and its reason is
+  // unchanged: nothing is captured, because nothing capturable answers a
+  // control-flow question.
 
   it("nullable-chain · four dereferences of one nullable property stay four roots", () => {
     const { report } = analyse("nullable-chain");
@@ -331,27 +336,36 @@ describe("causality · the cascades the §5.1 threshold declines to fold", () =>
     expect(report.diagnostics.every((d) => d.context === undefined)).toBe(true);
   });
 
-  it("missing-required-property · three sites stay three roots though each PRINTS the cause", () => {
-    // The sharper of the two. Every diagnostic carries a related pointing at
-    // the very declaration they share, so the report names the shared cause
-    // three times and still declines to group on it. This is design question 2
-    // of the P1 plan — does a related span count as a declaredAt? — closed as
-    // moot when TS2554 turned out to resolve through getResolvedSignature().
-    // Here it is not moot.
+  it("missing-required-property · folds since 2026-08-02, and NOT on the related span", () => {
+    // This test used to assert `groups: []`, with a comment saying it existed so
+    // that extending capture would surface as a failure here rather than as a
+    // silent improvement. That is exactly what happened: 2739/2741 entered
+    // CONTEXT_CAPTURE_CODES and the three sites now fold onto one interface.
+    //
+    // What it still guards is the sharper half, and it is worth more than the
+    // fold. Every diagnostic here carries a related pointing at the missing
+    // *property*, `profile.ts:10:3` — and the group key is the *interface*,
+    // `profile.ts:7:1`. Two different positions. The fold rests on the captured
+    // `expected.declaredAt`, never on the related, so design question 2 of the
+    // P1 plan stays closed in the direction `assignability-mismatch` closed it.
     const { report } = analyse("missing-required-property");
-    expect(report.groups).toEqual([]);
-    expect(report.diagnostics.every((d) => d.role === "root")).toBe(true);
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(3);
+
+    const cause = report.groups[0]?.cause;
+    expect(cause?.kind).toBe("declaration");
+    const declaredAt = cause?.kind === "declaration" ? cause.symbol.declaredAt : undefined;
+    expect(declaredAt?.file).toBe("src/accounts/profile.ts");
+    expect(declaredAt?.line).toBe(7);
 
     const spans = report.diagnostics.map((d) => d.related[0]?.span);
     expect(spans).toHaveLength(3);
     for (const span of spans) {
       expect(span?.file).toBe("src/accounts/profile.ts");
+      // One and the same position, three times over — and still not the key.
       expect(span?.line).toBe(10);
+      expect(span?.line).not.toBe(declaredAt?.line);
     }
-    // One and the same position, three times over, unused.
-    expect(new Set(spans.map((span) => `${span?.file}:${span?.line}:${span?.column}`)).size).toBe(
-      1,
-    );
   });
 });
 

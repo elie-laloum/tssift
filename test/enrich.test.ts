@@ -307,6 +307,63 @@ describe("2307 · what the declarative files say", () => {
   });
 });
 
+/**
+ * TS2739/2741 — the pair that folds, and the §5.2 claim the measurement broke.
+ */
+describe("2739/2741 · the target type, and the list that needed no completing", () => {
+  it("names the declaration TypeScript never prints, on both codes", () => {
+    for (const [name, code, expected] of [
+      ["missing-multiple-properties", 2739, "required by: interface 'Rect'"],
+      ["missing-required-property", 2741, "required by: interface 'Profile'"],
+    ] as const) {
+      const diagnostics = build(name).after.diagnostics.filter((d) => d.code === code);
+      expect(diagnostics).toHaveLength(3);
+      for (const diagnostic of diagnostics) {
+        expect(diagnostic.facts.map((f) => f.text)).toEqual([expected]);
+      }
+    }
+  });
+
+  it("resolves the return-statement shape too, not just variable declarations", () => {
+    // 2 of the 6 diagnostics sit on a `return { … }`, where `getTypeAtLocation`
+    // yields `any`. Without the enclosing-signature branch they would resolve to
+    // nothing and the cascade would fold 2 of 3 — worse than not folding, since
+    // the stray member would read as a second cause.
+    const returns = build("missing-multiple-properties").after.diagnostics.filter(
+      (d) => d.primary.line === 9,
+    );
+    expect(returns).toHaveLength(1);
+    expect(returns[0]?.facts[0]?.span?.file).toBe("src/geometry/shape.ts");
+  });
+
+  it("each fixture folds onto one declaration — the point of capturing them", () => {
+    for (const name of ["missing-multiple-properties", "missing-required-property"] as const) {
+      const { after } = build(name);
+      expect(after.groups).toHaveLength(1);
+      expect(after.groups[0]?.members).toHaveLength(3);
+    }
+  });
+
+  it("no fact repeats the list of missing properties (TS2739 never truncates)", () => {
+    // Probed on 5.9.3: 1 missing ⇒ 2741, 2–5 ⇒ 2739 with the list complete,
+    // 6+ ⇒ TS2740 truncated at four. The truncation §5.2 attributes to these two
+    // belongs to 2740, which is not in the table of ten. Restating a complete
+    // list would be a fact that says what the message just said.
+    for (const name of ["missing-multiple-properties", "missing-required-property"] as const) {
+      for (const diagnostic of build(name).after.diagnostics) {
+        for (const fact of diagnostic.facts) {
+          expect(fact.text).not.toMatch(/width|height|locale/);
+        }
+      }
+    }
+  });
+
+  it("2740 is not captured and not enriched: it is outside the table of ten", () => {
+    expect(CONTEXT_CAPTURE_CODES).not.toContain(2740);
+    expect(ENRICHED_CODES).not.toContain(2740);
+  });
+});
+
 describe("the renderer says a group's facts once, not once per member", () => {
   it("the property list appears exactly once under a folded cause", () => {
     const { after, facts } = build("partial-interface-rename");

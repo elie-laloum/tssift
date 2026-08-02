@@ -98,7 +98,7 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // node_modules …` line. Widening this to `.*` would retire the guard
         // rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |(type|expected type|parameter type|callee|module|installer|lockfiles): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
         );
       }
     });

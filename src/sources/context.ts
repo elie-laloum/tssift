@@ -381,6 +381,57 @@ function context2554(
   };
 }
 
+/**
+ * TS2741 — `Property 'x' is missing in type 'S' but required in type 'T'`.
+ * TS2739 — the same failure with two or more missing: `… is missing the
+ * following properties from type 'T': a, b`.
+ *
+ * One resolver, because they are one failure counted twice: TypeScript picks
+ * 2741 at exactly one missing property and 2739 from two, so which code fires
+ * is a property of *how many* members were forgotten and not of what went
+ * wrong. Splitting them would make an identical cascade fold or not depending
+ * on whether someone dropped one field or two — the same trap 2305/2724 set,
+ * and the reason `src/codes.ts` records that lesson.
+ *
+ * `expected` is `T`, the target type, which is the shared cause: N construction
+ * sites of one interface break together when that interface gains a required
+ * member. Two node shapes reach here and both are handled explicitly rather
+ * than by a downward search for an object literal — a search would pick a
+ * nested literal on the way and point at the wrong type:
+ *
+ *  - the **name of a variable declaration** (`const origin: Rect = { … }`),
+ *    where the type at that location already *is* the target;
+ *  - a **return statement** (`return { x, y }`), where it is the enclosing
+ *    function's declared return type. `getTypeAtLocation` on the statement
+ *    yields `any`, so this branch is not an optimisation but the only way the
+ *    case resolves at all — measured on the two fixtures, 2 of 6 diagnostics.
+ *
+ * Anything else returns `undefined` and degrades to the native format (rule 5).
+ */
+function context2739(
+  ts: typeof TS,
+  checker: TS.TypeChecker,
+  node: TS.Node,
+  spanOf: SpanOf,
+): DiagnosticContext | undefined {
+  let target: TS.Type | undefined;
+
+  if (ts.isReturnStatement(node)) {
+    let fn: TS.Node | undefined = node.parent;
+    while (fn && !ts.isFunctionLike(fn)) fn = fn.parent;
+    const signature = fn
+      ? checker.getSignatureFromDeclaration(fn as TS.SignatureDeclaration)
+      : undefined;
+    target = signature ? checker.getReturnTypeOfSignature(signature) : undefined;
+  } else if (node.parent && ts.isVariableDeclaration(node.parent) && node.parent.name === node) {
+    target = checker.getTypeAtLocation(node);
+  }
+
+  if (!target) return undefined;
+  const expected = symbolRefOfType(ts, checker, target, spanOf);
+  return expected ? { expected } : undefined;
+}
+
 type Resolver = (
   ts: typeof TS,
   checker: TS.TypeChecker,
@@ -396,6 +447,9 @@ const RESOLVERS: Record<number, Resolver | undefined> = {
   2345: context2345,
   2353: context2353,
   2554: context2554,
+  2739: context2739,
+  // Same resolver, same failure — see the comment on `context2739`.
+  2741: context2739,
 };
 
 /**
