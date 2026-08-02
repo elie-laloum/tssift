@@ -132,6 +132,29 @@ function declarationSpan(ts: typeof TS, declaration: TS.Declaration, spanOf: Spa
 }
 
 /**
+ * Does this type have members of its own, or only a primitive's prototype?
+ *
+ * `getPropertiesOfType` answers on the *apparent* type, so a union of string
+ * literals comes back with the fifty members of `String` — `charAt`, `blink`,
+ * `fontcolor`. Printing those as "what 'Currency' contains" would be noise at
+ * best and a claim about the wrong type at worst.
+ *
+ * This is the mirror of the P2 finding recorded in `facts.ts`. There, for a
+ * *named object* type, the property list carries the information and the shape
+ * is just the name. Here, for a union of primitives, it is the exact opposite:
+ * the property list is prototype noise and the shape is the payload. Neither
+ * one generalises, which is why both are decided by a test on the type.
+ *
+ * Measured 2026-08-02: no fixture triggered this before TS2322 was captured, so
+ * the guard changes no existing output — it stops the first case that would
+ * have hit it.
+ */
+function hasOwnMembers(ts: typeof TS, type: TS.Type): boolean {
+  const constituents = type.isUnion() ? type.types : [type];
+  return constituents.every((member) => (member.flags & ts.TypeFlags.Object) !== 0);
+}
+
+/**
  * A type, as a `SymbolRef` anchored on its declaration.
  *
  * Returns `undefined` when the type has no declaration to point at — `{}`,
@@ -152,14 +175,44 @@ function symbolRefOfType(
   const declaration = symbol?.declarations?.[0];
   if (!symbol || !declaration) return undefined;
 
+  const name = displayName(ts, symbol, declaration);
+
+  const own = hasOwnMembers(ts, type);
+
+  // When `typeToString` gives back the name we are about to print anyway, it has
+  // said nothing — that is the whole point of `shapeAddsToName`. For a union of
+  // *primitives* we can do better than give up: its constituents are its whole
+  // definition, and for `type Currency = "EUR" | "USD"` they are precisely what
+  // TS2322's message never states.
+  //
+  // Gated on `own` because the two halves of that sentence are the same axis,
+  // measured on two fixtures the same day. Expanding a union of *objects*
+  // instead makes things worse: `narrowed-union-member` renders 130 characters
+  // of three object literals in place of `1 property: type`, which is the fact
+  // that actually answers "why does `.kind` not exist on Shape". Where the
+  // property list carries the information, the shape must stay out of its way.
+  let signature = truncate(checker.typeToString(type));
+  if (!own && signature === name && type.isUnion()) {
+    signature = truncate(type.types.map((member) => checker.typeToString(member)).join(" | "));
+  }
+
   const ref: SymbolRef = {
-    name: displayName(ts, symbol, declaration),
+    name,
     kind: declarationKind(ts, declaration),
     declaredAt: declarationSpan(ts, declaration, spanOf),
-    signature: truncate(checker.typeToString(type)),
+    signature,
   };
 
-  const members = checker.getPropertiesOfType(type).map((property) => property.getName());
+  const members = own
+    ? checker
+        .getPropertiesOfType(type)
+        .map((property) => property.getName())
+        // `__@iterator@2156`, `__@toStringTag@2198`: well-known symbols, spelled
+        // with an internal id that changes between compilations. They are not
+        // names anyone can look up, and the id would make a snapshot differ from
+        // one run to the next — the same reason `displayName` refuses `__type`.
+        .filter((name) => !name.startsWith("__@"))
+    : [];
   if (members.length > 0) ref.memberNames = members;
   return ref;
 }
@@ -461,6 +514,61 @@ function context2739(
   return context;
 }
 
+/**
+ * TS2322 — `Type 'A' is not assignable to type 'B'`.
+ *
+ * `B` is the shared cause, and this is the fixture that proves the point twice
+ * over. `assignability-mismatch` exists as the counter-example that forbids
+ * keying on a `related` span: two of its three diagnostics carry a related
+ * naming the `currency` *property* of `Rate` — correct code, three lines below
+ * the union that actually lost a member — and the third carries no related at
+ * all. Resolving the **contextual type** instead lands all three on
+ * `type Currency` itself, at the exact line `meta.json` names as the root cause.
+ * 3 of 3, measured 2026-08-02.
+ *
+ * The handle is uniform, and deliberately one concept rather than a list of
+ * syntactic cases: *the expression that was checked against something*, then
+ * what it was checked against. A property assignment's initialiser, a variable
+ * declaration's initialiser, a return statement's expression, or the node
+ * itself when it is already an expression.
+ *
+ * `unconstrained-generic` is the witness that this stays honest where it should
+ * not fold: its lone TS2322 resolves to `Map` in `lib.es2015.collection.d.ts`,
+ * which §5.1's "a declaration outside the program's files cannot be a cause"
+ * guard refuses. That guard was written in P1 for a corpus TS2345 that resolved
+ * the same way, and it catches this one for free.
+ */
+function context2322(
+  ts: typeof TS,
+  checker: TS.TypeChecker,
+  node: TS.Node,
+  spanOf: SpanOf,
+): DiagnosticContext | undefined {
+  const parent = node.parent;
+  let assigned: TS.Expression | undefined;
+
+  if (parent && ts.isPropertyAssignment(parent) && parent.name === node) {
+    assigned = parent.initializer;
+  } else if (parent && ts.isVariableDeclaration(parent) && parent.name === node) {
+    assigned = parent.initializer;
+  } else if (ts.isReturnStatement(node)) {
+    assigned = node.expression;
+  } else if (ts.isExpression(node)) {
+    assigned = node;
+  }
+
+  const contextual = assigned ? checker.getContextualType(assigned) : undefined;
+  if (!contextual) return undefined;
+
+  const expected = symbolRefOfType(ts, checker, contextual, spanOf);
+  if (!expected) return undefined;
+
+  return {
+    expected,
+    actual: truncate(checker.typeToString(checker.getTypeAtLocation(assigned as TS.Expression))),
+  };
+}
+
 type Resolver = (
   ts: typeof TS,
   checker: TS.TypeChecker,
@@ -470,6 +578,7 @@ type Resolver = (
 
 const RESOLVERS: Record<number, Resolver | undefined> = {
   2305: context2305,
+  2322: context2322,
   // Same resolver, same shape — see the comment on `context2305`.
   2724: context2305,
   2339: context2339,

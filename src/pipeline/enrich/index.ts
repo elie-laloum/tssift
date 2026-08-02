@@ -27,9 +27,13 @@
  *   fixture with a branching chain, all three branches have identical depth and
  *   one leaf each, so no structural signal separates them. Ranking them would
  *   mean reading the leaf messages semantically, which is guessing (rule 5).
- * - **2322** (`Type not assignable`) — the divergence path (`a.b[0].c`) needs
- *   both types as structures. Only the expected side is captured, and as a
- *   `SymbolRef` rather than a tree.
+ * **2322 shipped on 2026-08-02, and not for the reason §5.2 gave.** That table
+ * asks it for the divergence path (`a.b[0].c`), which needs both types as
+ * structures and is still not derivable. What is derivable turned out to be
+ * worth more: where the target type is declared, and — for a union — what it
+ * actually permits. It also folds: `assignability-mismatch`, the fixture
+ * written to *forbid* keying on a `related` span, folds correctly on the
+ * contextual type instead.
  * - **18047/18048** (`Possibly null`) — the origin of the nullability is a
  *   control-flow question; nothing captured answers it.
  *
@@ -72,6 +76,7 @@ import type {
 } from "../../types.js";
 import { enrich2305 } from "./2305.js";
 import { enrich2307 } from "./2307.js";
+import { enrich2322 } from "./2322.js";
 import { enrich2339 } from "./2339.js";
 import { enrich2345 } from "./2345.js";
 import { enrich2353 } from "./2353.js";
@@ -91,6 +96,7 @@ const ENRICHERS: Record<number, Enricher | undefined> = {
   // Same enricher, same shape — see the comment on `2305.ts`.
   2724: enrich2305,
   2307: enrich2307,
+  2322: enrich2322,
   2339: enrich2339,
   2345: enrich2345,
   2353: enrich2353,
@@ -118,12 +124,37 @@ export const ENRICHED_CODES: readonly number[] = Object.keys(ENRICHERS)
  * this is not hypothetical: 8 of 99 TS2339 resolve to no declaration at all,
  * every one downstream of an implicit `any`.
  */
+/**
+ * Do these facts describe something declared outside the program's own files?
+ *
+ * The same authority §5.1 gives causality — `ProgramFacts.files`, never a prefix
+ * test on the path, so a sibling package in a monorepo is admitted while a lib
+ * type is not. Extended to enrichment on 2026-08-02, when capturing TS2322
+ * produced the first case: `unconstrained-generic` resolves its expected type to
+ * `Map` in `lib.es2015.collection.d.ts`, and the facts that came back were a
+ * declaration site nobody will ever open and a list of `Map`'s twelve methods.
+ * True, checkable, and worth nothing to the reader of a generic-inference
+ * failure.
+ *
+ * All or nothing, and here that really is right: a diagnostic's facts describe
+ * the one symbol its context resolved to, so if the declaration is out of
+ * scope, the member list hanging off it is too. Dropping the set makes the
+ * diagnostic `confidence: 'low'`, which rule 5 defines as "render the native
+ * format" — the honest outcome rather than a fact about the standard library.
+ */
+function describesOutsideProgram(facts: Fact[], inProgram: ReadonlySet<string>): boolean {
+  return facts.some((fact) => fact.span !== undefined && !inProgram.has(fact.span.file));
+}
+
 export function enrich(report: DiagnosticReport, facts: ProgramFacts): DiagnosticReport {
+  const inProgram = new Set(facts.files);
+
   const diagnostics = report.diagnostics.map<EnrichedDiagnostic>((diagnostic) => {
     const enricher = ENRICHERS[diagnostic.code];
     if (!enricher) return diagnostic;
 
-    const produced = enricher(diagnostic, facts);
+    const candidate = enricher(diagnostic, facts);
+    const produced = describesOutsideProgram(candidate, inProgram) ? [] : candidate;
     return {
       ...diagnostic,
       facts: produced,

@@ -786,3 +786,116 @@ où elle s'appliquait.
 `typecheck`, **560 tests** (539 avant), `check`, et `fixtures:verify` sur **21**
 fixtures — verts. La fixture nouvelle émet 3 × TS2740 sous 5.4.5 comme sous
 5.9.3, seuil de troncature compris.
+
+---
+
+## P2 / 2322 — le dernier code enrichissable, et pas pour la raison annoncée (2026-08-02)
+
+§5.2 demande à 2322 « le chemin de divergence (`a.b[0].c`) ». Il reste non
+dérivable : il faudrait les deux types comme structures, et seul l'attendu est
+capturé. **Ce qui l'est valait davantage** — où le type cible est déclaré, et,
+pour une union, ce qu'il autorise réellement.
+
+`Type '"GBP"' is not assignable to type 'Currency'.` nomme le type au nom
+duquel la valeur est refusée, et ne dit ni où `Currency` vit, ni qu'il vaut
+`"EUR" | "USD"`. Les deux sont à un survol de souris dans un éditeur et
+inatteignables depuis un terminal — la définition même, dans ce projet, d'un
+fait qui vaut ses tokens.
+
+### Le résultat le plus net du jalon : la fixture anti-`related` plie correctement
+
+`assignability-mismatch` a été écrite pour **interdire** une règle : indexer sur
+le span d'un `relatedInformation`. Deux de ses trois diagnostics portent un
+`related` désignant `currency.ts:9:3` — la *propriété* `currency` de `Rate`, du
+code parfaitement correct — et le troisième n'en porte aucun.
+
+Résolu sur le **type contextuel**, les trois atterrissent sur
+`currency.ts:6:1`, `type Currency`, la ligne que `meta.json` nomme cause racine.
+
+| clé | atteint | où |
+|---|---:|---|
+| span du `related` | 2 / 3 | `currency.ts:9:3` — code correct, à ne pas toucher |
+| **type contextuel** | **3 / 3** | **`currency.ts:6:1` — l'union qui a perdu `"GBP"`** |
+
+La fixture porte donc désormais les **deux** moitiés de l'argument au lieu
+d'une : le `related` est la mauvaise clé, *et* le type contextuel en est une
+bonne. Rendu :
+
+```
+[1] cause: type-alias 'Currency' declared at src/pricing/currency.ts:6:1
+      "EUR" | "USD"
+    3 diagnostics, all TS2322
+```
+
+### Une inversion mesurée : objet vs primitif
+
+P2 avait établi que pour un type **objet nommé**, `typeToString` rend le nom et
+c'est la **liste des propriétés** qui porte l'information. Pour une union de
+**primitifs**, c'est l'exact inverse :
+
+| type | `typeToString` | `getPropertiesOfType` | ce qui informe |
+|---|---|---|---|
+| `interface CreateUserInput` | `CreateUserInput` (le nom) | `id, email, name` | **les propriétés** |
+| `type Currency = "EUR" \| "USD"` | `Currency` (le nom) | **50 membres de `String`** — `charAt`, `blink`, `fontcolor` | **les constituants** |
+
+Aucune des deux ne se généralise, d'où un test sur le type (`hasOwnMembers`)
+plutôt qu'une règle unique. Vérifié dans les deux sens : `narrowed-union-member`
+— une union d'**objets**, où la liste commune est l'information — sort **au
+caractère près** comme avant, et une version intermédiaire qui expansait toutes
+les unions lui infligeait 130 caractères de littéraux d'objet à la place de
+`1 property: type`, qui est la ligne qui répond vraiment à « pourquoi `.kind`
+n'existe pas sur Shape ».
+
+### Un garde étendu, et une règle 1 qui a sonné juste
+
+Capturer 2322 a produit le premier cas d'un type attendu **hors du programme** :
+`unconstrained-generic` résout vers `Map` dans `lib.es2015.collection.d.ts`. Ce
+qui sortait :
+
+```
+expected type: interface 'Map' Map<string, User> at <ts-lib>/lib.es2015.collection.d.ts:19:1
+'Map' has 12 properties: clear, delete, forEach, get, has, set, size, …, __@iterator@2156
+```
+
+Vrai, vérifiable, et sans valeur pour le lecteur d'un échec d'inférence
+générique — plus deux noms internes (`__@iterator@2156`) dont l'identifiant
+change d'une compilation à l'autre. **Et le test de non-prescription de la
+règle 1 a échoué dessus**, sur `set` et `delete`, membres de `Map` : le test
+n'avait pas tort, la sortie n'avait rien à faire là.
+
+Deux corrections, toutes deux générales :
+- **un enrichisseur ne décrit jamais une déclaration hors des fichiers du
+  programme** — même autorité que §5.1 pour une cause, `ProgramFacts.files`,
+  tout ou rien puis repli natif (règle 5) ;
+- **les noms de symboles bien connus (`__@…`) sont filtrés** de `memberNames`,
+  pour la même raison que `displayName` refuse `__type`.
+
+### Coût
+
+| | entrées | B chars | B/A |
+|---|---:|---:|---:|
+| avant 2322 | 49 | 18 010 | 56 % |
+| après | **47** | 18 150 | 57 % |
+
+**+140 caractères, −2 entrées.** Le seul poste qui bouge est
+`assignability-mismatch`, 284 → 753 (265 %) : trois diagnostics repliés en une
+entrée, plus l'en-tête et la ligne d'union. Comme les autres petites fixtures,
+le gain y est **structurel et non volumétrique**.
+
+**Pliage à cause unique : 12 sur 18** — contre 8 sur 17 en début de journée. Le
+lien `declaredAt` identique porte neuf fixtures, le spécificateur partagé trois.
+
+### Ce que 2322 ne plie pas, et c'est correct
+
+`unconstrained-generic` porte un TS2322 et **ne plie pas** : son type attendu est
+`Map`, hors programme, et le garde le refuse. C'est le comportement voulu — la
+fixture est le témoin des diagnostics *sur* leur propre cause — et c'est aussi
+le rappel que capturer un code ne fait pas plier tous ses diagnostics.
+
+### Vérification
+
+`typecheck`, **560 tests**, `check` — verts. Diff de snapshot : **12 insertions,
+8 suppressions, sur la seule `assignability-mismatch`**. Toutes les autres
+fixtures, `narrowed-union-member` et `unconstrained-generic` comprises, sortent
+au caractère près comme avant — la démonstration que les corrections apportées à
+`symbolRefOfType` sont ciblées et non des effets de bord.

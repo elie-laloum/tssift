@@ -97,10 +97,12 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // more, all statements about a specifier rather than about a type:
         // `'x' is/matches …`, `installer:`/`lockfiles:`, and the `no
         // node_modules …` line — then 2740 two: `required by:` and the
-        // `N more not listed above:` completion. Widening this to `.*` would
-        // retire the guard rather than update it.
+        // `N more not listed above:` completion — and 2322 one, a union of
+        // primitives expanded as `"EUR" | "USD"`, which is the only fact line
+        // that opens on a quoted literal. Widening this to `.*` would retire
+        // the guard rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |\d+ more not listed above: |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |"[^"]*" \||\d+ more not listed above: |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
         );
       }
     });

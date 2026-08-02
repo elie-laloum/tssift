@@ -15,7 +15,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 3. `.plans/2026-08-01_p2-enrichment.md` — **le plan courant** : la première tranche de P2, ce que chaque mesure a décidé, et les quatre codes de §5.2 qui restent avec ce qui les débloquerait. Les autres sont **clos** : `_b1.md`, `_0.0.1-release-prep.md`, `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
 4. `EVAL.md` — les chiffres priment sur les intentions
 
-**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; `pipeline/enrich/` est ouvert depuis le 2026-08-01 et porte **dix codes**, 2307 et 2739/2740/2741 compris depuis le 2026-08-02. Depuis le 2026-07-28 le corpus de fixtures est à **21** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **560 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
+**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; `pipeline/enrich/` est ouvert depuis le 2026-08-01 et porte **onze codes**, 2307 · 2322 · 2739/2740/2741 compris depuis le 2026-08-02 — §5.2 est résolu sauf 18047/18048. Depuis le 2026-07-28 le corpus de fixtures est à **21** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **560 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 

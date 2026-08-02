@@ -41,15 +41,16 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed with --all 1`
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders assignability-mismatch 1`] = `
 "root: fixtures/assignability-mismatch/before
-3 errors · 3 files
+3 errors · 3 files · 1 root cause
 
-[1] src/billing/quote.ts:4:12 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
-    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
-
-[2] src/pricing/catalog.ts:3:37 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
-    related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
-
-[3] src/reporting/ledger.ts:3:14 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+[1] cause: type-alias 'Currency' declared at src/pricing/currency.ts:6:1
+      "EUR" | "USD"
+    3 diagnostics, all TS2322
+    src/billing/quote.ts:4:12 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+      related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+    src/pricing/catalog.ts:3:37 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+      related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+    src/reporting/ledger.ts:3:14 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
 "
 `;
 
@@ -59,11 +60,14 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders assignability-mismatch with
 
 [1] src/billing/quote.ts:4:12 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
     related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+    expected type: type-alias 'Currency' "EUR" | "USD" at src/pricing/currency.ts:6:1
 
 [2] src/pricing/catalog.ts:3:37 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
     related src/pricing/currency.ts:9:3: The expected type comes from property 'currency' which is declared here on type 'Rate'
+    expected type: type-alias 'Currency' "EUR" | "USD" at src/pricing/currency.ts:6:1
 
 [3] src/reporting/ledger.ts:3:14 error TS2322: Type '"GBP"' is not assignable to type 'Currency'.
+    expected type: type-alias 'Currency' "EUR" | "USD" at src/pricing/currency.ts:6:1
 "
 `;
 

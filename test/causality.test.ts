@@ -377,9 +377,22 @@ describe("causality · why a related span may NOT be used as a group key", () =>
   // good, in the other direction.
   const { report } = analyse("assignability-mismatch");
 
-  it("stays three roots", () => {
+  it("folds all three on the contextual type — line 6, not the related's line 9", () => {
+    // Since 2026-08-02 this fixture folds, and it folds onto exactly the line
+    // `meta.json` calls the root cause: `type Currency` at currency.ts:6:1, the
+    // union that lost "GBP". The related-keyed rule it was written to refute
+    // would have reached line 9:3 and only two of the three.
+    //
+    // So the fixture now carries both halves of the argument rather than one:
+    // the related is the wrong key, and the contextual type is a right one.
     expect(report.diagnostics).toHaveLength(3);
-    expect(report.groups).toEqual([]);
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(3);
+
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.name).toBe("Currency");
+    expect(symbol.declaredAt.file).toBe("src/pricing/currency.ts");
+    expect(symbol.declaredAt.line).toBe(6);
   });
 
   it("would have grouped two of three, and headed them with correct code", () => {
@@ -400,6 +413,11 @@ describe("causality · why a related span may NOT be used as a group key", () =>
     // that needs no edit, which is the misdirection PROJECT.md §11 calls
     // critical — just quieter than merging two unrelated bugs.
     expect(new Set(relatedSites.filter(Boolean))).not.toContain("src/pricing/currency.ts:6:1");
+
+    // And the group that DOES form is keyed nowhere near them.
+    const keyed = declSymbolOf(report.groups[0]).declaredAt;
+    expect(`${keyed.file}:${keyed.line}:${keyed.column}`).toBe("src/pricing/currency.ts:6:1");
+    expect(relatedSites).not.toContain("src/pricing/currency.ts:6:1");
   });
 });
 
