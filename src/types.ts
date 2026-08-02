@@ -76,8 +76,52 @@ export interface ProgramFacts {
    * the question the rule asks (PROJECT.md §4).
    */
   imports: Record<string, string[]>;
+  /**
+   * How module specifiers resolve in this project — declared dependencies,
+   * installer, PnP, `paths`. The channel TS2307 needs and that no
+   * `NormalizedDiagnostic` can carry: the message is identical under all four
+   * installers while the truth behind it is not (PROJECT.md §4, §9.1).
+   */
+  resolution: ResolutionFacts;
   /** The compiler actually loaded. */
   typescript: { version: string; path: string };
+}
+
+/** Which installer wrote the lockfile. `unknown` when none, or more than one, is found. */
+export type Installer = "npm" | "pnpm" | "yarn" | "bun" | "unknown";
+
+export interface DeclaredDependency {
+  /** `dependencies` | `devDependencies` | `peerDependencies` | `optionalDependencies`. */
+  field: string;
+  /** The range exactly as written in package.json. */
+  range: string;
+}
+
+/**
+ * What the project's declarative files say about module resolution.
+ *
+ * Filled by the source, from files only — never a package manager, never a
+ * subprocess, and never presuming `node_modules/` exists (rule 10). Every field
+ * is something that was looked for and found, or looked for and not found.
+ */
+export interface ResolutionFacts {
+  installer: Installer;
+  /** Lockfile names found at the project root, in a fixed order. */
+  lockfiles: string[];
+  /** `.pnp.cjs` (or the Yarn 2 `.pnp.js`) sits at the project root. */
+  pnp: boolean;
+  /** A `node_modules/` directory exists at the project root. Under PnP it does not. */
+  nodeModules: boolean;
+  /**
+   * package.json's declared dependencies, merged across the four fields.
+   * **Absent** when no manifest could be read — which is not the same as one
+   * declaring nothing, and only the latter licenses saying a package is missing.
+   */
+  dependencies?: Record<string, DeclaredDependency>;
+  /** tsconfig `paths`, verbatim. Empty when none are configured. */
+  paths: Record<string, readonly string[]>;
+  /** `baseUrl`, relative to the tsconfig's directory. Absent when not configured. */
+  baseUrl?: string;
 }
 
 export interface SymbolRef {

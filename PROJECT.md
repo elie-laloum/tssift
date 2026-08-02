@@ -132,7 +132,25 @@ interface ProgramFacts {
   root: string;                  // dossier du tsconfig résolu, absolu
   files: string[];               // relatifs à root
   imports: Record<string, string[]>;  // fichier → spécificateurs tels qu'écrits
+  resolution: ResolutionFacts;   // comment un spécificateur résout ici — le canal de 2307
   typescript: { version: string; path: string };  // le compilateur réellement chargé
+}
+
+type Installer = 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
+
+interface DeclaredDependency {
+  field: string;                 // dependencies | devDependencies | peer… | optional…
+  range: string;                 // la plage telle qu'écrite
+}
+
+interface ResolutionFacts {
+  installer: Installer;          // 'unknown' si aucun lockfile, ou plus d'un
+  lockfiles: string[];           // les noms trouvés à la racine, ordre fixe
+  pnp: boolean;                  // .pnp.cjs (ou .pnp.js) à la racine
+  nodeModules: boolean;          // un node_modules/ existe à la racine — jamais présumé
+  dependencies?: Record<string, DeclaredDependency>;  // ABSENT si aucun manifeste lisible
+  paths: Record<string, readonly string[]>;           // paths du tsconfig, verbatim
+  baseUrl?: string;              // relatif au dossier du tsconfig
 }
 
 interface SymbolRef {
@@ -184,6 +202,9 @@ interface Fact {
 - **`chain`.** Parcours préfixe + `depth` est un encodage **sans perte** d'un arbre ordonné : rien n'est cédé par rapport à un `children[]`, et les snapshots restent lisibles — ce qui compte, puisqu'un diff de snapshot doit se lire. Le `code` par nœud est indispensable : une chaîne 2769 se termine typiquement sur un 2345, et c'est ce code-là qui informe.
   **Précision arrêtée le 2026-07-27 à l'implémentation :** le nœud de tête est **exclu** de `chain`, qui commence donc à `depth: 1`. La tête vit déjà dans `message` et `code` ; l'inclure en `chain[0]` dupliquerait le message dans `json` et obligerait chaque renderer à sauter `depth: 0`. L'encodage reste sans perte, la racine étant connue. Vérifié sur `overload-mismatch` : un 2769 donne la suite de profondeurs `[1,2,1,2,1,2]` — un arbre **branchant**, trois frères 2772 portant chacun une feuille. C'est un témoin plus exigeant qu'une chaîne linéaire, et c'est ce qui rend le parcours préfixe non négociable.
 - **`ProgramFacts.imports`.** **Corrigé le 2026-07-27 à l'implémentation.** Le commentaire disait « spécificateurs **résolus** » ; c'est la seule sémantique qui rende le champ inutilisable par son unique consommateur documenté. §5.1 dérive sur « le diagnostic est dans un fichier dont l'import du module non résolu par la racine a échoué » : un module en 2307 n'a par définition **aucune** résolution, donc une table des résolutions réussies ne peut pas dire qui l'importait. `imports` porte donc les **spécificateurs tels qu'écrits** (`"@acme/csv-writer"`, `"../types/user"`), ce qui répond exactement à la question posée. Collectés sans checker, par parcours des `import`/`export`/`import =` de chaque fichier — donc compatible règle 4.
+- **`ProgramFacts.resolution`. Ajouté le 2026-08-02, pour débloquer l'enrichisseur 2307 — et c'est le canal, pas le code, qui était le travail.** TS2307 est le seul des dix dont la charge utile n'est pas typée : `Cannot find module 'qs'` est **la même phrase sous les quatre installateurs** alors que la vérité derrière elle diffère à chaque fois (non déclaré mais hoisté, non déclaré et injoignable, déclaré et installé mais résolu par une carte que ce processus ne charge pas, ou aliasé par une ligne `paths` visant un dossier renommé). Rien de tout cela n'est dans un `NormalizedDiagnostic`, et rien ne peut y entrer : ce sont des **fichiers** qu'il faut lire, ce qu'un étage de pipeline n'a pas le droit de faire (règle 4). D'où un canal par programme, rempli par la source à l'ingestion.
+  Ce qu'il lit, et **rien d'autre** (règle 10) : `package.json` analysé, les **noms** des lockfiles présents, la présence de `.pnp.cjs`, la présence d'un `node_modules/`, et les `paths` / `baseUrl` du compilateur. Aucun lockfile n'est *parsé* — `pnpm-lock.yaml` demanderait un parseur YAML, donc la première dépendance runtime, pour un seul code — et rien ne parcourt `node_modules/.pnpm/`, qui est une convention privée de pnpm et non un fichier déclaratif.
+  Deux choix de forme portent une distinction et pas une commodité. **`dependencies` est absent plutôt que vide** quand aucun manifeste n'a pu être lu : « le manifeste ne déclare rien » et « nous n'avons pas pu regarder » soutiennent des affirmations opposées, et seule la première autorise à dire qu'un paquet n'est **pas** déclaré (règle 5). Et **`installer` reste `unknown` dès que deux lockfiles cohabitent** : un ordre de priorité imprimerait une supposition comme un fait, là où la liste des lockfiles en dit plus et n'affirme rien.
 - **`ProgramFacts.files`.** Les fichiers du programme **hors** libs TypeScript et hors `node_modules`, normalisés et triés. Sans ce filtre, un dépôt réel y verse des milliers d'entrées de `@types` que rien ne consomme, dans le champ même qui doit rester lisible en `json`.
 - **`category`.** Quatre membres, comme `ts.DiagnosticCategory`. P0 n'ingère que `getPreEmitDiagnostics()`, donc `'suggestion'` reste vide : les suggestions sont du bruit d'éditeur, et le consommateur a lancé `tsc --noEmit`.
 - **`context` et non `subject` sur `EnrichedDiagnostic`.** Remplir un `SymbolRef` exige le checker ; la règle 4 l'interdit au pipeline. Tel qu'écrit auparavant, **aucune couche n'avait le droit de peupler `subject`**. Le champ descend donc dans `NormalizedDiagnostic`, rempli par la source.
@@ -272,7 +293,7 @@ Les codes hors table sortent au format natif. **Couvrir 10 codes bien vaut mieux
 **Ce que P2 a livré le 2026-08-01, et où cette table s'est trompée.** Six codes ont un enrichisseur — **2339, 2353, 2345, 2554, 2305, 2724** — sélectionnés par une règle unique : *un enrichisseur sort quand le fait qu'il produit est déjà capturé et que TypeScript ne l'imprime pas déjà.* Quatre entrées ci-dessus ne sortent pas, et une cinquième sort en no-op ; les chiffres sont dans `EVAL.md` § P2.
 
 - **2769, classé ⭐⭐⭐ ici, est en réalité le moins rentable des dix.** Toute sa charge utile est déjà dans `chain` — TypeScript imbrique un TS2772 par candidat avec sa signature et l'erreur qui l'a tué, et le renderer l'imprime depuis P0. « Laquelle échoue le plus tard » **n'est pas dérivable** du capturé : sur `overload-mismatch`, les trois branches ont même profondeur et une feuille chacune.
-- **2322, 2307 et 18047/18048 manquent de données, pas de code.** 2322 demanderait les deux types comme structures, 2307 la topologie installée — donc un canal `ProgramFacts` neuf, un étage de pipeline n'ayant pas le droit de lire des fichiers (règle 4) — et 18047 une analyse de flot.
+- **2322, 2307 et 18047/18048 manquaient de données, pas de code.** 2322 demanderait les deux types comme structures, et 18047 une analyse de flot. **2307 est livré le 2026-08-02**, exactement par où ce diagnostic disait : le canal `ProgramFacts.resolution` (§4), rempli par la source. C'est le septième enrichisseur, et le seul qui ne lit **aucun** `context` — les deux canaux de la règle 4 servent enfin chacun un enrichisseur, ce qui était l'intention du découpage de §3. Il produit au plus trois faits : la ligne `paths` que le spécificateur active, ce que `package.json` déclare (ou ne déclare pas) pour ce paquet, et la topologie d'installation. Deux choses qu'il **ne dit pas**, sur décision : rien de ce qui est réellement posé sur le disque (`qs` est bien présent sous `node_modules/.pnpm/` dans `phantom-dependency-pnpm` — l'atteindre demanderait un parcours de la topologie privée de pnpm ou un parseur YAML), et rien sur ce que chaque installateur fait d'un paquet non déclaré, qui est vrai, documenté, et n'est pas un fait *sur ce projet-ci*. Chiffres : `EVAL.md` § P2/2307.
 - **2551 est absent de la table par décision** : il est déjà bon nativement, et l'instruction de ne pas le dégrader se respecte le mieux en ne le touchant pas.
 - **Le « candidat proche (Levenshtein) » de 2339 n'existe pas, sur mesure.** TypeScript émet TS2551/TS2724 *à la place de* TS2339/TS2305 dès que son correcteur trouve un candidat : tout diagnostic parvenant à un enrichisseur est un cas qu'il a déjà rejeté. À seuil comparable, une suggestion se déclenchait 38 fois sur les fixtures et le corpus, sur deux noms, et était fausse les deux fois (`kind` → `id`, `side` → `id`, sur la cascade qui résiste déjà à 100 % en B1). Aucun `Fact` de type `near-match` n'est produit, et un test le garde.
 
@@ -384,11 +405,15 @@ root: fixtures/phantom-dependency-pnpm/before
 3 errors · 3 files · 1 root cause
 
 [1] cause: unresolved module 'qs'
+      'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json
+      installer: pnpm (pnpm-lock.yaml)
     3 diagnostics, all TS2307
     src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
     src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
     src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
 ```
+
+**Les deux lignes indentées sont l'enrichisseur 2307 (2026-08-02), et elles se rendent une fois pour trois importateurs.** C'est le pendant, pour la branche `module`, de ce que la branche `declaration` fait avec sa signature et sa liste de propriétés : les faits portent sur la **cause** — ici le spécificateur — donc ils appartiennent à l'en-tête et non aux membres. La condition de remontée est l'**intersection** et non « les faits du premier membre » : un texte ne monte que si *tous* les membres le portent, sinon la ligne serait vraie du diagnostic arrivé premier au tri plutôt que du groupe. Sous `--all` il n'y a plus de groupe pour amortir et chaque diagnostic reporte ses faits — le comportement voulu, et l'endroit où l'enrichissement coûte cher.
 
 La clé est le spécificateur, jamais le fichier : `wrong-tsconfig-paths` sort **deux** entrées, une par spécificateur (`@domain/order` plié à trois, `@domain/customer` seul et donc non plié), parce que regrouper deux alias distincts sous un seul en-tête serait le sur-regroupement que §11 classe critique.
 

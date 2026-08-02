@@ -69,6 +69,7 @@ function diagnosticLines(
   diagnostic: EnrichedDiagnostic,
   indent: string,
   suppressAt?: SourceSpan,
+  hoisted?: ReadonlySet<string>,
 ): string[] {
   const lines: string[] = [
     `${indent}${at(diagnostic.primary)} ${diagnostic.category} TS${diagnostic.code}: ${singleLine(
@@ -101,7 +102,13 @@ function diagnosticLines(
     diagnostic.facts.some((fact) => fact.span !== undefined && at(fact.span) === covered);
 
   if (!describesTheCause) {
-    for (const fact of diagnostic.facts) lines.push(factLine(fact, indent));
+    for (const fact of diagnostic.facts) {
+      // `hoisted` carries the exact texts already printed under the group
+      // header — matched on the text rather than assumed, so a member that
+      // somehow produced a different fact still gets to say it.
+      if (hoisted?.has(fact.text)) continue;
+      lines.push(factLine(fact, indent));
+    }
   }
 
   return lines;
@@ -125,6 +132,27 @@ function causeLine(group: DiagnosticGroup): string {
 }
 
 /**
+ * The fact texts a module group may state once, for all of its members.
+ *
+ * The condition is intersection, not "the first member's facts": a text is
+ * hoisted only if **every** member carries it. That is what makes the header
+ * line true of the group rather than true of whichever diagnostic happened to
+ * sort first — and it holds over all members, not just the ones the display cap
+ * leaves visible, so a hidden member never loses a fact it alone had.
+ *
+ * In practice a 2307 group's facts are identical across members by
+ * construction, since they are all statements about the one specifier the group
+ * folds on. The intersection is what guarantees that rather than assuming it.
+ */
+function hoistedFactTexts(entry: Extract<Entry, { kind: "group" }>): string[] {
+  const [first, ...rest] = entry.members;
+  if (!first) return [];
+  return first.facts
+    .map((fact) => fact.text)
+    .filter((text) => rest.every((member) => member.facts.some((fact) => fact.text === text)));
+}
+
+/**
  * What the cause *is*, under the line saying where it is — the P2 half of the
  * §6 example.
  *
@@ -138,8 +166,18 @@ function causeLine(group: DiagnosticGroup): string {
  * interface renders as its own name, so on the contract fixture the shape line
  * is dropped and the member list is the fact. See `shapeAddsToName`.
  */
-function causeFactLines(group: DiagnosticGroup): string[] {
-  if (group.cause.kind === "module") return [];
+function causeFactLines(entry: Extract<Entry, { kind: "group" }>): string[] {
+  const { group } = entry;
+
+  // The module arm carries no `SymbolRef` — there is nothing declared to
+  // describe — so its facts come off the members, which by construction all
+  // name the same unresolved specifier and therefore produce the same facts.
+  // Hoisting them here is what keeps the economics of §5.2 intact: three
+  // importers of `qs` get one statement about `qs`, not three.
+  if (group.cause.kind === "module") {
+    return hoistedFactTexts(entry).map((text) => `      ${text}`);
+  }
+
   const { symbol } = group.cause;
   const lines: string[] = [];
 
@@ -171,7 +209,7 @@ function groupLines(
 ): string[] {
   const lines = [
     `[${index}] ${causeLine(entry.group)}`,
-    ...causeFactLines(entry.group),
+    ...causeFactLines(entry),
     `    ${membersLine(entry.members)}`,
   ];
 
@@ -180,8 +218,10 @@ function groupLines(
   // and json still carries them all (rule 2).
   const causeAt =
     entry.group.cause.kind === "declaration" ? entry.group.cause.symbol.declaredAt : undefined;
+  const hoisted =
+    entry.group.cause.kind === "module" ? new Set(hoistedFactTexts(entry)) : undefined;
   const shown = entry.members.slice(0, maxMembers);
-  for (const member of shown) lines.push(...diagnosticLines(member, "    ", causeAt));
+  for (const member of shown) lines.push(...diagnosticLines(member, "    ", causeAt, hoisted));
 
   const hidden = entry.members.length - shown.length;
   if (hidden > 0) lines.push(`    +${plural(hidden, "more site")} (--all for every one)`);

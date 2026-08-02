@@ -502,6 +502,8 @@ Même harnais B0, mêmes 25 cibles, la seule variable étant la présence de l'�
 
 | | B chars, P1 | B chars, P2 | delta | B/A, P1 | B/A, P2 |
 |---|---:|---:|---:|---:|---:|
+> **Les valeurs absolues de ce tableau ne se reproduisent pas — corrigé le 2026-08-02.** Le harnais passait alors au renderer le chemin **absolu** du projet en guise de `rootLabel`, ce que `run.ts` ne fait pas : le bras B portait `/home/<user>/…` et grossissait de la longueur du chemin de checkout, sur un seul des deux bras. **Les deltas ci-dessous restent justes** (la constante s'annule dans une différence) ; les totaux et les rapports B/A ne le sont pas. Mesuré à nouveau après correction, le même code donne **16 038 et B/A 51 %**. Détail en § P2/2307.
+
 | **total, 25 cibles** | 16 861 | 17 538 | **+4,0 %** | **54 %** | **56 %** |
 | `corpus/shape-tag-renamed` | 759 | 797 | +38 | 8 % | 9 % |
 | `corpus/mapper-argtype-changed` | 990 | 1 043 | +53 | 17 % | 18 % |
@@ -538,7 +540,7 @@ Les 38 déclenchements sont **deux cas distincts, faux tous les deux** : `kind` 
 
 - **2769** — §5.2 le classe premier, la mesure le rétrograde. Toute sa charge utile est **déjà dans `chain`** : TypeScript imbrique un TS2772 par candidat, portant la signature *et* l'erreur qui l'a tué, et le renderer imprime cet arbre depuis P0. Ce que §5.2 voulait ajouter — « laquelle échoue le plus tard, et sur quel argument » — **n'est pas dérivable du capturé** : sur `overload-mismatch`, la seule fixture à chaîne ramifiée, les trois branches ont la même profondeur et une feuille chacune. Aucun signal structurel ne les sépare ; les classer voudrait dire lire les messages sémantiquement, c'est-à-dire deviner.
 - **2322** — le chemin de divergence demande les deux types comme structures. Seul le côté attendu est capturé, et comme `SymbolRef`, pas comme arbre.
-- **2307** — ses faits portent sur la **topologie installée** (déclaré ou non dans `package.json`, hoisting, PnP, `paths`). C'est de la lecture de fichiers, qu'un étage de pipeline n'a pas le droit de faire (règle 4) : il faut un nouveau canal `ProgramFacts` rempli par la source. La moitié *causalité* de 2307 est livrée depuis B1/T1 et plie ses trois fixtures.
+- **2307** — ses faits portent sur la **topologie installée** (déclaré ou non dans `package.json`, hoisting, PnP, `paths`). C'est de la lecture de fichiers, qu'un étage de pipeline n'a pas le droit de faire (règle 4) : il faut un nouveau canal `ProgramFacts` rempli par la source. La moitié *causalité* de 2307 est livrée depuis B1/T1 et plie ses trois fixtures. — **Levé le 2026-08-02** : le canal existe (`ProgramFacts.resolution`) et 2307 est le septième enrichisseur. Ce diagnostic-ci s'est avéré exact au mot près, ce qui est la seule raison de le laisser écrit ; § P2/2307.
 - **18047 / 18048** — l'origine de la nullabilité est une question de flot de contrôle ; rien de capturé n'y répond.
 
 Et **2551 sort en no-op délibéré** : il est déjà bon nativement et §5.2 interdit de le dégrader. Il est absent de la table, donc il se rend exactement comme TypeScript l'a écrit.
@@ -548,3 +550,62 @@ Et **2551 sort en no-op délibéré** : il est déjà bon nativement et §5.2 in
 Le `.corpus/` privé (trois copies dérivées d'un dépôt qui n'existe plus sur cette machine) rendait un bras A à **0 diagnostic** et un bras B à 754 : son propre `tsc` ne typecheckait plus rien pendant que `TsApiSource` parcourait encore l'arbre. Replié dans les totaux, cela donnait un **`B/A 1235 %`** — un nombre qui décrit une copie cassée et se lit comme une affirmation sur le produit.
 
 `measure.ts` refuse désormais ces lignes : les deux bras lisent le même tsconfig avec le même compilateur, donc « A trouve 0, B trouve beaucoup » n'est pas un résultat mais une cible périmée. La ligne est marquée `incoherent`, exclue des totaux, et la raison est imprimée. Le `corpus/` committé de T3 est immunisé par construction — c'est exactement pourquoi il a été committé.
+
+---
+
+## P2 / 2307 — l'enrichisseur de module, et un chiffre publié qui ne se reproduisait pas (2026-08-02)
+
+Septième enrichisseur, et le seul qui ne lit **aucun** `context` : ses faits viennent du canal `ProgramFacts.resolution` que la source remplit à l'ingestion (PROJECT.md §4). Le blocage annoncé le 2026-08-01 — « il manque un canal, pas du code » — s'est vérifié à la lettre : le canal fait 148 lignes, l'enrichisseur 60.
+
+### D'abord, la correction : le harnais mesurait un produit que personne ne livre
+
+`measure.ts` passait au renderer `rootLabel: projectDir`, **le chemin absolu**, là où `run.ts` passe `relative(process.cwd(), facts.root)`. La ligne `root:` du bras B portait donc `/home/<user>/…` dans la seule métrique que ce projet publie. Trois conséquences, toutes mauvaises :
+
+- **le bras B grossissait de la longueur du chemin de checkout** — ~27 caractères par cible ici, soit **~675 sur un total de 25** ;
+- **un seul des deux bras était touché.** Le bras A lance `tsc` avec `cwd: projectDir` et imprime des chemins relatifs. Le biais gonflait donc exactement le côté dont ce dépôt affirme qu'il est plus petit ;
+- **deux machines mesurant le même commit publiaient des rapports B/A différents**, sans qu'aucune des deux ne corresponde à la sortie réelle de l'outil.
+
+C'est ce qui explique que les totaux publiés le 2026-08-01 (**16 861 → 17 538, B/A 54 % → 56 %**) **ne se reproduisent pas** sur ce dépôt : mesuré à `HEAD` avec le harnais corrigé, le même code donne **16 038, B/A 51 %**. L'écart est un décalage constant par cible, pas une régression — et **les deltas publiés en P2 restent justes**, la constante s'annulant dans une différence : les `+38 à +83 caractères` par cascade de corpus sont mesurés à nouveau à l'identique. Ce sont les **valeurs absolues et les rapports** de ce tableau-là qui étaient contaminés, pas ses conclusions.
+
+Corrigé le 2026-08-02 ; tous les chiffres ci-dessous sont post-correction et reproductibles depuis n'importe quel chemin de checkout.
+
+### Le coût de 2307, mesuré
+
+Même harnais, mêmes 25 cibles, seule variable l'enregistrement de `2307` dans la table des enrichisseurs.
+
+| | B chars, sans 2307 | B chars, avec | delta | B/A sans | B/A avec |
+|---|---:|---:|---:|---:|---:|
+| **total, 25 cibles** | 16 038 | 16 635 | **+3,7 %** | **51 %** | **53 %** |
+| `wrong-tsconfig-paths` | 639 | 854 | +215 | 134 % | 179 % |
+| `yarn-pnp-project` | 483 | 654 | +171 | 146 % | 198 % |
+| `phantom-dependency-pnpm` | 454 | 615 | +161 | 150 % | 203 % |
+| `two-independent-roots` | 423 | 473 | +50 | 190 % | 212 % |
+| **les 21 autres cibles** | — | — | **0** | — | — |
+
+**Le chiffre à lire en premier : le coût est nul sur les cinq cascades de corpus.** Aucune n'est une cascade de module — ce sont des cascades de type. 2307 ne se paie que là où il parle, ce qui est la propriété qu'on veut d'un enrichisseur sélectif, et **c'est aussi la limite honnête de ce jalon** : sa valeur n'est mesurée sur aucun code réel, seulement sur trois fixtures d'installateur. Le corpus figé n'en contient pas, et en fabriquer un serait une fixture de plus, pas une mesure.
+
+**Le pliage paie encore la facture, et cette fois on peut le chiffrer exactement.** Sur `phantom-dependency-pnpm`, les deux lignes de fait pèsent 160 caractères et le delta mesuré est de +161 : elles sont rendues **une fois** pour trois importateurs. Ungrouped — c'est-à-dire sous `--all` — les mêmes deux lignes coûteraient 480. Le rapport 3:1 est la remontée des faits vers l'en-tête de groupe, et sa condition est l'intersection sur *tous* les membres (PROJECT.md §6).
+
+`two-independent-roots` est le cas sans amortissement : son TS2307 est seul, donc son unique fait (`no node_modules directory at the project root`) se paie plein tarif, +50 caractères sur un rapport de 423. C'est le comportement attendu d'un diagnostic isolé, et c'est aussi pourquoi le rapport B/A d'un témoin négatif se dégrade — il n'a rien à replier, par construction.
+
+### Ce que les trois fixtures rendent, et pourquoi c'est la bonne réponse dans les trois cas
+
+Une seule phrase de TypeScript, trois vérités différentes derrière — le constat pour lequel les fixtures d'installateur avaient été committées le 2026-07-28, enfin exploité :
+
+| fixture | ce que TypeScript dit | ce que la sortie ajoute |
+|---|---|---|
+| `wrong-tsconfig-paths` | `Cannot find module '@domain/order'` | `matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'` |
+| `phantom-dependency-pnpm` | `Cannot find module 'qs'` | `'qs' is not declared in … package.json` · `installer: pnpm (pnpm-lock.yaml)` |
+| `yarn-pnp-project` | `Cannot find module '@acme/http'` | `'@acme/http' is declared in dependencies … as '1.2.0'` · `installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory` |
+
+`wrong-tsconfig-paths` est le seul endroit du produit où une cause est nommée **hors de tout fichier du programme** : une ligne de `tsconfig.json`, qu'aucun `declaredAt` ne peut atteindre. Et `yarn-pnp-project` est le cas où le fait le plus utile est celui qui **réfute** la lecture par défaut : le paquet *est* déclaré, *est* verrouillé, *est* installé — ce sont trois imports que seul le mode de lancement rend irrésolus.
+
+### Trois choses qui ne sont pas dites, sur décision
+
+1. **Rien sur ce qui est réellement posé sur le disque.** `qs` est bien présent dans `phantom-dependency-pnpm`, un cran plus bas sous `node_modules/.pnpm/qs@6.11.2/`, et le dire serait la ligne la plus utile de tout ce jalon. Elle n'est pas dite : l'atteindre demande soit de parcourir la topologie **privée** de pnpm — une convention, pas un fichier déclaratif (règle 10) —, soit de parser `pnpm-lock.yaml`, donc d'introduire un parseur YAML, donc la **première dépendance runtime du projet**, pour un seul code. L'installateur et la déclaration manquante sont rendus à la place ; entre les deux le cas est identifiable, et chaque mot est vérifiable contre un fichier.
+2. **Rien sur ce que chaque installateur fait d'un paquet non déclaré.** Que le hoisting le rende joignable sous npm et que la topologie de pnpm ne le rende pas est vrai, documenté — et n'est pas un fait *sur ce projet-ci*. C'est là qu'un fait devient une explication, et une explication est à un pas d'une prescription (règle 1).
+3. **Rien du tout quand le manifeste n'a pas pu être lu.** `two-independent-roots` n'a pas de `package.json` : « non déclaré » serait une affirmation sur un fichier jamais ouvert. Seule survit l'observation qu'aucun `node_modules` n'est là. `ResolutionFacts.dependencies` est **absent** plutôt que vide exactement pour rendre cette distinction représentable (règle 5).
+
+### Vérification
+
+`typecheck`, **534 tests** (518 avant ce jalon), `check` — tous verts. Les **8 snapshots** régénérés ont été relus : le diff est **purement additif**, 24 insertions et 0 suppression, et ne touche que les quatre cibles portant un TS2307. Les deux témoins négatifs gardent leur compte d'entrées.

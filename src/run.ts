@@ -173,7 +173,7 @@ export function run(argv: readonly string[], streams: Streams): number {
     // whether the renderer walks that index (rule 2). `enrich` adds facts and
     // removes nothing either — it is the last stage because a fact must never
     // influence a grouping decision.
-    const report = enrich(detectCausality(dedupe(ingested, facts), facts));
+    const report = enrich(detectCausality(dedupe(ingested, facts), facts), facts);
 
     // A bare-Node read of a Yarn PnP project produces plausible, entirely false
     // TS2307s. Refusing beats rendering a clean-looking, wrong hierarchy (§15).

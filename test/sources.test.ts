@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { TssiftUnrunnable } from "../src/errors.js";
+import { readResolutionFacts } from "../src/sources/resolution.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
 
 const fixture = (name: string): string =>
@@ -281,5 +282,83 @@ describe("TsApiSource · exit-2 conditions (rule 15)", () => {
     expect(() =>
       new TsApiSource().load({ project, captureFor: CONTEXT_CAPTURE_CODES }),
     ).toThrowError(TssiftUnrunnable);
+  });
+});
+
+/**
+ * `ProgramFacts.resolution` — the channel that unblocked the TS2307 enricher.
+ *
+ * Tested directly rather than through a program, because every field here is an
+ * answer about *files*, and the reader is the only place allowed to look at them
+ * (rule 4). What the enricher then does with the answers is `enrich.test.ts`.
+ */
+describe("resolution facts · read from declarative files only", () => {
+  it("names the installer from a single lockfile", () => {
+    expect(load("phantom-dependency-pnpm").facts.resolution).toMatchObject({
+      installer: "pnpm",
+      lockfiles: ["pnpm-lock.yaml"],
+      pnp: false,
+    });
+  });
+
+  it("reports PnP and the absence of node_modules, which is the unusual state", () => {
+    expect(load("yarn-pnp-project").facts.resolution).toMatchObject({
+      installer: "yarn",
+      pnp: true,
+      nodeModules: false,
+    });
+  });
+
+  it("carries tsconfig paths and a baseUrl relative to the project", () => {
+    const { paths, baseUrl } = load("wrong-tsconfig-paths").facts.resolution;
+    expect(paths).toEqual({ "@domain/*": ["src/lib/*"] });
+    expect(baseUrl).toBe(".");
+  });
+
+  it("refuses to name an installer when two lockfiles disagree", () => {
+    // A priority order would print a guess as a fact. The list says more and
+    // claims less — and `installer: unknown` is what stops the enricher from
+    // attributing a topology to the wrong tool.
+    const dir = scratchProject({
+      "package.json": "{}",
+      "package-lock.json": "{}",
+      "bun.lock": "",
+    });
+    const facts = readResolutionFacts(dir, {});
+    expect(facts.installer).toBe("unknown");
+    expect(facts.lockfiles).toEqual(["package-lock.json", "bun.lock"]);
+  });
+
+  it("merges the four dependency fields, first field winning", () => {
+    const dir = scratchProject({
+      "package.json": JSON.stringify({
+        dependencies: { zod: "^3.0.0" },
+        devDependencies: { zod: "^4.0.0", vitest: "^2.0.0" },
+        peerDependencies: { typescript: ">=5.4" },
+        optionalDependencies: { fsevents: "*" },
+      }),
+    });
+    expect(readResolutionFacts(dir, {}).dependencies).toEqual({
+      // `dependencies` wins: it is the field that governs whether shipping code
+      // may import the package at all.
+      zod: { field: "dependencies", range: "^3.0.0" },
+      vitest: { field: "devDependencies", range: "^2.0.0" },
+      typescript: { field: "peerDependencies", range: ">=5.4" },
+      fsevents: { field: "optionalDependencies", range: "*" },
+    });
+  });
+
+  it("leaves dependencies absent when no manifest could be read (rule 5)", () => {
+    // Absent and empty are not the same claim: only an empty map licenses
+    // saying a package is *not* declared.
+    expect(
+      readResolutionFacts(scratchProject({ "src/a.ts": "" }), {}).dependencies,
+    ).toBeUndefined();
+    expect(
+      readResolutionFacts(scratchProject({ "package.json": "{ oops" }), {}).dependencies,
+    ).toBeUndefined();
+    expect(readResolutionFacts(scratchProject({ "package.json": "{}" }), {}).dependencies).toEqual(
+      {},
+    );
   });
 });

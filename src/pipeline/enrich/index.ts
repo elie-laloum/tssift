@@ -30,13 +30,15 @@
  * - **2322** (`Type not assignable`) — the divergence path (`a.b[0].c`) needs
  *   both types as structures. Only the expected side is captured, and as a
  *   `SymbolRef` rather than a tree.
- * - **2307** (`Cannot find module`) — its facts are about the *installed
- *   topology*: declared or not in `package.json`, hoisted, PnP, `paths`. That is
- *   file reading, which a pipeline stage may not do (rule 4, purity), so it
- *   needs a new `ProgramFacts` channel filled by the source. The causality half
- *   of 2307 already shipped in B1/T1 and folds the three fixtures.
  * - **18047/18048** (`Possibly null`) — the origin of the nullability is a
  *   control-flow question; nothing captured answers it.
+ *
+ * **2307 shipped on 2026-08-02**, and it is the one enricher that reads no
+ * `context`: its facts are about the *installed topology* — declared or not in
+ * `package.json`, PnP, `paths` — which is file reading a pipeline stage may not
+ * do (rule 4). What unblocked it is the `ProgramFacts.resolution` channel the
+ * source now fills; that is the shape every remaining §5.2 entry is waiting for
+ * too, each on a different missing channel.
  *
  * And one entry ships as a **deliberate no-op**: **2551** (`Did you mean X`) is
  * already good natively and §5.2's instruction is to not degrade it. It is
@@ -56,19 +58,28 @@ import type {
   EnrichedDiagnostic,
   Fact,
   NormalizedDiagnostic,
+  ProgramFacts,
 } from "../../types.js";
 import { enrich2305 } from "./2305.js";
+import { enrich2307 } from "./2307.js";
 import { enrich2339 } from "./2339.js";
 import { enrich2345 } from "./2345.js";
 import { enrich2353 } from "./2353.js";
 import { enrich2554 } from "./2554.js";
 
-type Enricher = (diagnostic: NormalizedDiagnostic) => Fact[];
+/**
+ * Both channels of rule 4 reach an enricher: `NormalizedDiagnostic.context`,
+ * captured per diagnostic, and `ProgramFacts`, captured per program. Five of the
+ * six enrichers use only the first; 2307 uses only the second, which is what the
+ * two-channel design in PROJECT.md §3 was for.
+ */
+type Enricher = (diagnostic: NormalizedDiagnostic, facts: ProgramFacts) => Fact[];
 
 const ENRICHERS: Record<number, Enricher | undefined> = {
   2305: enrich2305,
   // Same enricher, same shape — see the comment on `2305.ts`.
   2724: enrich2305,
+  2307: enrich2307,
   2339: enrich2339,
   2345: enrich2345,
   2353: enrich2353,
@@ -92,13 +103,17 @@ export const ENRICHED_CODES: readonly number[] = Object.keys(ENRICHERS)
  * this is not hypothetical: 8 of 99 TS2339 resolve to no declaration at all,
  * every one downstream of an implicit `any`.
  */
-export function enrich(report: DiagnosticReport): DiagnosticReport {
+export function enrich(report: DiagnosticReport, facts: ProgramFacts): DiagnosticReport {
   const diagnostics = report.diagnostics.map<EnrichedDiagnostic>((diagnostic) => {
     const enricher = ENRICHERS[diagnostic.code];
     if (!enricher) return diagnostic;
 
-    const facts = enricher(diagnostic);
-    return { ...diagnostic, facts, confidence: facts.length > 0 ? "high" : "low" };
+    const produced = enricher(diagnostic, facts);
+    return {
+      ...diagnostic,
+      facts: produced,
+      confidence: produced.length > 0 ? "high" : "low",
+    };
   });
 
   return { diagnostics, groups: report.groups };

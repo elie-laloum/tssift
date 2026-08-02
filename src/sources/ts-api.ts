@@ -14,6 +14,7 @@ import type {
 } from "../types.js";
 import { resolveContext } from "./context.js";
 import type { DiagnosticSource, LoadOptions, SourceResult } from "./index.js";
+import { readResolutionFacts } from "./resolution.js";
 
 /**
  * How `context.ts` produces a span. Injected rather than imported there so that
@@ -416,10 +417,21 @@ export class TsApiSource implements DiagnosticSource {
     }
     files.sort();
 
+    // The declarative half of the program: read from files, at ingestion, so
+    // that the TS2307 enricher stays a pure pipeline stage (rule 4). The
+    // compiler's own `paths`/`baseUrl` travel with it because they answer the
+    // same question — why a specifier resolved where it did, or nowhere.
+    const compilerOptions = parsed.options;
+    const resolution = readResolutionFacts(root, {
+      ...(compilerOptions.paths ? { paths: compilerOptions.paths } : {}),
+      ...(compilerOptions.baseUrl !== undefined ? { baseUrl: compilerOptions.baseUrl } : {}),
+    });
+
     const facts: ProgramFacts = {
       root,
       files,
       imports,
+      resolution,
       typescript: { version: ts.version, path: compilerPath },
     };
 

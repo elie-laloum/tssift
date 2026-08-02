@@ -39,6 +39,7 @@ const FACTS: ProgramFacts = {
   root: "/nowhere",
   files: [],
   imports: {},
+  resolution: { installer: "unknown", lockfiles: [], pnp: false, nodeModules: false, paths: {} },
   typescript: { version: "5.9.3", path: "/nowhere" },
 };
 

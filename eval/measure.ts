@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { TssiftUnrunnable } from "../src/errors.js";
@@ -202,8 +202,16 @@ function armB(projectDir: string): { arm: Arm; typescript: string } {
   });
   // The same pipeline `run.ts` composes. Measuring the renderer without it would
   // measure a product nobody ships.
-  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts));
-  const text = renderAgentText({ report, facts, rootLabel: projectDir, all: false });
+  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts), facts);
+  // The label `run.ts` passes, not the absolute directory. Passing the absolute
+  // one — as this harness did until 2026-08-02 — put `/home/<user>/…` in the
+  // one metric the project publishes: B chars grew with the length of whoever's
+  // checkout path, so two machines measuring the same commit reported different
+  // B/A ratios and neither matched the tool's actual output. Arm A was never
+  // affected (tsc runs with `cwd: projectDir` and prints relative paths), so the
+  // bug inflated exactly one side of the comparison.
+  const rootLabel = relative(process.cwd(), facts.root) || ".";
+  const text = renderAgentText({ report, facts, rootLabel, all: false });
   return {
     // `[n]` counts *entries*, not diagnostics: after P1 one entry can stand for
     // a whole cascade, and that difference is precisely what H1 claims. The

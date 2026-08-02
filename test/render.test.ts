@@ -46,7 +46,7 @@ function build(name: (typeof FIXTURES)[number], all = false): RenderInput {
     project,
     captureFor: CONTEXT_CAPTURE_CODES,
   });
-  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts));
+  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts), facts);
   return { report, facts, rootLabel: relative(process.cwd(), facts.root) || ".", all };
 }
 
@@ -92,10 +92,13 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // up as a continuation matching none of these. P2 added four shapes —
         // a cause's property/export list, a cause's rendered signature (which
         // opens on `(` or `{`), a diagnostic's `<label>: <kind> 'name' at …`,
-        // and its `'name' has N properties: …`. Widening this to `.*` would
-        // retire the guard rather than update it.
+        // and its `'name' has N properties: …` — and the 2307 enricher three
+        // more, all statements about a specifier rather than about a type:
+        // `'x' is/matches …`, `installer:`/`lockfiles:`, and the `no
+        // node_modules …` line. Widening this to `.*` would retire the guard
+        // rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' has \d+ |(type|expected type|parameter type|callee|module): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |(type|expected type|parameter type|callee|module|installer|lockfiles): |[({]))/,
         );
       }
     });

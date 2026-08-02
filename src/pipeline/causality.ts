@@ -96,8 +96,13 @@ function causeKey(group: DiagnosticGroup): string {
  * string from two directories is two different modules, and grouping them would
  * be the §11-critical over-group. Anything the imports table cannot confirm is
  * `undefined`, and the diagnostic stays an isolated root — never a merge.
+ *
+ * Exported because the TS2307 **enricher** asks the same question and must get
+ * the same answer. Two copies of this parse would drift, and the day they did,
+ * a group header would name one specifier while the facts under it described
+ * another — the one inconsistency the reader has no way to detect.
  */
-function unresolvedSpecifier(
+export function unresolvedSpecifier(
   diagnostic: NormalizedDiagnostic,
   imports: ProgramFacts["imports"],
 ): string | undefined {

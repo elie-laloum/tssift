@@ -441,6 +441,8 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders phantom-dependency-pnpm 1`]
 3 errors · 3 files · 1 root cause
 
 [1] cause: unresolved module 'qs'
+      'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json
+      installer: pnpm (pnpm-lock.yaml)
     3 diagnostics, all TS2307
     src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
     src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
@@ -453,10 +455,16 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders phantom-dependency-pnpm wit
 3 errors · 3 files
 
 [1] src/api-client.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+    'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json
+    installer: pnpm (pnpm-lock.yaml)
 
 [2] src/callback.ts:1:23 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+    'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json
+    installer: pnpm (pnpm-lock.yaml)
 
 [3] src/upload.ts:2:27 error TS2307: Cannot find module 'qs' or its corresponding type declarations.
+    'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json
+    installer: pnpm (pnpm-lock.yaml)
 "
 `;
 
@@ -469,6 +477,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots 1`] =
     'LineItem' has 3 properties: sku, quantityOrdered, unitPriceCents
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
+    no node_modules directory at the project root
 "
 `;
 
@@ -481,6 +490,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with 
     'LineItem' has 3 properties: sku, quantityOrdered, unitPriceCents
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
+    no node_modules directory at the project root
 "
 `;
 
@@ -587,12 +597,14 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths 1`] = 
 4 errors · 4 files · 1 root cause
 
 [1] cause: unresolved module '@domain/order'
+      '@domain/order' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
     3 diagnostics, all TS2307
     src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
     src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
     src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
 
 [2] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
+    '@domain/customer' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
 "
 `;
 
@@ -601,12 +613,16 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders wrong-tsconfig-paths with -
 4 errors · 4 files
 
 [1] src/api/customers.ts:1:48 error TS2307: Cannot find module '@domain/customer' or its corresponding type declarations.
+    '@domain/customer' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
 
 [2] src/api/orders.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+    '@domain/order' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
 
 [3] src/reporting/invoices.ts:1:28 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+    '@domain/order' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
 
 [4] src/reporting/monthly.ts:1:40 error TS2307: Cannot find module '@domain/order' or its corresponding type declarations.
+    '@domain/order' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'
 "
 `;
 
@@ -615,6 +631,8 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders yarn-pnp-project 1`] = `
 3 errors · 3 files · 1 root cause
 
 [1] cause: unresolved module '@acme/http'
+      '@acme/http' is declared in dependencies of package.json as '1.2.0'
+      installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory
     3 diagnostics, all TS2307
     src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
     src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
@@ -627,9 +645,15 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders yarn-pnp-project with --all
 3 errors · 3 files
 
 [1] src/health.ts:1:37 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+    '@acme/http' is declared in dependencies of package.json as '1.2.0'
+    installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory
 
 [2] src/portal-client.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+    '@acme/http' is declared in dependencies of package.json as '1.2.0'
+    installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory
 
 [3] src/telemetry.ts:1:25 error TS2307: Cannot find module '@acme/http' or its corresponding type declarations.
+    '@acme/http' is declared in dependencies of package.json as '1.2.0'
+    installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory
 "
 `;

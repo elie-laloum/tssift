@@ -12,6 +12,7 @@ import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
+import { matchingPathPattern, packageOf } from "../src/pipeline/enrich/2307.js";
 import { dedupe, detectCausality, ENRICHED_CODES, enrich } from "../src/pipeline/index.js";
 import { renderAgentText } from "../src/render/agent-text.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
@@ -58,7 +59,7 @@ function build(name: (typeof FIXTURES)[number]): Built {
     captureFor: CONTEXT_CAPTURE_CODES,
   });
   const before = detectCausality(dedupe(diagnostics, facts), facts);
-  const built: Built = { before, after: enrich(before), facts };
+  const built: Built = { before, after: enrich(before, facts), facts };
   cache.set(name, built);
   return built;
 }
@@ -195,6 +196,117 @@ describe("what a fact says", () => {
   });
 });
 
+/**
+ * TS2307 — the one enricher that reads no `context`, only `ProgramFacts`.
+ *
+ * The three fixtures below are three different truths behind one identical
+ * sentence, which is the whole reason the code needed a channel of its own.
+ */
+describe("2307 · what the declarative files say", () => {
+  function factsOn(name: (typeof FIXTURES)[number], specifier: string): string[] {
+    return build(name)
+      .after.diagnostics.filter((d) => d.code === 2307 && d.message.includes(`'${specifier}'`))
+      .flatMap((d) => d.facts.map((f) => f.text));
+  }
+
+  it("names the tsconfig line — the one cause that lives in no program file", () => {
+    // `wrong-tsconfig-paths` is the only fixture whose root cause is a line of
+    // configuration. No `declaredAt` can ever point there, so this fact is the
+    // only handle the output has on it.
+    const texts = factsOn("wrong-tsconfig-paths", "@domain/order");
+    expect(texts).toHaveLength(3);
+    for (const text of texts) {
+      expect(text).toBe(
+        "'@domain/order' matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'",
+      );
+    }
+  });
+
+  it("an aliased specifier is not also reported as a missing package", () => {
+    // An alias is never in a manifest, so "not in package.json" would be true of
+    // every aliased import and news about none of them.
+    for (const text of factsOn("wrong-tsconfig-paths", "@domain/customer")) {
+      expect(text).not.toContain("package.json");
+    }
+  });
+
+  it("says a package is undeclared, and names the installer that makes it matter", () => {
+    const texts = factsOn("phantom-dependency-pnpm", "qs");
+    expect(texts).toHaveLength(6);
+    expect(texts).toContain(
+      "'qs' is not declared in the dependencies, devDependencies, peerDependencies or optionalDependencies of package.json",
+    );
+    expect(texts).toContain("installer: pnpm (pnpm-lock.yaml)");
+  });
+
+  it("claims nothing about what is installed on disk", () => {
+    // `qs` really is present under node_modules/.pnpm/. Saying so needs either a
+    // walk of pnpm's private layout or a YAML parser — the reason is argued in
+    // `enrich/2307.ts`, and this pins that it stayed unsaid.
+    for (const text of factsOn("phantom-dependency-pnpm", "qs")) {
+      expect(text).not.toMatch(/node_modules\/\.pnpm|installed|transitive|hoist/);
+    }
+  });
+
+  it("says the package IS declared when it is — the fact that refutes the default reading", () => {
+    // `yarn-pnp-project` is the only fixture whose `before/` has no bug: correct
+    // source, package declared and locked, read by a plain Node process that
+    // never loads `.pnp.cjs`. Without these two lines the output is three
+    // unresolved imports and no way to tell.
+    const texts = factsOn("yarn-pnp-project", "@acme/http");
+    expect(texts).toContain("'@acme/http' is declared in dependencies of package.json as '1.2.0'");
+    expect(texts).toContain(
+      "installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory",
+    );
+  });
+
+  it("says nothing about a manifest it could not read (rule 5)", () => {
+    // `two-independent-roots` has no package.json. "Not declared" would be a
+    // claim about a file we never opened, so only the observation that nothing
+    // is installed survives.
+    for (const text of factsOn("two-independent-roots", "@acme/csv-writer")) {
+      expect(text).not.toContain("package.json");
+    }
+  });
+
+  it("picks the paths pattern TypeScript would pick, not the first that matches", () => {
+    // TypeScript's own rule: an exact pattern beats a wildcard, and among
+    // wildcards the longest prefix before the `*` wins. Reporting the wrong one
+    // of two overlapping patterns would name the wrong tsconfig line — a fact
+    // that is precise, checkable, and about the wrong thing.
+    const paths = {
+      "*": ["src/*"],
+      "@domain/*": ["src/lib/*"],
+      "@domain/order/*": ["src/order/*"],
+      "@domain/exact": ["src/exact.ts"],
+    };
+    expect(matchingPathPattern("@domain/order/line", paths)).toBe("@domain/order/*");
+    expect(matchingPathPattern("@domain/customer", paths)).toBe("@domain/*");
+    expect(matchingPathPattern("@domain/exact", paths)).toBe("@domain/exact");
+    expect(matchingPathPattern("zod", paths)).toBe("*");
+    expect(matchingPathPattern("anything", {})).toBeUndefined();
+  });
+
+  it("asks package.json about the package, not about the subpath", () => {
+    expect(packageOf("qs/lib/parse")).toBe("qs");
+    expect(packageOf("@acme/http/client")).toBe("@acme/http");
+    expect(packageOf("@acme/http")).toBe("@acme/http");
+    expect(packageOf("zod")).toBe("zod");
+  });
+
+  it("relative specifiers get no facts: the imports table cannot confirm them", () => {
+    // Same guard as the grouping half, and deliberately the same function —
+    // `./x` from two directories is two modules, so nothing here may key on it.
+    for (const name of FIXTURES) {
+      for (const diagnostic of build(name).after.diagnostics) {
+        if (diagnostic.code !== 2307) continue;
+        const specifier = /module '([^']+)'/.exec(diagnostic.message)?.[1] ?? "";
+        if (specifier.startsWith(".")) expect(diagnostic.facts).toEqual([]);
+      }
+    }
+  });
+});
+
 describe("the renderer says a group's facts once, not once per member", () => {
   it("the property list appears exactly once under a folded cause", () => {
     const { after, facts } = build("partial-interface-rename");
@@ -211,6 +323,20 @@ describe("the renderer says a group's facts once, not once per member", () => {
       d.facts.some((f) => f.text.includes("3 properties: id, email, name")),
     );
     expect(carriers).toHaveLength(3);
+  });
+
+  it("a module group states its facts once for three importers", () => {
+    // The economics that made 2307 worth shipping: a group's facts are about the
+    // specifier, so three files importing `qs` produce one statement, not three.
+    const { after, facts } = build("phantom-dependency-pnpm");
+    const text = renderAgentText({
+      report: after,
+      facts,
+      rootLabel: relative(process.cwd(), facts.root) || ".",
+      all: false,
+    });
+    expect(text.split("installer: pnpm").length - 1).toBe(1);
+    expect(text.split("error TS2307").length - 1).toBe(3);
   });
 
   it("--all restores the facts on every diagnostic", () => {
