@@ -40,8 +40,12 @@ function scratchProject(files: Record<string, string>): string {
  * the resolved path. Ubuntu-only CI and Windows out of scope for v0.1 (§9.2),
  * so a symlink is safe here.
  */
-function linkTypeScript(projectDir: string): void {
-  const real = dirname(createRequire(import.meta.url).resolve("typescript"));
+function linkTypeScript(projectDir: string, pkg = "typescript"): void {
+  // `pkg` selects which pinned compiler to expose as the project's own
+  // `typescript`: the dev one by default, `typescript-6` for the 6.x case. It is
+  // always linked *as* `typescript`, because that is the name the source
+  // resolves — the whole point being that it resolves the project's compiler.
+  const real = dirname(createRequire(import.meta.url).resolve(pkg));
   const modules = join(projectDir, "node_modules");
   mkdirSync(modules, { recursive: true });
   symlinkSync(join(real, ".."), join(modules, "typescript"), "dir");
@@ -192,7 +196,45 @@ describe("TsApiSource · exit-2 conditions (rule 15)", () => {
     expect(message).toMatch(/Unsupported TypeScript version/);
     expect(message).toMatch(/typescript 7\.0\.2/);
     expect(message).toMatch(/node_modules\/typescript/);
-    expect(message).toMatch(/>=5\.4 <6/);
+    expect(message).toMatch(/>=5\.4 <7/);
+    // Says *why* 7 is out, so nobody reads the bound as arbitrary and widens it:
+    // the Go port's entry point has no classic API to drive.
+    expect(message).toMatch(/classic API/);
+  });
+
+  it("the real typescript@7 has no classic API — the fact the architecture rests on", () => {
+    // Rule 4 exists because of this one sentence, and until now it was only
+    // written down. Asserting it against the actually-installed 7.0.2 turns the
+    // premise into something that fails loudly if a later 7.x restores the API,
+    // which would be the moment to revisit the bound rather than the source.
+    const ts7 = createRequire(import.meta.url)("typescript-7") as Record<string, unknown>;
+    expect(ts7.version).toMatch(/^7\./);
+    expect(Object.keys(ts7).sort()).toEqual(["version", "versionMajorMinor"]);
+    for (const api of ["createProgram", "getPreEmitDiagnostics", "readConfigFile", "SyntaxKind"]) {
+      expect(ts7[api], api).toBeUndefined();
+    }
+  });
+
+  it("accepts a TypeScript 6 project and type-checks it for real", () => {
+    // The range moved to `<7` on 2026-08-02 because 6.0.3 still exposes the
+    // whole classic API. This runs the real 6.0.3 rather than a stub, so the
+    // claim is exercised and not merely asserted: a 6.x that had dropped
+    // `createProgram` would fail here, which is the point.
+    const project = scratchProject({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: { strict: true, noEmit: true, skipLibCheck: true, lib: ["ES2022"] },
+      }),
+      "src/a.ts": "export const n: number = 'not a number';\n",
+    });
+    linkTypeScript(project, "typescript-6");
+
+    const { diagnostics, facts } = new TsApiSource().load({
+      project,
+      captureFor: CONTEXT_CAPTURE_CODES,
+    });
+    expect(facts.typescript.version).toMatch(/^6\./);
+    expect(diagnostics.map((d) => d.code)).toEqual([2322]);
+    expect(diagnostics[0]?.primary.line).toBe(1);
   });
 
   it("refuses a project with no resolvable typescript, naming where it looked", () => {

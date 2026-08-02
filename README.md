@@ -78,7 +78,7 @@ entries; a root is never dropped.
 ## Compatibility
 
 - **Node.js:** `>=20.19`.
-- **TypeScript:** peer dependency `>=5.4 <6` (tested across TypeScript 5.4–5.9).
+- **TypeScript:** peer dependency `>=5.4 <7` (tested across TypeScript 5.4–5.9 and 6.0). TypeScript 7 is refused with exit 2: the Go port removes the classic compiler API, so it needs a separate source rather than a wider range. Note that TypeScript 6 deprecates `baseUrl`, so a project using one gains a TS5101 — the same one its own `tsc` reports.
 - **Platform:** tested on Ubuntu. Windows support is not claimed.
 - **Project references:** solution-style `tsconfig` files with project references
   are rejected rather than silently checking nothing; point tssift at a concrete

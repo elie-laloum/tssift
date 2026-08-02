@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        typescript: ["5.4.5", "5.5.4", "5.6.3", "5.7.3", "5.8.3", "5.9.3"]
+        typescript: ["5.4.5", "5.5.4", "5.6.3", "5.7.3", "5.8.3", "5.9.3", "6.0.3"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -67,8 +67,8 @@ jobs:
         run: |
           node -e '
             const peer = require("./package.json").peerDependencies.typescript;
-            if (peer !== ">=5.4 <6") {
-              console.error(`peerDependencies.typescript is "${peer}", expected ">=5.4 <6"`);
+            if (peer !== ">=5.4 <7") {
+              console.error(`peerDependencies.typescript is "${peer}", expected ">=5.4 <7"`);
               process.exit(1);
             }
           '
@@ -247,4 +247,4 @@ jobs:
           test -z "$OUT" || { echo "expected nothing on stdout"; exit 1; }
           printf '%s' "$ERR" | grep -q "Unsupported TypeScript version" || { echo "message not named"; exit 1; }
           printf '%s' "$ERR" | grep -q "7\.0\.2" || { echo "resolved version not reported"; exit 1; }
-          printf '%s' "$ERR" | grep -q ">=5.4 <6" || { echo "supported range not reported"; exit 1; }
+          printf '%s' "$ERR" | grep -q ">=5.4 <7" || { echo "supported range not reported"; exit 1; }

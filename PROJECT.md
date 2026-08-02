@@ -41,19 +41,19 @@ Explicitement hors périmètre, à défendre contre le glissement :
 
 ## 3. Architecture
 
-Contrainte structurante — **ce n'est plus un risque à moyen terme, c'est l'état du registre.** Vérifié le 2026-07-27 : `npm view typescript dist-tags` donne `latest: 7.0.2`. Le paquet `typescript@7` (port Go) n'exporte plus que `./lib/version.cjs` : **ni `ts.createProgram`, ni `ts.TypeChecker`, ni binaire `tsserver`.** `6.0.0-beta` est la dernière lignée en implémentation JS, `5.9.3` la dernière stable.
+Contrainte structurante — **ce n'est plus un risque à moyen terme, c'est l'état du registre.** Vérifié le 2026-07-27 : `npm view typescript dist-tags` donne `latest: 7.0.2`. Le paquet `typescript@7` (port Go) n'exporte plus que `./lib/version.cjs` : **ni `ts.createProgram`, ni `ts.TypeChecker`, ni binaire `tsserver`.** `6.x` est la dernière lignée en implémentation JS — **`6.0.3` est vérifié le 2026-08-02 comme exposant l'API classique au complet** — et `5.9.3` la dernière 5.x.
 
 Ce que TS 7 offre à la place : un client IPC **synchrone** vers le binaire Go, sous `typescript/unstable/sync` — `new API()` → `updateSnapshot()` → `Snapshot.getProject()` → `{ program, checker }`. `Program.getSemanticDiagnostics()` existe, et le `Checker` expose `getPropertiesOfType`, `getSymbolAtPosition`, `typeToString`, `getResolvedSignature`, `getDeclaredTypeOfSymbol` — soit tout ce dont les enrichisseurs de §5.2 ont besoin. Deux réserves : le chemin est préfixé `unstable/` et peut casser entre mineures de 7.x, et chaque appel au checker est un aller-retour IPC, donc l'enrichissement y a un budget de latence qu'il n'a pas en 5.x.
 
 Le `Diagnostic` de TS 7 est aussi plus pauvre que celui de 5.x : `{ fileName?, pos, end, code, category, text, messageChain?, relatedInformation? }` — des offsets bruts, aucun objet `SourceFile`. **C'est cette forme-là, la plus contrainte, qui dicte le modèle §4** : ce qu'on capture doit être exprimable dans les deux API, sinon `Ts7ApiSource` imposera de réécrire le pipeline au lieu de s'ajouter à côté.
 
-Conséquence de cadrage, tranchée le 2026-07-27 : **V1 lit TS 5.4 → 5.9 via `TsApiSource`**, `typescript` en peer `>=5.4 <6`. Sur un projet en TS 6 ou 7, le CLI **ne dégrade pas** : il sort en code 2 avec un message nommé (§9). `Ts7ApiSource` est un jalon explicite, additif, avant la DoD v0.1.0.
+Conséquence de cadrage, tranchée le 2026-07-27 et **élargie le 2026-08-02** : **V1 lit TS 5.4 → 6.x via `TsApiSource`**, `typescript` en peer `>=5.4 <7`. L'élargissement à 6 n'est pas une préférence mais une mesure — `typescript@6.0.3` expose encore `createProgram`, `getPreEmitDiagnostics`, `readConfigFile`, `parseJsonConfigFileContent`, `SyntaxKind`, `DiagnosticCategory`, `forEachChild`, et les 21 fixtures y produisent des diagnostics identiques à une exception près (TS5101 : 6 déprécie `baseUrl`, et le `tsc` de l'utilisateur le signale aussi). Sur un projet en TS 7, le CLI **ne dégrade pas** : il sort en code 2 avec un message nommé (§9), parce que 7 n'est pas une borne à élargir mais une API à écrire. `Ts7ApiSource` est un jalon explicite, additif, avant la DoD v0.1.0.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  SOURCES (interchangeables, derrière une interface)     │
 │                                                         │
-│  • TsApiSource    → TS 5.4–5.9 · createProgram + Checker│
+│  • TsApiSource    → TS 5.4–6.x · createProgram + Checker│
 │  • Ts7ApiSource   → TS 7 · typescript/unstable/sync     │
 │  • TscTextSource  → parse de la sortie tsc (fallback)   │
 └──────────────────────┬──────────────────────────────────┘
@@ -576,7 +576,7 @@ Deux lots en parallèle. Le lot B n'est pas optionnel.
 | Releases | Changesets | |
 | Repo | Mono-package d'abord | Split `core` / `cli` / `mcp` seulement si nécessaire |
 | CI | GitHub Actions | trois axes séparés + un job de garde TS 7, Ubuntu seul — voir ci-dessous |
-| Peer dep | `typescript`, **`>=5.4 <6`** | jamais bundlé. Résolu depuis le projet analysé, pas depuis notre installation |
+| Peer dep | `typescript`, **`>=5.4 <7`** | jamais bundlé. Résolu depuis le projet analysé, pas depuis notre installation |
 
 **Le build : pas de bundler du tout.** La décision ouverte `tsdown` vs `tsup` se dissout plutôt qu'elle ne se tranche. Le paquet vise **zéro dépendance runtime** (`typescript` est un peer, jamais empaqueté) ; or le travail d'un bundler est d'inliner des dépendances et de réécrire des formats. Sans rien à inliner, `tsc` émet déjà de l'ESM correct et les déclarations, et il **préserve le shebang `#!/usr/bin/env node`** dont dépend la délégation de bun vers Node. Reste le format CJS comme seule raison de bundler — et `require()` d'un module ESM est supporté depuis Node 20.19, sous notre propre plancher. À revoir uniquement si un consommateur réel a besoin de CJS sous Node < 20.19. Bénéfice secondaire : la sortie publiée est du JavaScript lisible qui correspond ligne à ligne à la source, ce qui compte le jour où un utilisateur envoie une pile d'appels.
 
@@ -601,7 +601,7 @@ bun sert de gestionnaire de paquets et de lanceur de scripts. Il ne sert **pas**
 
 Le partage tient parce que `bun run` respecte le shebang `#!/usr/bin/env node` des binaires de `node_modules/.bin` et délègue à Node (vérifié : Node v20.20.2). Le flag `bun run --bun` court-circuite ce comportement — il est proscrit.
 
-**L'épinglage est local uniquement.** `mise.toml` sert les machines de dev ; la CI ne le lit pas et installe ses propres versions, puisque son travail est justement de balayer une matrice (TS 5.4 → 5.9, plusieurs Node, plusieurs installateurs) qu'une version unique épinglée contredirait.
+**L'épinglage est local uniquement.** `mise.toml` sert les machines de dev ; la CI ne le lit pas et installe ses propres versions, puisque son travail est justement de balayer une matrice (TS 5.4 → 6.x, plusieurs Node, plusieurs installateurs) qu'une version unique épinglée contredirait.
 
 Contrepartie assumée : l'environnement local n'est pas identique à la CI. La garantie minimale qui rend cet écart supportable — **la version de Node épinglée dans `mise.toml` doit toujours figurer dans la matrice CI**. Sans elle, la configuration sur laquelle on développe au quotidien n'est testée nulle part.
 
@@ -672,7 +672,7 @@ Ce qui reste libre est donc plus étroit, et se confond avec ce que §5.1 appell
 | Risque | Gravité | Mitigation |
 |---|---|---|
 | **H2 se révèle nulle** | Moyenne | Assumé par design : H1 seule justifie l'outil. L'éval tranche tôt. |
-| **Port Go / TS7 casse l'API JS** | **Matérialisé** — `typescript@7.0.2` est `latest` depuis avant la première ligne de code | Le découplage n'est plus une précaution, c'est une contrainte de conception active : le modèle §4 est dimensionné sur le `Diagnostic` de TS 7, le plus pauvre des deux. V1 déclare `>=5.4 <6` et **refuse** 6/7 en sortie 2 plutôt que de deviner. `Ts7ApiSource` est un jalon daté (P2.5), pas une intention. |
+| **Port Go / TS7 casse l'API JS** | **Matérialisé** — `typescript@7.0.2` est `latest` depuis avant la première ligne de code | Le découplage n'est plus une précaution, c'est une contrainte de conception active : le modèle §4 est dimensionné sur le `Diagnostic` de TS 7, le plus pauvre des deux. V1 déclare `>=5.4 <7` — 6.x mesuré compatible le 2026-08-02 — et **refuse 7** en sortie 2 plutôt que de deviner. `Ts7ApiSource` est un jalon daté (P2.5), pas une intention. |
 | **Obsolescence par le haut** (TS améliore ses messages, les modèles s'améliorent) | Moyenne | Livrer petit et vite. Ne pas bâtir une architecture ambitieuse. |
 | **Faux positifs de causalité** — regrouper à tort masque une vraie erreur | **Critique** | Ne jamais *supprimer*, seulement *déclasser*. `--all` restitue tout. Fixture dédiée avec deux racines indépendantes. |
 | **Dérive prescriptive** | Élevée | Non-objectif n°1. Interdire l'impératif dans les `Fact.text` — testable par lint sur les fixtures de sortie. |
@@ -685,7 +685,7 @@ Ce qui reste libre est donc plus étroit, et se confond avec ce que §5.1 appell
 - [ ] `npx tssift` fonctionne sur un projet réel de l'agence
 - [ ] Réduction mesurée du volume de diagnostics sur ≥ 3 repos réels, chiffre publié
 - [ ] 20 fixtures, bras A et B mesurés, résultats dans `EVAL.md`
-- [ ] Matrice CI verte sur TS 5.4 → 5.9, snapshots texte sur 5.9.3
+- [ ] Matrice CI verte sur TS 5.4 → 6.x, snapshots texte sur 5.9.3
 - [ ] Job de garde vert : un projet TypeScript 7 sort en code 2 avec le message nommé
 - [ ] `Ts7ApiSource` livré (P2.5) — sinon l'outil ne tourne pas sur le `latest` du registre
 - [ ] Matrice d'installation verte : npm · pnpm · yarn (node-modules) · yarn (PnP) · bun

@@ -19,7 +19,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 
-- `typescript@7.0.2` est le `latest` npm et n'a plus `ts.createProgram`. V1 vise 5.4 → 5.9 et refuse 6/7 en **sortie 2**.
+- `typescript@7.0.2` est le `latest` npm et n'a plus `ts.createProgram` (son entrée exporte `version` et rien d'autre). **La plage est 5.4 → 6.x depuis le 2026-08-02** — 6.0.3 expose l'API classique au complet, vérifié — et **7 sort en 2**, parce que c'est une source à écrire (`Ts7ApiSource`) et non une borne à élargir.
 - Le renderer sort en **anglais** et n'altère **jamais** le message TS. L'exemple de §6 a été corrigé en ce sens : une version antérieure montrait une reformulation, qui était H2 glissée dans P0.
 
 ## Quand demander plutôt que décider
@@ -34,7 +34,7 @@ Demander avant d'agir si la tâche implique :
 - d'ajouter une dépendance runtime
 - d'écrire quoi que ce soit qui **prescrit un correctif** (règle 1)
 
-Sont **tranchés**, ne pas les rouvrir : le paquet s'appelle `tssift`, bun est le gestionnaire de paquets de dev, les tests tournent sous Node, la plage TS est 5.4 → 5.9, le build est `tsc` sans bundler, la sortie est en anglais avec le message TS brut, la causalité ne dérive que sur liens structurels, B0 ne fait appel à aucun modèle. La liste complète et ses raisons : AGENTS.md § « Décisions ouvertes » et PROJECT.md.
+Sont **tranchés**, ne pas les rouvrir : le paquet s'appelle `tssift`, bun est le gestionnaire de paquets de dev, les tests tournent sous Node, la plage TS est 5.4 → 6.x, le build est `tsc` sans bundler, la sortie est en anglais avec le message TS brut, la causalité ne dérive que sur liens structurels, B0 ne fait appel à aucun modèle. La liste complète et ses raisons : AGENTS.md § « Décisions ouvertes » et PROJECT.md.
 
 Dans les autres cas : agir, et rapporter ce qui a été fait.
 

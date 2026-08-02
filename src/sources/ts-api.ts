@@ -24,8 +24,32 @@ import { readResolutionFacts } from "./resolution.js";
  */
 type SpanCapture = (file: TS.SourceFile, start: number, length: number) => SourceSpan;
 
-/** The peer range. Anything outside it exits 2 rather than guessing (rule 7, rule 15). */
-export const SUPPORTED_TYPESCRIPT_RANGE = ">=5.4 <6";
+/**
+ * The range this source can drive. Anything outside it exits 2 rather than
+ * guessing (rule 7, rule 15).
+ *
+ * **Widened to include 6.x on 2026-08-02**, on the only evidence that settles
+ * it: TypeScript 6.0.3 still exposes the whole classic API this file uses —
+ * `createProgram`, `getPreEmitDiagnostics`, `readConfigFile`,
+ * `parseJsonConfigFileContent`, the `SyntaxKind` and `DiagnosticCategory`
+ * enums, `forEachChild`. Verified further by running all 21 fixtures under it:
+ * identical diagnostics everywhere but two, and the difference there is a real
+ * one the project's own `tsc` reports too — see below.
+ *
+ * The ceiling stays below 7 because that is not a version question. The 7.x Go
+ * port removes the classic API entirely: `require("typescript")` there exports
+ * exactly `version` and `versionMajorMinor`. Reaching it needs `Ts7ApiSource`
+ * against `typescript/unstable/sync`, which is an addition rather than a
+ * loosened bound — which is the whole reason rule 4 exists.
+ *
+ * **What TS 6 changes, and it is not a bug:** it deprecates `baseUrl`, so a
+ * project using one gains a TS5101 (`Option 'baseUrl' is deprecated and will
+ * stop functioning in TypeScript 7.0`). `wrong-tsconfig-paths` and
+ * `monorepo-cross-package` each pick up exactly that one extra diagnostic under
+ * 6.0.3. Reporting it is correct: the user's own `tsc` prints it, and rule 15's
+ * whole point is that we never diverge from it.
+ */
+export const SUPPORTED_TYPESCRIPT_RANGE = ">=5.4 <7";
 
 /**
  * A filename that never exists, used only as the base from which `createRequire`
@@ -45,7 +69,8 @@ export function isSupportedTypeScriptVersion(version: string): boolean {
   if (!match) return false;
   const major = Number(match[1] ?? "");
   const minor = Number(match[2] ?? "");
-  return major === 5 && minor >= 4;
+  // 5.4 is the floor; every 6.x is in, because the classic API is still there.
+  return (major === 5 && minor >= 4) || major === 6;
 }
 
 /** POSIX separators, always. A snapshot carrying a backslash dies on the next machine. */
@@ -261,9 +286,10 @@ function loadCompiler(projectDir: string): LoadedCompiler {
         `  resolved: typescript ${version}\n` +
         `  at: ${resolvedPath}\n` +
         `  resolving from: ${projectDir}\n` +
-        `tssift v1 supports ${SUPPORTED_TYPESCRIPT_RANGE}. TypeScript 6 and 7 are refused rather than ` +
-        `degraded: the 7.x Go port no longer exposes ts.createProgram, and guessing would report ` +
-        `diagnostics the project's own tsc does not.`,
+        `tssift supports ${SUPPORTED_TYPESCRIPT_RANGE}. TypeScript 7 is refused rather than ` +
+        `degraded: the 7.x Go port removes the classic API — its entry point exports only ` +
+        `"version" — so driving it takes a different source, not a wider bound. Guessing would ` +
+        `report diagnostics the project's own tsc does not.`,
     );
   }
 

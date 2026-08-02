@@ -61,7 +61,7 @@ Deux chiffres à ne pas mélire :
 
 **Le contrat de sortie et le modèle de données ont été arrêtés le 2026-07-27** et sont intégrés dans PROJECT.md. Ils ne se rouvrent pas sans raison neuve. Le séquencement exécutable, avec critères d'acceptation, est dans **`.plans/2026-07-27_p0-b0.md`**.
 
-Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest` du registre npm** et n'expose plus `ts.createProgram`. V1 vise 5.4 → 5.9 et **refuse** 6/7 en sortie 2 ; `Ts7ApiSource` est un jalon daté (PROJECT.md §8, P2.5). Détail complet en §3.
+Un fait de contexte à ne pas redécouvrir : **`typescript@7.0.2` est le `latest` du registre npm** et n'expose plus `ts.createProgram` — son point d'entrée exporte `version` et `versionMajorMinor`, rien d'autre (revérifié le 2026-08-02). **La plage est passée à 5.4 → 6.x le 2026-08-02, sur mesure** : `typescript@6.0.3` expose l'API classique au complet et les 21 fixtures y sont identiques à un TS5101 près (6 déprécie `baseUrl`, et le `tsc` de l'utilisateur le signale aussi). **7 reste refusé en sortie 2** — ce n'est pas une borne à élargir mais une source à écrire ; `Ts7ApiSource` est un jalon daté (PROJECT.md §8, P2.5). Détail complet en §3.
 
 La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md`. **Verdict à connaître avant d'ouvrir P1** — le positionnement « consommateur = agent » n'est plus libre (trois serveurs MCP depuis fin 2025), mais aucun ne hiérarchise. Ce qui reste au projet se confond donc avec P1. Un `tssift` qui s'arrêterait à P0 n'aurait pas de créneau.
 
@@ -131,7 +131,7 @@ Elles ne se négocient pas au cas par cas. Si une tâche semble en exiger la vio
 | 4 | **Le pipeline ne voit jamais le `TypeChecker`.** Tout est capturé à l'ingestion, sur deux canaux : `NormalizedDiagnostic.context` (par diagnostic, capture **sélective** pilotée par une liste de codes) et `ProgramFacts` (par programme : graphe de modules, fichiers). Les étages deviennent `(diagnostics, facts) => diagnostics`. Une poignée encapsulant le checker, même en lecture seule, viole la règle. | Le port Go (TS7) a supprimé `ts.createProgram`. Ce n'est plus une précaution : c'est la condition pour que `Ts7ApiSource` s'ajoute au lieu d'imposer une réécriture. |
 | 5 | **`confidence: 'low'` ⇒ on rend le format natif.** Dégrader vaut mieux qu'inventer. | Idem règle 1. |
 | 6 | **Ne jamais tronquer une racine** sous contrainte de budget. | Elle est la seule chose que l'agent doit lire en premier. |
-| 7 | **`typescript` en `peerDependency` `>=5.4 <6`, jamais bundlé, et résolu depuis le projet analysé** (`createRequire(<projectRoot>/)`), jamais depuis notre propre installation. | Matrice de compat TS 5.4 → 5.9. Sous `npx`, npm ≥ 7 installe volontiers *sa* copie du peer : typechecker avec un autre compilateur que le `tsc` de l'utilisateur produirait des diagnostics que son outil de référence ne produit pas. |
+| 7 | **`typescript` en `peerDependency` `>=5.4 <7`, jamais bundlé, et résolu depuis le projet analysé** (`createRequire(<projectRoot>/)`), jamais depuis notre propre installation. | Matrice de compat TS 5.4 → 6.x. Sous `npx`, npm ≥ 7 installe volontiers *sa* copie du peer : typechecker avec un autre compilateur que le `tsc` de l'utilisateur produirait des diagnostics que son outil de référence ne produit pas. |
 | 8 | **Aucun travail sur le serveur MCP ni sur des codes supplémentaires avant les chiffres de l'éval.** | Porte de décision, PROJECT.md §7. |
 | 9 | **Pas de `--fix`, pas de codefix, pas de réimplémentation de `tsc`.** | Non-objectifs, PROJECT.md §2. |
 | 10 | **Ne jamais présumer qu'un dossier `node_modules/` existe. Ne jamais invoquer un gestionnaire de paquets en sous-processus.** On lit des fichiers déclaratifs. | Yarn PnP n'a pas de `node_modules` du tout, pnpm a une topologie strictement différente. PROJECT.md §9.1. |
@@ -155,7 +155,7 @@ src/
   codes.ts              liste déclarative des codes à contexte — pilote la capture sélective
   sources/
     index.ts            interface DiagnosticSource → { diagnostics, facts }
-    ts-api.ts           TsApiSource — TS 5.4–5.9, createProgram + Checker (P0)
+    ts-api.ts           TsApiSource — TS 5.4–6.x, createProgram + Checker (P0)
     context.ts          résolution sélective de DiagnosticContext, un resolver par code (P1)
     ts7-api.ts          Ts7ApiSource — typescript/unstable/sync (P2.5, pas avant)
     tsc-text.ts         TscTextSource — parse de la sortie tsc (fallback)
@@ -235,7 +235,7 @@ mise exec -- bun run eval       # harnais d'éval (B0+)
 
 Pas de pnpm ni de yarn sur la machine — les scénarios qui les concernent se testent en CI, pas localement.
 
-**L'épinglage s'arrête au poste de dev.** La CI installe ses propres versions : son rôle est de balayer une matrice (TS 5.4 → 5.9, plusieurs Node, plusieurs installateurs), qu'une version unique épinglée contredirait. Ne pas introduire `jdx/mise-action` ni faire lire `mise.toml` par un workflow.
+**L'épinglage s'arrête au poste de dev.** La CI installe ses propres versions : son rôle est de balayer une matrice (TS 5.4 → 6.x, plusieurs Node, plusieurs installateurs), qu'une version unique épinglée contredirait. Ne pas introduire `jdx/mise-action` ni faire lire `mise.toml` par un workflow.
 
 Conséquence à tenir : **la version de Node de `mise.toml` doit toujours figurer dans la matrice CI.** Si l'une des deux bouge, l'autre bouge dans le même changement — sinon on développe quotidiennement sur une configuration que rien ne teste.
 
@@ -358,7 +358,7 @@ Attendu à ne pas prendre pour un bug : le seuil de causalité étant volontaire
 2. **Licence des corpus tiers** — `ts-error-translator` (Matt Pocock). **Parquée** : son unique consommateur possible est H2, différé derrière les chiffres. Rien à décider tant que B2 n'a pas montré qu'un code y gagne.
 3. ~~**Portée de la matrice d'installation**~~ — **tranchée** : npm · pnpm · yarn (node-modules) · yarn (PnP) · bun, Ubuntu seul. **Windows hors périmètre v0.1**, écrit dans le README. Deno/JSR hors périmètre tant que personne ne le demande.
 
-*Tranchées le 2026-07-27 :* nom du paquet = **`tssift`** · gestionnaire de paquets dev = **bun** · runtime de test = **Node** · plage TS = **5.4 → 5.9**, refus en sortie 2 au-delà · sortie du renderer en **anglais**, message TS **brut** · seuil de causalité **structurel uniquement** · B0 **sans modèle**.
+*Tranchées le 2026-07-27 :* nom du paquet = **`tssift`** · gestionnaire de paquets dev = **bun** · runtime de test = **Node** · plage TS = **5.4 → 6.x** (élargie le 2026-08-02, sur mesure : 6.0.3 expose l'API classique), refus en sortie 2 au-delà · sortie du renderer en **anglais**, message TS **brut** · seuil de causalité **structurel uniquement** · B0 **sans modèle**.
 
 Ces dernières sont documentées en détail dans PROJECT.md. Les rouvrir demande une raison neuve, pas une préférence.
 

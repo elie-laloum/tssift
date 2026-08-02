@@ -25,8 +25,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesRoot = join(repoRoot, "fixtures");
 const print = process.argv.includes("--print");
 
-/** The two ends of the declared support range (PROJECT.md §9.2, axis 1). */
-const COMPILERS = ["typescript-5.4", "typescript"];
+/** The ends and the middle of the declared support range (PROJECT.md §9.2, axis 1). */
+const COMPILERS = ["typescript-5.4", "typescript", "typescript-6"];
 
 function loadDiagnostics(ts, beforeDir) {
   const configPath = join(beforeDir, "tsconfig.json");

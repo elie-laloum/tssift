@@ -78,13 +78,29 @@ describe("diagnosticId", () => {
 
 describe("isSupportedTypeScriptVersion", () => {
   it("accepts the declared range", () => {
-    for (const version of ["5.4.5", "5.5.4", "5.6.3", "5.7.3", "5.8.3", "5.9.3", "5.9.0-beta"]) {
+    // 6.x is in since 2026-08-02: it still exposes the whole classic API, and
+    // all 21 fixtures produce identical diagnostics under 6.0.3 bar a TS5101
+    // `baseUrl` deprecation that the project's own tsc reports too.
+    for (const version of [
+      "5.4.5",
+      "5.5.4",
+      "5.6.3",
+      "5.7.3",
+      "5.8.3",
+      "5.9.3",
+      "5.9.0-beta",
+      "6.0.0-beta",
+      "6.0.3",
+      "6.4.1",
+    ]) {
       expect(isSupportedTypeScriptVersion(version)).toBe(true);
     }
   });
 
-  it("refuses below the floor and at or above 6", () => {
-    for (const version of ["5.3.3", "5.0.4", "4.9.5", "6.0.0-beta", "7.0.2", "8.0.0"]) {
+  it("refuses below the floor and at or above 7", () => {
+    // 7 is not a bound to widen: the Go port's entry point exports `version`
+    // and nothing else, so it needs Ts7ApiSource rather than a bigger range.
+    for (const version of ["5.3.3", "5.0.4", "4.9.5", "7.0.0-beta", "7.0.2", "8.0.0"]) {
       expect(isSupportedTypeScriptVersion(version)).toBe(false);
     }
   });
