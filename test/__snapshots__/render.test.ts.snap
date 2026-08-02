@@ -5,6 +5,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed 1`] = `
 4 errors · 3 files · 1 root cause
 
 [1] cause: function 'auditEvent' declared at src/audit/event.ts:13:1
+      (action: string, actor: string): AuditEvent
     4 diagnostics, all TS2554
     src/accounts/session.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
       related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
@@ -22,15 +23,19 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders arity-changed with --all 1`
 
 [1] src/accounts/session.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
     related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    callee: function 'auditEvent' (action: string, actor: string): AuditEvent at src/audit/event.ts:13:1
 
 [2] src/accounts/session.ts:9:17 error TS2554: Expected 2 arguments, but got 1.
     related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    callee: function 'auditEvent' (action: string, actor: string): AuditEvent at src/audit/event.ts:13:1
 
 [3] src/admin/impersonation.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
     related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    callee: function 'auditEvent' (action: string, actor: string): AuditEvent at src/audit/event.ts:13:1
 
 [4] src/billing/refund.ts:4:17 error TS2554: Expected 2 arguments, but got 1.
     related src/audit/event.ts:13:44: An argument for 'actor' was not provided.
+    callee: function 'auditEvent' (action: string, actor: string): AuditEvent at src/audit/event.ts:13:1
 "
 `;
 
@@ -67,6 +72,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export 1`] = 
 3 errors · 3 files · 1 root cause
 
 [1] cause: module '../domain' declared at src/domain/index.ts:1:1
+      3 exports: Order, Customer, CustomerId
     3 diagnostics, all TS2724
     src/billing/invoice.ts:2:22 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
     src/reporting/summary.ts:3:27 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
@@ -79,10 +85,16 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export with -
 3 errors · 3 files
 
 [1] src/billing/invoice.ts:2:22 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+    module: module '../domain' at src/domain/index.ts:1:1
+    '../domain' has 3 exports: Order, Customer, CustomerId
 
 [2] src/reporting/summary.ts:3:27 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+    module: module '../domain' at src/domain/index.ts:1:1
+    '../domain' has 3 exports: Order, Customer, CustomerId
 
 [3] src/shipping/label.ts:3:15 error TS2724: '"../domain"' has no exported member named 'OrderId'. Did you mean 'Order'?
+    module: module '../domain' at src/domain/index.ts:1:1
+    '../domain' has 3 exports: Order, Customer, CustomerId
 "
 `;
 
@@ -233,6 +245,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders monorepo-cross-package 1`] 
 4 errors · 4 files · 1 root cause
 
 [1] cause: interface 'Invoice' declared at packages/core/src/invoice.ts:3:1
+      4 properties: id, status, currency, amountDue
     4 diagnostics, all TS2339
     packages/api/src/billing-route.ts:7:20 error TS2339: Property 'total' does not exist on type 'Invoice'.
     packages/api/src/dunning.ts:4:59 error TS2339: Property 'total' does not exist on type 'Invoice'.
@@ -246,12 +259,20 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders monorepo-cross-package with
 4 errors · 4 files
 
 [1] packages/api/src/billing-route.ts:7:20 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    type: interface 'Invoice' at packages/core/src/invoice.ts:3:1
+    'Invoice' has 4 properties: id, status, currency, amountDue
 
 [2] packages/api/src/dunning.ts:4:59 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    type: interface 'Invoice' at packages/core/src/invoice.ts:3:1
+    'Invoice' has 4 properties: id, status, currency, amountDue
 
 [3] packages/web/src/invoice-card.ts:4:37 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    type: interface 'Invoice' at packages/core/src/invoice.ts:3:1
+    'Invoice' has 4 properties: id, status, currency, amountDue
 
 [4] packages/web/src/invoice-list.ts:4:58 error TS2339: Property 'total' does not exist on type 'Invoice'.
+    type: interface 'Invoice' at packages/core/src/invoice.ts:3:1
+    'Invoice' has 4 properties: id, status, currency, amountDue
 "
 `;
 
@@ -260,6 +281,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member 1`] =
 8 errors · 3 files · 1 root cause
 
 [1] cause: type-alias 'Shape' declared at src/geometry/shape.ts:7:1
+      1 property: type
     8 diagnostics, all TS2339
     src/geometry/area.ts:4:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
         TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
@@ -277,27 +299,43 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member with 
 
 [1] src/geometry/area.ts:4:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
       TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [2] src/geometry/area.ts:4:55 error TS2339: Property 'radius' does not exist on type 'Shape'.
       TS2339: Property 'radius' does not exist on type '{ type: "square"; side: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [3] src/geometry/area.ts:5:13 error TS2339: Property 'kind' does not exist on type 'Shape'.
       TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [4] src/geometry/area.ts:5:45 error TS2339: Property 'side' does not exist on type 'Shape'.
       TS2339: Property 'side' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [5] src/geometry/area.ts:6:17 error TS2339: Property 'base' does not exist on type 'Shape'.
       TS2339: Property 'base' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [6] src/geometry/area.ts:6:30 error TS2339: Property 'height' does not exist on type 'Shape'.
       TS2339: Property 'height' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [7] src/render/label.ts:4:21 error TS2339: Property 'kind' does not exist on type 'Shape'.
       TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 
 [8] src/render/legend.ts:4:38 error TS2339: Property 'kind' does not exist on type 'Shape'.
       TS2339: Property 'kind' does not exist on type '{ type: "circle"; radius: number; }'.
+    type: type-alias 'Shape' at src/geometry/shape.ts:7:1
+    'Shape' has 1 property: type
 "
 `;
 
@@ -368,6 +406,7 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename 1`
 3 errors · 1 file · 1 root cause
 
 [1] cause: interface 'CreateUserInput' declared at src/types/user.ts:7:1
+      3 properties: id, email, name
     3 diagnostics, TS2339 · TS2345 · TS2353
     src/api/user.ts:10:5 error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
     src/api/user.ts:16:16 error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
@@ -382,12 +421,18 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders partial-interface-rename wi
 3 errors · 1 file
 
 [1] src/api/user.ts:10:5 error TS2353: Object literal may only specify known properties, and 'emailAddress' does not exist in type 'CreateUserInput'.
+    expected type: interface 'CreateUserInput' at src/types/user.ts:7:1
+    'CreateUserInput' has 3 properties: id, email, name
 
 [2] src/api/user.ts:16:16 error TS2339: Property 'emailAddress' does not exist on type 'CreateUserInput'.
+    type: interface 'CreateUserInput' at src/types/user.ts:7:1
+    'CreateUserInput' has 3 properties: id, email, name
 
 [3] src/api/user.ts:30:11 error TS2345: Argument of type '{ id: string; emailAddress: string; }' is not assignable to parameter of type 'CreateUserInput'.
       TS2741: Property 'email' is missing in type '{ id: string; emailAddress: string; }' but required in type 'CreateUserInput'.
     related src/types/user.ts:9:3: 'email' is declared here.
+    parameter type: interface 'CreateUserInput' at src/types/user.ts:7:1
+    'CreateUserInput' has 3 properties: id, email, name
 "
 `;
 
@@ -420,6 +465,8 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots 1`] =
 2 errors · 2 files
 
 [1] src/billing/invoice.ts:10:15 error TS2339: Property 'quantity' does not exist on type 'LineItem'.
+    type: interface 'LineItem' at src/billing/invoice.ts:3:1
+    'LineItem' has 3 properties: sku, quantityOrdered, unitPriceCents
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
 "
@@ -430,6 +477,8 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with 
 2 errors · 2 files
 
 [1] src/billing/invoice.ts:10:15 error TS2339: Property 'quantity' does not exist on type 'LineItem'.
+    type: interface 'LineItem' at src/billing/invoice.ts:3:1
+    'LineItem' has 3 properties: sku, quantityOrdered, unitPriceCents
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
 "
@@ -440,11 +489,13 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-roots-one-file 1`] = `
 4 errors · 1 file · 2 root causes
 
 [1] cause: interface 'Gauge' declared at src/dashboard.ts:11:1
+      2 properties: min, max
     2 diagnostics, all TS2339
     src/dashboard.ts:23:12 error TS2339: Property 'upper' does not exist on type 'Gauge'.
     src/dashboard.ts:23:22 error TS2339: Property 'lower' does not exist on type 'Gauge'.
 
 [2] cause: interface 'Widget' declared at src/dashboard.ts:6:1
+      2 properties: id, label
     2 diagnostics, all TS2339
     src/dashboard.ts:18:15 error TS2339: Property 'title' does not exist on type 'Widget'.
     src/dashboard.ts:18:28 error TS2339: Property 'caption' does not exist on type 'Widget'.
@@ -456,12 +507,20 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-roots-one-file with --a
 4 errors · 1 file
 
 [1] src/dashboard.ts:18:15 error TS2339: Property 'title' does not exist on type 'Widget'.
+    type: interface 'Widget' at src/dashboard.ts:6:1
+    'Widget' has 2 properties: id, label
 
 [2] src/dashboard.ts:18:28 error TS2339: Property 'caption' does not exist on type 'Widget'.
+    type: interface 'Widget' at src/dashboard.ts:6:1
+    'Widget' has 2 properties: id, label
 
 [3] src/dashboard.ts:23:12 error TS2339: Property 'upper' does not exist on type 'Gauge'.
+    type: interface 'Gauge' at src/dashboard.ts:11:1
+    'Gauge' has 2 properties: min, max
 
 [4] src/dashboard.ts:23:22 error TS2339: Property 'lower' does not exist on type 'Gauge'.
+    type: interface 'Gauge' at src/dashboard.ts:11:1
+    'Gauge' has 2 properties: min, max
 "
 `;
 

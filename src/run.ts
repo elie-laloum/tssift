@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { CONTEXT_CAPTURE_CODES } from "./codes.js";
 import { TssiftUnrunnable } from "./errors.js";
-import { dedupe, detectCausality } from "./pipeline/index.js";
+import { dedupe, detectCausality, enrich } from "./pipeline/index.js";
 import { renderAgentText } from "./render/agent-text.js";
 import { countErrors, isRenderFormat, RENDER_FORMATS, type RenderFormat } from "./render/index.js";
 import { renderJson } from "./render/json.js";
@@ -170,8 +170,10 @@ export function run(argv: readonly string[], streams: Streams): number {
     // which carry no information, so "restore everything" still restores
     // everything there is. `detectCausality` removes nothing at all — it returns
     // the complete table plus a ranked index over it, and `--all` decides only
-    // whether the renderer walks that index (rule 2).
-    const report = detectCausality(dedupe(ingested, facts), facts);
+    // whether the renderer walks that index (rule 2). `enrich` adds facts and
+    // removes nothing either — it is the last stage because a fact must never
+    // influence a grouping decision.
+    const report = enrich(detectCausality(dedupe(ingested, facts), facts));
 
     // A bare-Node read of a Yarn PnP project produces plausible, entirely false
     // TS2307s. Refusing beats rendering a clean-looking, wrong hierarchy (§15).

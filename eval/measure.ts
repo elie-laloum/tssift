@@ -8,10 +8,12 @@
  * claim — is near enough tokenizer-independent. `chars / 4` is quoted as an
  * estimate with its divisor stated, never as a measurement.
  *
- * Read PROJECT.md §7 before reading the numbers: in P0 there is neither
- * causality nor enrichment, so arm B holds the same diagnostics as arm A, only
- * reformatted. A flat delta is the expected result and the point of the
- * exercise — it is the baseline P1 will be measured against.
+ * Read PROJECT.md §7 before reading the numbers. The composition below is the
+ * one `run.ts` ships, and it has grown twice since the first table: P1 added
+ * causality, which is what makes arm B smaller than arm A at all, and P2 added
+ * enrichment, which makes it *larger* again by a stated amount. Both are in the
+ * arm on purpose — the published ratio has to be the ratio of the shipped
+ * product, not of a favourable subset of it.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -21,7 +23,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
 import { TssiftUnrunnable } from "../src/errors.js";
-import { dedupe, detectCausality } from "../src/pipeline/index.js";
+import { dedupe, detectCausality, enrich } from "../src/pipeline/index.js";
 import { renderAgentText } from "../src/render/agent-text.js";
 import { TsApiSource } from "../src/sources/ts-api.js";
 
@@ -200,7 +202,7 @@ function armB(projectDir: string): { arm: Arm; typescript: string } {
   });
   // The same pipeline `run.ts` composes. Measuring the renderer without it would
   // measure a product nobody ships.
-  const report = detectCausality(dedupe(diagnostics, facts), facts);
+  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts));
   const text = renderAgentText({ report, facts, rootLabel: projectDir, all: false });
   return {
     // `[n]` counts *entries*, not diagnostics: after P1 one entry can stand for
@@ -302,7 +304,33 @@ lines.push(
 );
 lines.push(`|---|---|---|---:|---:|---:|---:|---:|---:|---:|`);
 
+/**
+ * Do the two arms agree that the project is broken at all?
+ *
+ * They must, because they read the same tsconfig with the same compiler. When
+ * arm A reports zero diagnostics and arm B reports many, nothing has been
+ * measured: A's `tsc` did not run over the same program — the case that produced
+ * it is a **stale materialised corpus**, a copy under `.corpus/` whose source
+ * repository has since disappeared, so its own `tsc` finds nothing to check
+ * while `TsApiSource` still walks the tree.
+ *
+ * Folding such a row into the totals is worse than dropping it: on 2026-08-01 it
+ * turned a published total into `B/A 1235%`, a number that describes a broken
+ * copy and reads as a claim about the product. The frozen `corpus/` committed in
+ * B1/T3 exists precisely so the corpus stops moving underneath the measurement;
+ * this guard makes the failure of the *old* one loud instead of arithmetical.
+ */
+function isIncoherent(row: (typeof rows)[number]): boolean {
+  return row.status === "ok" && row.a?.diagnostics === 0 && (row.b?.diagnostics ?? 0) > 0;
+}
+
 for (const row of rows) {
+  if (isIncoherent(row)) {
+    lines.push(
+      `| ${row.target.name} | ${row.target.kind} | ${row.typescript} | ${row.a?.diagnostics} | ${row.b?.diagnostics} | incoherent — arm A type-checked nothing; excluded from totals | | | | |`,
+    );
+    continue;
+  }
   if (row.status !== "ok" || !row.a || !row.b) {
     lines.push(
       `| ${row.target.name} | ${row.target.kind} | — | ${row.status} — ${row.note ?? ""} | | | | | | |`,
@@ -314,7 +342,8 @@ for (const row of rows) {
   );
 }
 
-const ok = rows.filter((row) => row.status === "ok" && row.a && row.b);
+const ok = rows.filter((row) => row.status === "ok" && row.a && row.b && !isIncoherent(row));
+const incoherent = rows.filter(isIncoherent);
 const totalA = ok.reduce((sum, row) => sum + (row.a?.chars ?? 0), 0);
 const totalB = ok.reduce((sum, row) => sum + (row.b?.chars ?? 0), 0);
 const diagsA = ok.reduce((sum, row) => sum + (row.a?.diagnostics ?? 0), 0);
@@ -326,6 +355,19 @@ process.stdout.write(
     `chars A=${totalA} B=${totalB} (B/A ${ratio(totalB, totalA)}). ` +
     `Token estimates use chars / ${CHARS_PER_TOKEN}.\n`,
 );
+
+if (incoherent.length > 0) {
+  process.stdout.write(
+    `\nEXCLUDED as incoherent (arm A found 0 diagnostics, arm B found some): ${incoherent
+      .map((row) => row.target.name)
+      .join(", ")}.\n` +
+      `Both arms read the same tsconfig with the same compiler, so this is not a\n` +
+      `result — it is a target that no longer type-checks the program it used to.\n` +
+      `The usual cause is a stale .corpus/ copy whose source repository is gone;\n` +
+      `rebuild it with \`bun run corpus:build\` or delete it. The committed corpus/\n` +
+      `is unaffected by design.\n`,
+  );
+}
 
 const dirty = rows.filter((row) => row.note === "WORKING TREE CHANGED");
 if (dirty.length > 0) {

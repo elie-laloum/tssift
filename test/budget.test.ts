@@ -108,18 +108,48 @@ describe("budget · the fitting function", () => {
   });
 });
 
+/**
+ * A budget that the smallest rendering of this fixture still fits inside.
+ *
+ * It was 60 until P2. Enrichment added a property list to the cause header,
+ * which raised the *floor* — the irreducible form of a group, header and counts
+ * with no member lines — from roughly 55 to roughly 68 tokens. Below the floor
+ * rule 6 takes over and renders the entry whole, so a budget of 60 now produces
+ * the full report and the assertion below would be testing nothing.
+ *
+ * The number is therefore not arbitrary and not free to drift downward: it says
+ * "above this fixture's floor". If it has to move again, the floor moved, and
+ * that is a fact worth knowing rather than a test to relax.
+ */
+const ABOVE_FLOOR = 80;
+
 describe("budget · through the renderer", () => {
   it("actually shrinks the report", () => {
     const unbudgeted = renderAgentText(build("partial-interface-rename"));
-    const budgeted = renderAgentText(build("partial-interface-rename", { budgetTokens: 60 }));
+    const budgeted = renderAgentText(
+      build("partial-interface-rename", { budgetTokens: ABOVE_FLOOR }),
+    );
     expect(budgeted.length).toBeLessThan(unbudgeted.length);
+  });
+
+  it("below the floor, rule 6 renders the entry whole rather than half", () => {
+    // Not a regression: an entry is rendered in one of its allowed forms or
+    // dropped, never cut. The first entry is never dropped, so a budget too
+    // small to hold even its shortest form is a budget that was wrong.
+    const unbudgeted = renderAgentText(build("partial-interface-rename"));
+    const starved = renderAgentText(build("partial-interface-rename", { budgetTokens: 20 }));
+    expect(starved).toBe(unbudgeted);
   });
 
   it("keeps the cause header when it sheds usage sites", () => {
     // §5.3's order of sacrifice: derived sites go before anything explanatory.
-    const budgeted = renderAgentText(build("partial-interface-rename", { budgetTokens: 60 }));
+    const budgeted = renderAgentText(
+      build("partial-interface-rename", { budgetTokens: ABOVE_FLOOR }),
+    );
     expect(budgeted).toContain("cause: interface 'CreateUserInput'");
     expect(budgeted).toContain("src/types/user.ts:7:1");
+    // And the fact the header carries is explanatory too, so it survives with it.
+    expect(budgeted).toContain("3 properties: id, email, name");
   });
 
   it("--all ignores the budget (rule 2 wins)", () => {

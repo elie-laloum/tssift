@@ -12,10 +12,10 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 
 1. `AGENTS.md` (importé ci-dessus) — les règles dures
 2. `PROJECT.md` — la spec produit, seule source de vérité pour le modèle de données (§4) et la table des enrichisseurs (§5.2)
-3. `.plans/2026-07-28_b1.md` — **le plan courant** : le séquencement exécutable de B1 (vingt fixtures, règle 2307, corpus élargi, harnais modèle), avec critères d'acceptation et ce qui demande un feu vert humain. Les trois autres sont **clos** : `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
+3. `.plans/2026-08-01_p2-enrichment.md` — **le plan courant** : la première tranche de P2, ce que chaque mesure a décidé, et les quatre codes de §5.2 qui restent avec ce qui les débloquerait. Les autres sont **clos** : `_b1.md`, `_0.0.1-release-prep.md`, `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
 4. `EVAL.md` — les chiffres priment sur les intentions
 
-**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; seul `pipeline/enrich/` est vide, c'est P2 et il est fermé par la porte de décision §7. Depuis le 2026-07-28 le corpus de fixtures est à **20** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **464 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
+**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; `pipeline/enrich/` est ouvert depuis le 2026-08-01 (six codes, première tranche de P2). Depuis le 2026-07-28 le corpus de fixtures est à **20** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **518 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 
@@ -29,7 +29,8 @@ Ce projet a une spec inhabituellement précise et une liste explicite de non-obj
 Demander avant d'agir si la tâche implique :
 - de trancher une des « Décisions ouvertes » d'AGENTS.md
 - d'ajouter un code d'erreur **hors** de la table des 10 de PROJECT.md §5.2
-- de commencer le **serveur MCP** ou toute distribution (bloqués par la porte de décision §7)
+- de commencer le **serveur MCP** ou toute distribution — la porte §7 s'est ouverte le 2026-08-01 **vers P2 seulement** ; le MCP et la publication npm restent un choix humain non fait
+- de **rouvrir 2551 ou 2769** : P2 les a écartés sur mesure, pas par manque de temps (AGENTS.md § État actuel)
 - d'ajouter une dépendance runtime
 - d'écrire quoi que ce soit qui **prescrit un correctif** (règle 1)
 

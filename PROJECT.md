@@ -269,6 +269,13 @@ Périmètre V1, par ordre de rentabilité :
 
 Les codes hors table sortent au format natif. **Couvrir 10 codes bien vaut mieux que 60 à moitié.**
 
+**Ce que P2 a livré le 2026-08-01, et où cette table s'est trompée.** Six codes ont un enrichisseur — **2339, 2353, 2345, 2554, 2305, 2724** — sélectionnés par une règle unique : *un enrichisseur sort quand le fait qu'il produit est déjà capturé et que TypeScript ne l'imprime pas déjà.* Quatre entrées ci-dessus ne sortent pas, et une cinquième sort en no-op ; les chiffres sont dans `EVAL.md` § P2.
+
+- **2769, classé ⭐⭐⭐ ici, est en réalité le moins rentable des dix.** Toute sa charge utile est déjà dans `chain` — TypeScript imbrique un TS2772 par candidat avec sa signature et l'erreur qui l'a tué, et le renderer l'imprime depuis P0. « Laquelle échoue le plus tard » **n'est pas dérivable** du capturé : sur `overload-mismatch`, les trois branches ont même profondeur et une feuille chacune.
+- **2322, 2307 et 18047/18048 manquent de données, pas de code.** 2322 demanderait les deux types comme structures, 2307 la topologie installée — donc un canal `ProgramFacts` neuf, un étage de pipeline n'ayant pas le droit de lire des fichiers (règle 4) — et 18047 une analyse de flot.
+- **2551 est absent de la table par décision** : il est déjà bon nativement, et l'instruction de ne pas le dégrader se respecte le mieux en ne le touchant pas.
+- **Le « candidat proche (Levenshtein) » de 2339 n'existe pas, sur mesure.** TypeScript émet TS2551/TS2724 *à la place de* TS2339/TS2305 dès que son correcteur trouve un candidat : tout diagnostic parvenant à un enrichisseur est un cas qu'il a déjà rejeté. À seuil comparable, une suggestion se déclenchait 38 fois sur les fixtures et le corpus, sur deux noms, et était fausse les deux fois (`kind` → `id`, `side` → `id`, sur la cascade qui résiste déjà à 100 % en B1). Aucun `Fact` de type `near-match` n'est produit, et un test le garde.
+
 Cette table a un second usage, moins visible : **c'est elle qui pilote la capture sélective de `context`** (§3). La source reçoit la liste des codes pour lesquels résoudre un `SymbolRef` vaut son aller-retour de checker ; tout le reste est ingéré sans contexte. La liste est déclarative et partagée — la source ne connaît pas les enrichisseurs, seulement des numéros.
 
 ### 5.3 Budget de tokens
@@ -387,15 +394,21 @@ La clé est le spécificateur, jamais le fichier : `wrong-tsconfig-paths` sort *
 
 ### Après — P2 (les faits)
 
-Ce que P2 ajoutera sous l'en-tête de cause, et qui n'existe pas encore :
+**Livré le 2026-08-01.** Ce que P2 ajoute sous l'en-tête de cause, tel qu'il sort réellement sur `fixtures/partial-interface-rename` :
 
 ```
 [1] cause: interface 'CreateUserInput' declared at src/types/user.ts:7:1
-      { id: string; email: string; name?: string }
-    near match: 'email' (distance 2)
+      3 properties: id, email, name
     3 diagnostics, TS2339 · TS2345 · TS2353
     …
 ```
+
+**La maquette qui figurait ici était fausse sur deux points, et les fixtures l'ont montré.** Elle est corrigée ci-dessus plutôt que conservée par égard pour l'intention.
+
+- Elle montrait la **forme** du type (`{ id: string; email: string; name?: string }`). Ce rendu **n'existe pas pour un type nommé** : `checker.typeToString` d'une interface rend son nom, donc la ligne se serait lue `type 'CreateUserInput' CreateUserInput`. C'est la **liste des propriétés** qui porte l'information. La forme n'est rendue que là où elle n'est pas le nom — une signature résolue (`(action: string, actor: string): AuditEvent` sur TS2554), ou un type anonyme.
+- Elle montrait un **`near match: 'email' (distance 2)`**. La distance réelle est 7, aucun near-match n'est produit sur aucun code, et §5.2 dit pourquoi : TypeScript émet TS2551/TS2724 à la place dès que *son* correcteur trouve un candidat, donc le nôtre ne pourrait se déclencher que là où le sien a dit non — mesuré, 38 déclenchements, faux tous.
+
+Un fait d'économie à ne pas perdre : **les faits se rendent une fois par groupe, pas une fois par diagnostic.** Une cascade de 65 diagnostics repliée en une entrée porte une seule ligne de propriétés, ce qui est pourquoi P2 ne coûte que 40 à 85 caractères sur une cascade profonde (`EVAL.md` § P2). Sous `--all` il n'y a plus de groupe pour amortir, et chaque diagnostic reporte ses faits : c'est voulu, et c'est là que l'enrichissement est cher.
 
 **Trois choses à ne pas défaire dans ce format.**
 

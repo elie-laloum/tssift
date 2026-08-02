@@ -1,3 +1,4 @@
+import { memberList, membersLabel, shapeAddsToName } from "../pipeline/enrich/facts.js";
 import {
   type Entry,
   entriesOf,
@@ -5,7 +6,7 @@ import {
   MAX_SHOWN_MEMBERS,
   sizeOf,
 } from "../pipeline/index.js";
-import type { DiagnosticGroup, EnrichedDiagnostic, SourceSpan } from "../types.js";
+import type { DiagnosticGroup, EnrichedDiagnostic, Fact, SourceSpan } from "../types.js";
 import type { RenderInput } from "./index.js";
 
 /**
@@ -44,8 +45,31 @@ function at(span: SourceSpan): string {
   return `${span.file}:${span.line}:${span.column}`;
 }
 
-/** The body of a diagnostic: its own line, its chain, its related entries. */
-function diagnosticLines(diagnostic: EnrichedDiagnostic, indent: string): string[] {
+/**
+ * A fact, as one line. `at <span>` is a suffix rather than a prefix so the line
+ * reads as the statement it is — "type 'X' { … } at file:7:1" — and so the
+ * varying part stays at the end where a diff is easy to read.
+ */
+function factLine(fact: Fact, indent: string): string {
+  return `${indent}  ${fact.text}${fact.span ? ` at ${at(fact.span)}` : ""}`;
+}
+
+/**
+ * The body of a diagnostic: its own line, its chain, its related entries, its
+ * facts.
+ *
+ * `suppressAt` carries the group cause's declaration site, when there is one. A
+ * member's `declaration` fact points at exactly that site — it is *why* the
+ * member is in the group — so printing it under every member would repeat the
+ * header three times. Dropping it here is a rendering decision and nothing more:
+ * json still carries every fact on every diagnostic (rule 14), and `--all`
+ * renders diagnostics ungrouped, where nothing is suppressed.
+ */
+function diagnosticLines(
+  diagnostic: EnrichedDiagnostic,
+  indent: string,
+  suppressAt?: SourceSpan,
+): string[] {
   const lines: string[] = [
     `${indent}${at(diagnostic.primary)} ${diagnostic.category} TS${diagnostic.code}: ${singleLine(
       diagnostic.message,
@@ -64,6 +88,20 @@ function diagnosticLines(diagnostic: EnrichedDiagnostic, indent: string): string
         ? `${indent}  related ${at(related.span)}: ${singleLine(related.message)}`
         : `${indent}  related: ${singleLine(related.message)}`,
     );
+  }
+
+  // All-or-nothing, not fact-by-fact: a diagnostic's facts all describe the one
+  // symbol its context resolved to, so if the declaration among them is the
+  // group's cause, the whole set is what the header already said — including the
+  // member list, which carries no span of its own and would otherwise repeat
+  // under every member.
+  const covered = suppressAt ? at(suppressAt) : undefined;
+  const describesTheCause =
+    covered !== undefined &&
+    diagnostic.facts.some((fact) => fact.span !== undefined && at(fact.span) === covered);
+
+  if (!describesTheCause) {
+    for (const fact of diagnostic.facts) lines.push(factLine(fact, indent));
   }
 
   return lines;
@@ -86,6 +124,38 @@ function causeLine(group: DiagnosticGroup): string {
   return `cause: ${symbol.kind} '${symbol.name}' declared at ${at(symbol.declaredAt)}`;
 }
 
+/**
+ * What the cause *is*, under the line saying where it is — the P2 half of the
+ * §6 example.
+ *
+ * Both lines come straight off the cause's own `SymbolRef`, so a group carries
+ * them once for however many members it explains. That is the whole economics of
+ * enrichment under folding: 152 diagnostics on one arrow function get one
+ * signature line, not 152.
+ *
+ * The member list is held back only when the shape already spells the type out,
+ * which — measured on the fixtures — is rarer than §6's mock-up assumed: a named
+ * interface renders as its own name, so on the contract fixture the shape line
+ * is dropped and the member list is the fact. See `shapeAddsToName`.
+ */
+function causeFactLines(group: DiagnosticGroup): string[] {
+  if (group.cause.kind === "module") return [];
+  const { symbol } = group.cause;
+  const lines: string[] = [];
+
+  const shape = shapeAddsToName(symbol);
+  if (shape) lines.push(`      ${symbol.signature}`);
+
+  const members = symbol.memberNames ?? [];
+  // A truncated signature has stopped answering "what does it contain", so the
+  // list earns its line even next to a shape.
+  if (members.length > 0 && (!shape || symbol.signature?.endsWith("…"))) {
+    lines.push(`      ${membersLabel(symbol, members.length)}: ${memberList(members)}`);
+  }
+
+  return lines;
+}
+
 /** `152 diagnostics, all TS2554` when they agree, the spread when they do not. */
 function membersLine(members: readonly EnrichedDiagnostic[]): string {
   const codes = [...new Set(members.map((member) => member.code))].sort((a, b) => a - b);
@@ -99,13 +169,19 @@ function groupLines(
   index: number,
   maxMembers = MAX_SHOWN_MEMBERS,
 ): string[] {
-  const lines = [`[${index}] ${causeLine(entry.group)}`, `    ${membersLine(entry.members)}`];
+  const lines = [
+    `[${index}] ${causeLine(entry.group)}`,
+    ...causeFactLines(entry.group),
+    `    ${membersLine(entry.members)}`,
+  ];
 
   // The cap declasses the tail: those members lose their line and survive as a
   // count. Nothing is removed from the table — `--all` still prints every one,
   // and json still carries them all (rule 2).
+  const causeAt =
+    entry.group.cause.kind === "declaration" ? entry.group.cause.symbol.declaredAt : undefined;
   const shown = entry.members.slice(0, maxMembers);
-  for (const member of shown) lines.push(...diagnosticLines(member, "    "));
+  for (const member of shown) lines.push(...diagnosticLines(member, "    ", causeAt));
 
   const hidden = entry.members.length - shown.length;
   if (hidden > 0) lines.push(`    +${plural(hidden, "more site")} (--all for every one)`);

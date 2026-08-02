@@ -489,3 +489,62 @@ Le premier balayage (ci-dessus) tournait sur des fixtures trop faciles : le mod�
 **Verdict corpus.** Sur du code profond — le cas d'usage réel, pas les fixtures — le pliage **économise ~la moitié des tokens et réduit les faux départs**, le plus nettement là où le nombre de sites rend le patch-par-symptôme tentant. Le premier run « H1 non soutenue » était largement un artefact de tâches trop faciles ; ce corpus figé, lui, soutient H1 sur les tokens et l'appuie sur le faux départ, sans le sur-vendre (`shape-tag` reste un contre-exemple honnête).
 
 *Reproductible : `AGENT_TARGETS=corpus/… AGENT_MODEL=… mise exec -- bun run eval:agent`. Corpus committé sous `corpus/`, endpoint dans `.env`.*
+
+---
+
+## P2 — l'enrichissement : ce qu'il ajoute, et ce qu'il coûte (2026-08-01)
+
+Six codes reçoivent un enrichisseur — **2339, 2353, 2345, 2554, 2305, 2724** — et la règle qui les sélectionne tient en une ligne : *un enrichisseur sort quand le fait qu'il produit est déjà capturé et que TypeScript ne l'imprime pas déjà.* Ce sont exactement les codes dont la charge utile est un **site de déclaration** et une **liste de membres**, deux choses qu'un lecteur de terminal ne peut obtenir d'aucune façon et qu'un éditeur donne au survol.
+
+### Le coût en volume, mesuré contre la ligne de base P1
+
+Même harnais B0, mêmes 25 cibles, la seule variable étant la présence de l'étage `enrich` et de la ligne de fait sous l'en-tête de cause.
+
+| | B chars, P1 | B chars, P2 | delta | B/A, P1 | B/A, P2 |
+|---|---:|---:|---:|---:|---:|
+| **total, 25 cibles** | 16 861 | 17 538 | **+4,0 %** | **54 %** | **56 %** |
+| `corpus/shape-tag-renamed` | 759 | 797 | +38 | 8 % | 9 % |
+| `corpus/mapper-argtype-changed` | 990 | 1 043 | +53 | 17 % | 18 % |
+| `corpus/order-book-field-renamed` | 574 | 657 | +83 | 21 % | 24 % |
+| `corpus/registry-barrel-dropped` | 590 | 649 | +59 | 24 % | 26 % |
+| `corpus/dispatch-arity-changed` | 773 | 821 | +48 | 39 % | 41 % |
+
+**Le chiffre à retenir : sur une cascade profonde, l'enrichissement coûte 40 à 85 caractères — de l'ordre de 10 à 20 tokens — pour un site de déclaration et la liste des propriétés réelles.** C'est le pliage qui paie la facture : les faits se rendent **une fois par groupe**, pas une fois par diagnostic, donc une cascade de 65 diagnostics repliée en une entrée porte une seule ligne de propriétés. Le rapport global passe de 54 % à 56 % et les cinq cibles de corpus restent entre 9 % et 41 %.
+
+La contrepartie est visible sous `--all`, où il n'y a plus de groupe pour amortir : chaque diagnostic reporte ses faits. C'est le comportement voulu — `--all` restitue tout — mais c'est là que l'enrichissement est cher, et il faut le savoir avant de le mesurer par accident.
+
+### Le near-match n'existe pas, et c'est une mesure
+
+§5.2 demandait un « candidat proche (Levenshtein) » sur 2339. Il n'est pas implémenté, et la raison n'est pas la difficulté.
+
+**TypeScript émet TS2551 / TS2724 *à la place de* TS2339 / TS2305 dès que son propre correcteur orthographique trouve un candidat.** Tout diagnostic qui parvient à un enrichisseur est donc, par construction, un cas que TypeScript a déjà examiné et rejeté. Une suggestion de notre part ne peut se déclencher que là où le sien a dit non.
+
+Mesuré le 2026-08-01 sur les 20 fixtures et les 5 cascades de corpus, avec un seuil transcrit de `getSpellingSuggestion` (`len × 0,4 + 1`) :
+
+| code | diagnostics avec liste de membres résolue | TS avait suggéré | notre near-match se déclenche |
+|---|---:|---:|---:|
+| 2339 | 113 | **0** | **38** |
+| 2353 | 1 | 0 | 0 |
+| 2305 / 2724 | 24 | 0 | 0 |
+
+Les 38 déclenchements sont **deux cas distincts, faux tous les deux** : `kind` → `id` et `side` → `id`, distance 2, sur `shape-tag-renamed`. Sur un nom de quatre lettres une distance de 2 ne signifie rien. Et la cible est précisément la cascade qui **résiste à 100 % dans les deux bras en B1** : un fait qui y nomme `id` enverrait le modèle sur la mauvaise déclaration, c'est-à-dire exactement la panne que la règle 1 existe pour empêcher. Aucun `Fact` de type `near-match` n'est produit, sur aucun code, et un test le garde.
+
+### Deux choses que §5.2 et §6 supposaient et que les fixtures ont démenties
+
+1. **`checker.typeToString` d'un type nommé rend son nom, pas sa forme.** L'exemple de §6 montrait `interface 'CreateUserInput'` suivi de `{ id: string; email: string; name?: string }` ; ce rendu n'existe pas pour un type nommé — on obtient `CreateUserInput`, et la ligne se lirait `type 'CreateUserInput' CreateUserInput`. **C'est donc la liste des propriétés, et non la forme, qui porte l'information sur un type nommé.** La forme n'est rendue que là où elle n'est pas le nom : une signature résolue (`(action: string, actor: string): AuditEvent` sur TS2554) ou un type anonyme.
+2. **« member » est le mauvais mot.** Pour une union, un *member* est un constituant, pas une propriété : `1 member: type` sur `type Shape = Circle | Square` se lit « cette union a un bras » alors qu'il faut lire « une propriété est accessible dessus ». La fixture qui l'a révélé s'appelle `narrowed-union-member`. La sortie dit **`property`** pour un type et **`export`** pour un module.
+
+### Quatre codes de §5.2 ne sortent pas, chacun pour une raison nommée
+
+- **2769** — §5.2 le classe premier, la mesure le rétrograde. Toute sa charge utile est **déjà dans `chain`** : TypeScript imbrique un TS2772 par candidat, portant la signature *et* l'erreur qui l'a tué, et le renderer imprime cet arbre depuis P0. Ce que §5.2 voulait ajouter — « laquelle échoue le plus tard, et sur quel argument » — **n'est pas dérivable du capturé** : sur `overload-mismatch`, la seule fixture à chaîne ramifiée, les trois branches ont la même profondeur et une feuille chacune. Aucun signal structurel ne les sépare ; les classer voudrait dire lire les messages sémantiquement, c'est-à-dire deviner.
+- **2322** — le chemin de divergence demande les deux types comme structures. Seul le côté attendu est capturé, et comme `SymbolRef`, pas comme arbre.
+- **2307** — ses faits portent sur la **topologie installée** (déclaré ou non dans `package.json`, hoisting, PnP, `paths`). C'est de la lecture de fichiers, qu'un étage de pipeline n'a pas le droit de faire (règle 4) : il faut un nouveau canal `ProgramFacts` rempli par la source. La moitié *causalité* de 2307 est livrée depuis B1/T1 et plie ses trois fixtures.
+- **18047 / 18048** — l'origine de la nullabilité est une question de flot de contrôle ; rien de capturé n'y répond.
+
+Et **2551 sort en no-op délibéré** : il est déjà bon nativement et §5.2 interdit de le dégrader. Il est absent de la table, donc il se rend exactement comme TypeScript l'a écrit.
+
+### Un garde-fou ajouté au harnais, parce qu'un total absurde a failli être publié
+
+Le `.corpus/` privé (trois copies dérivées d'un dépôt qui n'existe plus sur cette machine) rendait un bras A à **0 diagnostic** et un bras B à 754 : son propre `tsc` ne typecheckait plus rien pendant que `TsApiSource` parcourait encore l'arbre. Replié dans les totaux, cela donnait un **`B/A 1235 %`** — un nombre qui décrit une copie cassée et se lit comme une affirmation sur le produit.
+
+`measure.ts` refuse désormais ces lignes : les deux bras lisent le même tsconfig avec le même compilateur, donc « A trouve 0, B trouve beaucoup » n'est pas un résultat mais une cible périmée. La ligne est marquée `incoherent`, exclue des totaux, et la raison est imprimée. Le `corpus/` committé de T3 est immunisé par construction — c'est exactement pourquoi il a été committé.

@@ -2,7 +2,7 @@ import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
-import { dedupe, detectCausality } from "../src/pipeline/index.js";
+import { dedupe, detectCausality, enrich } from "../src/pipeline/index.js";
 import { renderAgentText } from "../src/render/agent-text.js";
 import type { RenderInput } from "../src/render/index.js";
 import { renderJson } from "../src/render/json.js";
@@ -46,7 +46,7 @@ function build(name: (typeof FIXTURES)[number], all = false): RenderInput {
     project,
     captureFor: CONTEXT_CAPTURE_CODES,
   });
-  const report = detectCausality(dedupe(diagnostics, facts), facts);
+  const report = enrich(detectCausality(dedupe(diagnostics, facts), facts));
   return { report, facts, rootLabel: relative(process.cwd(), facts.root) || ".", all };
 }
 
@@ -88,8 +88,14 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // Every rendered line is a whole line: a wrapped message would show up
         // as a continuation matching none of the shapes below.
         if (line === "" || line.startsWith("root: ")) continue;
+        // The alternation is an allow-list on purpose: a wrapped message shows
+        // up as a continuation matching none of these. P2 added four shapes —
+        // a cause's property/export list, a cause's rendered signature (which
+        // opens on `(` or `{`), a diagnostic's `<label>: <kind> 'name' at …`,
+        // and its `'name' has N properties: …`. Widening this to `.*` would
+        // retire the guard rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ ))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' has \d+ |(type|expected type|parameter type|callee|module): |[({]))/,
         );
       }
     });

@@ -15,12 +15,18 @@
  *  4. **Nothing is derived on a resemblance** (§5.1). The only link that
  *     attaches one diagnostic to another is an identical declaration site.
  *
- * The order is `dedupe → detectCausality → entriesOf`, and `run.ts` is the only
- * place that composes them.
+ * The order is `dedupe → detectCausality → enrich → entriesOf`, and `run.ts` is
+ * the only place that composes them.
+ *
+ * `enrich` runs **after** causality on purpose. Facts are for a reader; grouping
+ * is a structural decision. Letting a fact influence a group would make the
+ * threshold of §5.1 depend on how well a type happened to resolve, which is the
+ * "derived on a resemblance" failure property 4 forbids.
  */
 export type { BudgetedEntry, BudgetResult } from "./budget.js";
 export { CHARS_PER_TOKEN, estimateTokens, fitToBudget } from "./budget.js";
 export { detectCausality } from "./causality.js";
 export { dedupe } from "./dedupe.js";
+export { ENRICHED_CODES, enrich } from "./enrich/index.js";
 export type { DiagnosticEntry, Entry, GroupEntry } from "./group.js";
 export { entriesOf, MAX_SHOWN_MEMBERS, sizeOf } from "./group.js";
