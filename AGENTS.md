@@ -53,6 +53,11 @@ Ce qui existe : les **21** fixtures de contrat · `src/types.ts` + `src/codes.ts
 
 Ce qui n'existe pas encore : **18047/18048**, seul code de §5.2 encore bloqué, et par une analyse de flot de contrôle — pas par du code à écrire. **2769 et 2551 sont clos par mesure** (charge utile déjà dans `chain` ; suggestion déjà bonne nativement).
 
+**B2 (2026-08-03) tempère H1 et n'a rien montré pour P2 — lire `EVAL.md` § B2 avant de citer les chiffres de B1.** Trois faits à ne pas redécouvrir :
+- **B1 et B2 ne se soustraient pas.** Le bras A, dont le code n'a pas changé d'une ligne, a bougé de **−6 %** en tokens et a remonté deux taux de correction de 80 à 100 % entre les deux campagnes. L'environnement a dérivé ; toute différence B1 → B2 est confondue avec elle. `temperature: 0` ne donne pas la reproductibilité entre campagnes, et n=5 à température nulle est un échantillon répété, pas cinq échantillons.
+- **Dans B2, le gain en tokens tient (B/A 63 % fort, 57 % faible ; 49–52 % sur les cibles propres) et le gain en faux départ est nul** — 10/25 dans les deux bras, sur les deux modèles. Le résultat vedette de B1 (`order-book` 100 % → 0 %) ne se reproduit pas.
+- **La métrique de faux départ est fausse sur `order-book`.** Son `expectedFix` donne deux correctifs comme également valides puis appelle le premier un faux départ, et `rootCauseFiles` ne contient que la déclaration : mettre à jour les lectures — correctif que la fixture déclare valide — est scoré 100 %. Deux des cinq cibles ne mesurent donc rien. **À réparer avant de rejouer.**
+
 **H1 est confirmée sur du vrai code, et le chiffre est dans `EVAL.md`.** Ligne de base P0 : 283 diagnostics des deux côtés, sortie à **141 %** de `tsc` brut. Après P1 : **283 diagnostics rendus en 29 entrées (pliage de 90 %), sortie à 20 %** — soit sept fois moins de caractères que la ligne de base. Sur les trois entrées de corpus, qui sont les seules cibles réalistes, le rapport tombe à **6 – 42 %** ; `lekes-ok-arity-changed` rend 153 diagnostics en **2 entrées**. *(La quatrième fixture est entrée dans la mesure après coup : le total publié devient 286 → 30 et 22 %, et à périmètre constant les chiffres ci-dessus sont inchangés.)*
 
 Deux chiffres à ne pas mélire :

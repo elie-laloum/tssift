@@ -899,3 +899,121 @@ le rappel que capturer un code ne fait pas plier tous ses diagnostics.
 fixtures, `narrowed-union-member` et `unconstrained-generic` comprises, sortent
 au caractère près comme avant — la démonstration que les corrections apportées à
 `symbolRefOfType` sont ciblées et non des effets de bord.
+
+---
+
+## B2 — le bras modèle re-mesuré sur la sortie enrichie (2026-08-03)
+
+Même protocole que B1 : cinq cascades du corpus figé, deux bras, deux modèles,
+`temperature: 0`, n=5 — 100 runs. La seule variable voulue est que le bras B
+porte désormais l'enrichissement de P2 (onze codes).
+
+**Le résultat principal est négatif, et il faut le lire en entier avant de
+conclure quoi que ce soit.**
+
+### Les chiffres bruts
+
+| modèle | tokens A | tokens B | B/A | faux départ A | faux départ B |
+|---|---:|---:|---:|---:|---:|
+| fort `cx/gpt-5.6-terra` | 108 049 | 68 054 | **63 %** | **10/25** | **10/25** |
+| faible `cx/gpt-5.4-mini` | 127 583 | 72 551 | **57 %** | **10/25** | **10/25** |
+
+Correction au 1er essai : **100 % partout, les deux bras, les deux modèles.**
+
+### 1. B1 et B2 ne se soustraient pas — le bras A a bougé
+
+Le bras A est du `tsc` brut : **son code n'a pas changé d'une ligne** entre les
+deux campagnes. Il a pourtant bougé.
+
+| cible | vert B1 → B2 | tours | tokens |
+|---|---|---|---|
+| `order-book-field-renamed` A | 80 % → **100 %** | 7.2 → 5.8 | 25 215 → 23 280 |
+| `shape-tag-renamed` A | 80 % → **100 %** | 8.8 → 7.2 | 41 454 → 34 888 |
+| **total A** | | | 115 052 → 108 049 (**−6 %**) |
+
+Un bras témoin qui se déplace de 6 % en tokens et remonte deux taux de
+correction de 80 à 100 % dit une chose : **l'environnement a changé entre le
+2026-07-29 et le 2026-08-03** — endpoint auto-hébergé, même *nom* de modèle, pas
+nécessairement le même service derrière. Toute différence B1 → B2 est donc
+confondue avec cette dérive, et **la seule comparaison valide est A contre B à
+l'intérieur de B2**.
+
+C'est aussi une leçon de protocole : `temperature: 0` ne donne pas la
+reproductibilité entre campagnes, et n=5 à température nulle n'est pas cinq
+échantillons indépendants mais un échantillon répété. Un bras témoin daté est ce
+qui a permis de s'en apercevoir ; sans lui, on aurait publié une régression.
+
+### 2. Ce que B2 établit : le gain en tokens, oui ; le faux départ, non
+
+- **Tokens : le bras B fait 63 % (fort) et 57 % (faible) du bras A.** Sur les
+  trois cibles où aucun bras ne part à faux, il descend à **49 % / 52 %**. La
+  revendication volumétrique de H1 tient, et elle tient avec l'enrichissement
+  dedans — donc le surcoût de P2 est absorbé et au-delà.
+- **Faux départ : 10/25 dans les deux bras, sur les deux modèles. Aucun gain.**
+  Le résultat vedette de B1 — `order-book` passant de 100 % à 0 % côté fort — **ne
+  se reproduit pas** : les deux bras y sont à 100 %.
+
+### 3. Et la métrique de faux départ est fausse sur `order-book`
+
+En diagnostiquant le point précédent, un défaut de **la mesure** est apparu, pas
+de l'outil. Le `meta.json` de la fixture dit, dans cet ordre :
+
+> « **soit** garder `grandTotal` et mettre à jour les lectures, **soit** revenir
+> au nom `total` dans `src/domain/order.ts` […] L'alternative site-par-site est
+> un faux départ. »
+
+Les deux premières propositions sont données comme **également acceptables**, et
+la phrase suivante qualifie la première de faux départ. Or la métrique compte
+tout `write_file` hors de `rootCauseFiles`, et `rootCauseFiles` ne contient que
+la déclaration : **mettre à jour les lectures — un correctif que la fixture
+déclare valide — est compté comme 100 % de faux départ.**
+
+Le bras B de B2 a produit un typecheck vert en choisissant cette stratégie-là.
+Il est scoré 100 %. En B1 le modèle avait choisi l'autre, et scoré 0 %.
+
+**Conséquence sur la lecture de B1 : son résultat le plus fort repose en partie
+sur le choix, par le modèle, de l'une des deux stratégies valides** — pas
+seulement sur le fait d'avoir compris la cause. La métrique ne distingue pas
+« a patché 30 consommateurs sans comprendre » de « a délibérément choisi la
+stratégie *mettre à jour les lectures* ». C'est le défaut à corriger avant de
+rejouer quoi que ce soit : soit `rootCauseFiles` admet les deux ensembles, soit
+la fixture tranche une seule stratégie dans son `expectedFix`.
+
+Le rapport rendu au modèle, lui, n'a pas régressé — il est meilleur qu'en B1 :
+
+```
+[1] cause: interface 'Order' declared at src/domain/order.ts:5:1
+      7 properties: id, customerId, lines, grandTotal, currency, status, createdAt
+    30 diagnostics, all TS2339
+```
+
+599 caractères, la cause nommée, et `grandTotal` — le vrai nom du champ — écrit
+noir sur blanc. *(Hypothèse non testée, à retenir pour la suite : nommer la
+propriété réelle rend peut-être le patch des sites **plus** attrayant, pas
+moins. Elle est plausible et non mesurée ; on ne la publie pas comme un
+résultat.)*
+
+### 4. Ce que B2 dit de P2, honnêtement
+
+**Aucun bénéfice mesurable de l'enrichissement sur le faux départ ou sur le taux
+de correction.** Son coût, lui, est mesuré et réel (+13 % de caractères sur le
+rapport au fil de la journée). Dans la boucle d'agent ce coût disparaît dans le
+bruit — le bras B reste à 57–63 % du bras A — mais **rien dans ces 100 runs ne
+montre que P2 gagne quelque chose.**
+
+Ce n'est pas « P2 est inutile » : c'est « P2 n'est pas mesuré utile », et sur ce
+corpus la mesure ne peut pas trancher, parce que 2 des 5 cibles sont saturées à
+100 % dans les deux bras et que l'une des deux l'est pour une raison de
+métrique. **La conclusion honnête est que la question reste ouverte et que le
+corpus actuel ne peut pas y répondre** — ce qui remet la largeur du corpus
+(§ « Limites du corpus ») devant l'ajout de fonctionnalités.
+
+### 5. Ce qu'il faut faire avant de rejouer
+
+1. **Réparer la métrique** : `rootCauseFiles` doit décrire l'ensemble des
+   fichiers qu'un correctif *valide* peut toucher, ou la fixture doit n'admettre
+   qu'une stratégie. En l'état, deux des cinq cibles ne mesurent rien.
+2. **Élargir le corpus** — cinq cascades dont deux inexploitables laissent trois
+   points de mesure.
+3. **Rejouer les deux bras dans la même campagne**, toujours, et publier la
+   dérive du bras A comme partie du résultat.
