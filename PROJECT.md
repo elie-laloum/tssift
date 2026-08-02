@@ -546,6 +546,8 @@ Deux lots en parallèle. Le lot B n'est pas optionnel.
 - README avec les métriques en tête
 
 **P2.5 · `Ts7ApiSource`** — *jalon explicite, avant la DoD v0.1.0*
+
+> **Parité complète décidée le 2026-08-02, et l'API est cartographiée**, vérifiée par exécution contre `typescript@7.0.2` : `.plans/2026-08-03_ts7-parity.md`. Les diagnostics de TS 7 sont **complets** (mêmes codes, `messageChain` et `relatedInformation` intacts), les fichiers portent `.text` et `getLineAndCharacterOfPosition`, les nœuds portent `.parent` et tous les accesseurs nommés, et le `Checker` a 9 des 10 méthodes utilisées. Les écarts sont des **renommages** (`getAliasSymbol`, `isUnionType`, `getTypes`, `symbol.name`) plus un seul vrai piège : `symbol.declarations[i]` est une **poignée paresseuse** qu'il faut `.resolve()`. Vérifié bout en bout — la poignée résolue rend `pricing/currency.ts:6:1`, **le `declaredAt` exact sur lequel la 5.x plie déjà cette fixture**, donc le pliage est reproductible à l'identique. La forme retenue est une **façade** partagée plutôt que deux copies des huit résolveurs, `context.ts` étant le fichier où un `declaredAt` faux est la panne critique de §11.
 - `typescript/unstable/sync` derrière la même interface `DiagnosticSource`
 - Peer élargi, garde de version levée pour 7.x
 - Cellule CI dédiée ; le job « TS 7 ⇒ sortie 2 » est remplacé par un job de parité
