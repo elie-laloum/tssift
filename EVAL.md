@@ -705,3 +705,84 @@ les deux fixtures passent de 3 entrées à 1, et sous `--all` chaque diagnostic
 porte sa ligne `required by:`. 23 insertions, 15 suppressions — les suppressions
 sont les lignes `[2]`/`[3]` que le pliage remplace, pas des diagnostics perdus
 (`--all` les restitue tous, règle 2).
+
+---
+
+## P2 / 2740 — le code que §5.2 décrivait sans le nommer (2026-08-02)
+
+Ajouté à la table de §5.2 **sur décision humaine**, la règle d'AGENTS.md
+interdisant d'y faire entrer un code sans la demander. La mesure de la section
+précédente avait montré que la troncature attribuée à 2739/2741 appartient à
+2740 ; c'est donc le seul endroit où « la liste exacte des manquants » est une
+information que le lecteur n'a pas déjà.
+
+### Ce qu'il rend
+
+Une fixture, `missing-many-properties`, seule à émettre ce code — trois sites
+construisant un `ShipmentLabel` à six champs près. Identique sous **5.4.5 et
+5.9.3** : trois TS2740, quatre membres nommés, `and 2 more.`
+
+```
+[1] cause: interface 'ShipmentLabel' declared at src/shipping/label.ts:5:1
+      8 properties: carrier, tracking, weightGrams, originPostcode, destinationPostcode, service, insuredCents, signatureRequired
+      2 more not listed above: insuredCents, signatureRequired
+    3 diagnostics, all TS2740
+    …
+```
+
+**La complétion est calculée par soustraction contre le message verbatim**, et
+non en prenant `missing.slice(4)`. La queue n'est la bonne réponse que si
+TypeScript imprime dans l'ordre de `getPropertiesOfType` — une supposition sur
+ses internes, pas une vérification. La comparaison à ce qui a réellement été
+imprimé tient quel que soit son ordre, et dégrade en « ne rien ajouter » s'il
+cesse un jour d'imprimer des noms.
+
+*(La ligne `8 properties:` et la ligne de complétion se recouvrent
+partiellement — les deux noms apparaissent deux fois. C'est le prix d'une règle
+uniforme : l'en-tête décrit le type cause pour **tout** code pliant sur une
+déclaration, et lui faire une exception ici coûterait plus en cas particulier
+qu'en caractères.)*
+
+### Coût : nul sur les cibles préexistantes
+
+| | 25 cibles | 26 cibles |
+|---|---:|---:|
+| avant 2740 | 16 948 | — |
+| après 2740 | **16 948** | 18 010 |
+
+`18 010 − 1 062 = 16 948` exactement : la fixture nouvelle est la seule ligne
+qui bouge, et aucune des vingt-cinq autres ne coûte un caractère de plus. Le
+rapport global passe de 54 % à 56 % **uniquement** parce qu'une cible s'ajoute,
+et cette cible-là plie 3 diagnostics en 1 pour 157 %.
+
+### Une hypothèse du renderer que ce code a fait tomber
+
+Depuis le 2026-08-01, la suppression des faits d'un membre de groupe était
+**tout ou rien**, au motif — écrit dans le code — que *« les faits d'un
+diagnostic décrivent tous le seul symbole que son contexte a résolu, donc si la
+déclaration est parmi eux, l'ensemble est ce que l'en-tête a déjà dit »*.
+
+**2740 réfute la prémisse.** Sa ligne `2 more not listed above: …` est une
+propriété de la *panne*, pas du type cible : aucun `SymbolRef` ne peut la
+produire, donc aucun en-tête ne l'avait dite. Sous l'ancienne règle elle était
+supprimée dans le **rendu par défaut** et ne survivait que sous `--all` —
+l'enrichissement absent exactement de la vue pour laquelle il est écrit.
+
+La règle est maintenant **fait par fait**, contre ce que l'en-tête a réellement
+imprimé : égalité, **ou suffixe**. Le suffixe est ce qui reconnaît
+`'CreateUserInput' has 3 properties: id, email, name` et l'en-tête
+`3 properties: id, email, name` comme la même liste écrite deux fois, sans coder
+en dur ni l'une ni l'autre formulation. Et ce qui reste commun à tous les
+membres sans avoir été dit remonte **une fois** sur l'en-tête, comme pour les
+groupes `module`.
+
+**La refonte est neutre, et le snapshot le prouve : 32 insertions, 0
+suppression.** Aucune des vingt fixtures préexistantes ne change d'un caractère,
+ce qui est la démonstration que la règle du suffixe reproduit l'ancienne partout
+où elle s'appliquait.
+
+### Vérification
+
+`typecheck`, **560 tests** (539 avant), `check`, et `fixtures:verify` sur **21**
+fixtures — verts. La fixture nouvelle émet 3 × TS2740 sous 5.4.5 comme sous
+5.9.3, seuil de troncature compris.

@@ -39,6 +39,7 @@ const FIXTURES = [
   "cannot-find-name",
   "missing-multiple-properties",
   "two-roots-one-file",
+  "missing-many-properties",
 ] as const;
 
 interface Built {
@@ -358,9 +359,71 @@ describe("2739/2741 · the target type, and the list that needed no completing",
     }
   });
 
-  it("2740 is not captured and not enriched: it is outside the table of ten", () => {
-    expect(CONTEXT_CAPTURE_CODES).not.toContain(2740);
-    expect(ENRICHED_CODES).not.toContain(2740);
+  it("2740 IS captured and enriched — added to §5.2 by decision, 2026-08-02", () => {
+    // It was outside the table of ten, and this test asserted its absence. The
+    // measurement above is what changed that: 2740 is the only code where "the
+    // exact list of the missing" is information the reader does not already
+    // have, so it was put in the table deliberately rather than inferred into it.
+    expect(CONTEXT_CAPTURE_CODES).toContain(2740);
+    expect(ENRICHED_CODES).toContain(2740);
+  });
+});
+
+describe("2740 · the only code that elides, and the only one told to complete", () => {
+  const of2740 = () => build("missing-many-properties").after.diagnostics;
+
+  it("names the members the message counted and declined to print", () => {
+    for (const diagnostic of of2740()) {
+      expect(diagnostic.code).toBe(2740);
+      expect(diagnostic.message).toContain("and 2 more.");
+      expect(diagnostic.facts.map((f) => f.text)).toEqual([
+        "required by: interface 'ShipmentLabel'",
+        "2 more not listed above: insuredCents, signatureRequired",
+      ]);
+    }
+  });
+
+  it("never repeats a member the message already named", () => {
+    // The subtraction is against the verbatim message, not `missing.slice(4)`:
+    // the tail is only right if TypeScript prints in `getPropertiesOfType`
+    // order, which is an assumption about its internals rather than a check.
+    for (const diagnostic of of2740()) {
+      const completion = diagnostic.facts.find((f) => f.kind === "members")?.text ?? "";
+      for (const named of ["weightGrams", "originPostcode", "destinationPostcode", "service"]) {
+        expect(diagnostic.message).toContain(named);
+        expect(completion).not.toContain(named);
+      }
+    }
+  });
+
+  it("captures `missing` on all three codes but completes only where it elides", () => {
+    // Uniform capture, selective use. 2739/2741 print their list in full, so the
+    // subtraction comes back empty there — the check doing its job, not a
+    // special case written for them.
+    for (const name of ["missing-multiple-properties", "missing-required-property"] as const) {
+      for (const diagnostic of build(name).after.diagnostics) {
+        expect(diagnostic.context?.missing?.length).toBeGreaterThan(0);
+        expect(diagnostic.facts.filter((f) => f.kind === "members")).toEqual([]);
+      }
+    }
+  });
+
+  it("the completion survives grouping — it is not a --all-only fact", () => {
+    // The regression this guards: under the all-or-nothing suppression that
+    // shipped on 2026-08-01, a member's facts were dropped wholesale as soon as
+    // one of them pointed at the cause. That hid this line in the default
+    // rendering and left it visible only under `--all` — the enrichment missing
+    // from exactly the view it was written for.
+    const { after, facts } = build("missing-many-properties");
+    const text = renderAgentText({
+      report: after,
+      facts,
+      rootLabel: relative(process.cwd(), facts.root) || ".",
+      all: false,
+    });
+    expect(text).toContain("2 more not listed above: insuredCents, signatureRequired");
+    // Once for the group, not once per member.
+    expect(text.split("2 more not listed above").length - 1).toBe(1);
   });
 });
 

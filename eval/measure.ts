@@ -136,6 +136,11 @@ const TARGETS: Target[] = [
     project: "fixtures/missing-multiple-properties/before",
   },
   { name: "two-roots-one-file", kind: "fixture", project: "fixtures/two-roots-one-file/before" },
+  {
+    name: "missing-many-properties",
+    kind: "fixture",
+    project: "fixtures/missing-many-properties/before",
+  },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

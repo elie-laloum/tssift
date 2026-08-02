@@ -138,6 +138,38 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders cannot-find-name with --all
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-many-properties 1`] = `
+"root: fixtures/missing-many-properties/before
+3 errors · 1 file · 1 root cause
+
+[1] cause: interface 'ShipmentLabel' declared at src/shipping/label.ts:5:1
+      8 properties: carrier, tracking, weightGrams, originPostcode, destinationPostcode, service, insuredCents, signatureRequired
+      2 more not listed above: insuredCents, signatureRequired
+    3 diagnostics, all TS2740
+    src/shipping/dispatch.ts:5:14 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+    src/shipping/dispatch.ts:8:3 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+    src/shipping/dispatch.ts:11:14 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders missing-many-properties with --all 1`] = `
+"root: fixtures/missing-many-properties/before
+3 errors · 1 file
+
+[1] src/shipping/dispatch.ts:5:14 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+    required by: interface 'ShipmentLabel' at src/shipping/label.ts:5:1
+    2 more not listed above: insuredCents, signatureRequired
+
+[2] src/shipping/dispatch.ts:8:3 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+    required by: interface 'ShipmentLabel' at src/shipping/label.ts:5:1
+    2 more not listed above: insuredCents, signatureRequired
+
+[3] src/shipping/dispatch.ts:11:14 error TS2740: Type '{ carrier: string; tracking: string; }' is missing the following properties from type 'ShipmentLabel': weightGrams, originPostcode, destinationPostcode, service, and 2 more.
+    required by: interface 'ShipmentLabel' at src/shipping/label.ts:5:1
+    2 more not listed above: insuredCents, signatureRequired
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders missing-multiple-properties 1`] = `
 "root: fixtures/missing-multiple-properties/before
 3 errors · 1 file · 1 root cause

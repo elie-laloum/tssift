@@ -40,16 +40,51 @@
  * cascade or once per member". Once per member is what this file declines.
  */
 import type { Fact, NormalizedDiagnostic } from "../../types.js";
+import { memberList } from "./facts.js";
+
+/**
+ * The captured missing members that the message does not already name.
+ *
+ * Computed by subtraction against the verbatim message rather than by taking
+ * `missing.slice(4)`: the tail is only the right answer if TypeScript lists the
+ * first four in `getPropertiesOfType` order, which is an assumption about the
+ * compiler's internals rather than something checked. Comparing against what
+ * was actually printed holds however it chose to order them, and degrades to
+ * "say nothing extra" if it ever stops printing names at all.
+ *
+ * The word-boundary match is what keeps `id` from being counted as printed
+ * because `validId` appears in the message.
+ */
+function notNamedIn(message: string, missing: readonly string[]): string[] {
+  return missing.filter((name) => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return !new RegExp(`(^|[^\\w$])${escaped}([^\\w$]|$)`).test(message);
+  });
+}
 
 export function enrich2739(diagnostic: NormalizedDiagnostic): Fact[] {
-  const expected = diagnostic.context?.expected;
+  const { expected, missing } = diagnostic.context ?? {};
   if (!expected) return [];
 
-  return [
+  const facts: Fact[] = [
     {
       kind: "declaration",
       text: `required by: ${expected.kind} '${expected.name}'`,
       span: expected.declaredAt,
     },
   ];
+
+  // Only TS2740 can reach a non-empty remainder, because it is the only one of
+  // the three that elides. On 2739 and 2741 every missing name is already in
+  // the message and this comes back empty — which is the check doing its job,
+  // not a special case written for them.
+  const unnamed = missing ? notNamedIn(diagnostic.message, missing) : [];
+  if (unnamed.length > 0) {
+    facts.push({
+      kind: "members",
+      text: `${unnamed.length} more not listed above: ${memberList(unnamed)}`,
+    });
+  }
+
+  return facts;
 }

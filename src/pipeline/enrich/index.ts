@@ -33,12 +33,15 @@
  * - **18047/18048** (`Possibly null`) — the origin of the nullability is a
  *   control-flow question; nothing captured answers it.
  *
- * **2739/2741 shipped on 2026-08-02, and the measurement corrected §5.2 on the
- * way.** That table asks them for "the exact list of the missing" because
- * TypeScript is said to truncate its own. It does not: 1 missing gives TS2741,
- * 2 to 5 give TS2739 with the list complete, and only **TS2740** — absent from
- * the table of ten — elides at four. So what these two add is the declaration
- * site of the target type, which no message of theirs ever carries.
+ * **2739/2740/2741 shipped on 2026-08-02, and the measurement corrected §5.2 on
+ * the way.** That table asks 2739/2741 for "the exact list of the missing"
+ * because TypeScript is said to truncate its own. It does not: 1 missing gives
+ * TS2741, 2 to 5 give TS2739 with the list complete, and only **TS2740** elides,
+ * at four, from six missing upwards. So the payload §5.2 described belongs to a
+ * code that was **not in its table of ten** — added there deliberately, as a
+ * human decision, on 2026-08-02. What all three add is the declaration site of
+ * the target type, which no message of theirs ever carries; what 2740 alone adds
+ * is the members its own sentence counted and declined to name.
  *
  * **2307 shipped on 2026-08-02**, and it is the one enricher that reads no
  * `context`: its facts are about the *installed topology* — declared or not in
@@ -94,6 +97,7 @@ const ENRICHERS: Record<number, Enricher | undefined> = {
   2554: enrich2554,
   2739: enrich2739,
   // Same enricher, same failure — see the comment on `2739.ts`.
+  2740: enrich2739,
   2741: enrich2739,
 };
 

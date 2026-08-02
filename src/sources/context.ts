@@ -383,15 +383,23 @@ function context2554(
 
 /**
  * TS2741 — `Property 'x' is missing in type 'S' but required in type 'T'`.
- * TS2739 — the same failure with two or more missing: `… is missing the
+ * TS2739 — the same failure with two to five missing: `… is missing the
  * following properties from type 'T': a, b`.
+ * TS2740 — the same again from six missing, listing four and counting the rest:
+ * `…: a, b, c, d, and 2 more.`
  *
- * One resolver, because they are one failure counted twice: TypeScript picks
- * 2741 at exactly one missing property and 2739 from two, so which code fires
- * is a property of *how many* members were forgotten and not of what went
- * wrong. Splitting them would make an identical cascade fold or not depending
- * on whether someone dropped one field or two — the same trap 2305/2724 set,
- * and the reason `src/codes.ts` records that lesson.
+ * One resolver, because the three are one failure counted three ways:
+ * TypeScript picks 2741 at exactly one missing property, 2739 from two to five
+ * and 2740 from six. Which code fires is a property of *how many* members were
+ * forgotten and not of what went wrong, so splitting them would make an
+ * identical cascade fold or not depending on whether someone dropped one field
+ * or six — the same trap 2305/2724 set, and the reason `src/codes.ts` records
+ * that lesson.
+ *
+ * `missing` is filled for all three and read only by 2740, the one that
+ * truncates. Filling it uniformly costs one `getPropertiesOfType` on a type the
+ * resolver already holds, and keeps the field's meaning independent of which
+ * code happened to fire.
  *
  * `expected` is `T`, the target type, which is the shared cause: N construction
  * sites of one interface break together when that interface gains a required
@@ -415,6 +423,7 @@ function context2739(
   spanOf: SpanOf,
 ): DiagnosticContext | undefined {
   let target: TS.Type | undefined;
+  let supplied: TS.Expression | undefined;
 
   if (ts.isReturnStatement(node)) {
     let fn: TS.Node | undefined = node.parent;
@@ -423,13 +432,33 @@ function context2739(
       ? checker.getSignatureFromDeclaration(fn as TS.SignatureDeclaration)
       : undefined;
     target = signature ? checker.getReturnTypeOfSignature(signature) : undefined;
+    supplied = node.expression;
   } else if (node.parent && ts.isVariableDeclaration(node.parent) && node.parent.name === node) {
     target = checker.getTypeAtLocation(node);
+    supplied = node.parent.initializer;
   }
 
   if (!target) return undefined;
   const expected = symbolRefOfType(ts, checker, target, spanOf);
-  return expected ? { expected } : undefined;
+  if (!expected) return undefined;
+
+  const context: DiagnosticContext = { expected };
+
+  // The members TypeScript counted but, on TS2740, did not all name. Optional
+  // ones are excluded because their absence is not what was reported: an
+  // optional member missing raises nothing, so listing it would put a name in
+  // front of the reader that no diagnostic is about.
+  if (supplied) {
+    const suppliedType = checker.getTypeAtLocation(supplied);
+    const missing = checker
+      .getPropertiesOfType(target)
+      .filter((property) => (property.flags & ts.SymbolFlags.Optional) === 0)
+      .filter((property) => !suppliedType.getProperty(property.getName()))
+      .map((property) => property.getName());
+    if (missing.length > 0) context.missing = missing;
+  }
+
+  return context;
 }
 
 type Resolver = (
@@ -449,6 +478,7 @@ const RESOLVERS: Record<number, Resolver | undefined> = {
   2554: context2554,
   2739: context2739,
   // Same resolver, same failure — see the comment on `context2739`.
+  2740: context2739,
   2741: context2739,
 };
 

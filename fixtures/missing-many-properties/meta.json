@@ -1,0 +1,16 @@
+{
+  "rootCause": "`ShipmentLabel` grew from a two-field stub into the carrier's full payload when international shipping landed, and three construction sites in src/shipping/dispatch.ts were never updated. Each supplies `carrier` and `tracking` and is six required fields short: weightGrams, originPostcode, destinationPostcode, service, insuredCents, signatureRequired.",
+  "expectedFix": "Supply the six missing fields at each of the three sites, or give the ones that have a sensible default an optional marker on the interface. The interface itself is correct — it describes what the carrier API requires.",
+  "tags": [
+    "missing-properties",
+    "truncated-list",
+    "cross-file",
+    "single-root",
+    "TS2740"
+  ],
+  "difficulty": "easy",
+  "purpose": "The only fixture that emits TS2740, and it exists because a measurement on 2026-08-02 showed PROJECT.md §5.2 had attributed that code's behaviour to the wrong pair. TypeScript switches from TS2739 to TS2740 at six missing properties and then lists only the first four, so this is the one place where 'the exact list of the missing' is information the reader does not already have — on TS2739 the list is complete and repeating it would say nothing. Its second job is to carry both node shapes the shared 2739/2740/2741 resolver has to handle in a single file: two variable declarations, where the type at the diagnostic's own location already is the target, and one return statement, where it is `any` and only the enclosing signature answers. A resolver that handled just the first would fold two sites of three, which reads as a second cause and is worse than not folding at all.",
+  "rootCauseFiles": [
+    "src/shipping/dispatch.ts"
+  ]
+}

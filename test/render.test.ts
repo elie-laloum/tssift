@@ -29,6 +29,7 @@ const FIXTURES = [
   "cannot-find-name",
   "missing-multiple-properties",
   "two-roots-one-file",
+  "missing-many-properties",
 ] as const;
 
 /**
@@ -95,10 +96,11 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // and its `'name' has N properties: …` — and the 2307 enricher three
         // more, all statements about a specifier rather than about a type:
         // `'x' is/matches …`, `installer:`/`lockfiles:`, and the `no
-        // node_modules …` line. Widening this to `.*` would retire the guard
-        // rather than update it.
+        // node_modules …` line — then 2740 two: `required by:` and the
+        // `N more not listed above:` completion. Widening this to `.*` would
+        // retire the guard rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |\d+ more not listed above: |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
         );
       }
     });

@@ -58,18 +58,15 @@ function factLine(fact: Fact, indent: string): string {
  * The body of a diagnostic: its own line, its chain, its related entries, its
  * facts.
  *
- * `suppressAt` carries the group cause's declaration site, when there is one. A
- * member's `declaration` fact points at exactly that site — it is *why* the
- * member is in the group — so printing it under every member would repeat the
- * header three times. Dropping it here is a rendering decision and nothing more:
- * json still carries every fact on every diagnostic (rule 14), and `--all`
- * renders diagnostics ungrouped, where nothing is suppressed.
+ * `stated` carries the texts the group header has already put on screen. A
+ * member's fact matching one of them is dropped here — a rendering decision and
+ * nothing more: json still carries every fact on every diagnostic (rule 14), and
+ * `--all` renders diagnostics ungrouped, where nothing is suppressed.
  */
 function diagnosticLines(
   diagnostic: EnrichedDiagnostic,
   indent: string,
-  suppressAt?: SourceSpan,
-  hoisted?: ReadonlySet<string>,
+  stated?: (fact: Fact) => boolean,
 ): string[] {
   const lines: string[] = [
     `${indent}${at(diagnostic.primary)} ${diagnostic.category} TS${diagnostic.code}: ${singleLine(
@@ -91,24 +88,19 @@ function diagnosticLines(
     );
   }
 
-  // All-or-nothing, not fact-by-fact: a diagnostic's facts all describe the one
-  // symbol its context resolved to, so if the declaration among them is the
-  // group's cause, the whole set is what the header already said — including the
-  // member list, which carries no span of its own and would otherwise repeat
-  // under every member.
-  const covered = suppressAt ? at(suppressAt) : undefined;
-  const describesTheCause =
-    covered !== undefined &&
-    diagnostic.facts.some((fact) => fact.span !== undefined && at(fact.span) === covered);
-
-  if (!describesTheCause) {
-    for (const fact of diagnostic.facts) {
-      // `hoisted` carries the exact texts already printed under the group
-      // header — matched on the text rather than assumed, so a member that
-      // somehow produced a different fact still gets to say it.
-      if (hoisted?.has(fact.text)) continue;
-      lines.push(factLine(fact, indent));
-    }
+  // Fact by fact, against what the header actually printed — not all-or-nothing.
+  //
+  // It *was* all-or-nothing until 2026-08-02, on the premise that a diagnostic's
+  // facts all describe the one symbol its context resolved to, so the presence of
+  // the cause's declaration among them meant the whole set was already said.
+  // TS2740 broke that premise: `2 more not listed above: …` sits beside the
+  // declaration fact and is the one thing on the entry the header cannot state
+  // from a `SymbolRef`. Under the old rule it was suppressed in the default
+  // rendering and survived only under `--all` — the enrichment invisible exactly
+  // where it was worth most.
+  for (const fact of diagnostic.facts) {
+    if (stated?.(fact)) continue;
+    lines.push(factLine(fact, indent));
   }
 
   return lines;
@@ -144,12 +136,12 @@ function causeLine(group: DiagnosticGroup): string {
  * construction, since they are all statements about the one specifier the group
  * folds on. The intersection is what guarantees that rather than assuming it.
  */
-function hoistedFactTexts(entry: Extract<Entry, { kind: "group" }>): string[] {
+function commonFacts(entry: Extract<Entry, { kind: "group" }>): Fact[] {
   const [first, ...rest] = entry.members;
   if (!first) return [];
-  return first.facts
-    .map((fact) => fact.text)
-    .filter((text) => rest.every((member) => member.facts.some((fact) => fact.text === text)));
+  return first.facts.filter((fact) =>
+    rest.every((member) => member.facts.some((other) => other.text === fact.text)),
+  );
 }
 
 /**
@@ -175,7 +167,7 @@ function causeFactLines(entry: Extract<Entry, { kind: "group" }>): string[] {
   // Hoisting them here is what keeps the economics of §5.2 intact: three
   // importers of `qs` get one statement about `qs`, not three.
   if (group.cause.kind === "module") {
-    return hoistedFactTexts(entry).map((text) => `      ${text}`);
+    return commonFacts(entry).map((fact) => `      ${fact.text}`);
   }
 
   const { symbol } = group.cause;
@@ -207,21 +199,49 @@ function groupLines(
   index: number,
   maxMembers = MAX_SHOWN_MEMBERS,
 ): string[] {
+  const { cause } = entry.group;
+  const causeAt = cause.kind === "declaration" ? at(cause.symbol.declaredAt) : undefined;
+  const fromSymbol = causeFactLines(entry).map((line) => line.trim());
+
+  /**
+   * Has the header already said this?
+   *
+   * Three ways it can have, and the third is the one worth spelling out:
+   *  - the fact points at the cause's own site, which the `cause:` line names;
+   *  - its text is verbatim a header line (the module arm, where the header IS
+   *    the common facts);
+   *  - its text *ends* with a header line. `'CreateUserInput' has 3 properties:
+   *    id, email, name` and the header's `3 properties: id, email, name` are the
+   *    same list written twice, and only the suffix relation catches that
+   *    without hard-coding either wording.
+   */
+  const stated = (fact: Fact): boolean =>
+    (causeAt !== undefined && fact.span !== undefined && at(fact.span) === causeAt) ||
+    fromSymbol.some((line) => fact.text === line || fact.text.endsWith(line));
+
+  // Whatever every member carries and the header has NOT said: stated once, here,
+  // instead of once per member. On a declaration group this is normally empty —
+  // the facts describe the cause and the header describes the cause. TS2740 is
+  // the case where it is not: the members TypeScript counted and declined to name
+  // are a property of the failure, not of the target type, so no `SymbolRef` can
+  // produce them.
+  const extra = commonFacts(entry).filter((fact) => !stated(fact));
+
   const lines = [
     `[${index}] ${causeLine(entry.group)}`,
     ...causeFactLines(entry),
+    ...extra.map((fact) => `      ${fact.text}`),
     `    ${membersLine(entry.members)}`,
   ];
+
+  const hoisted = new Set(extra.map((fact) => fact.text));
+  const said = (fact: Fact): boolean => stated(fact) || hoisted.has(fact.text);
 
   // The cap declasses the tail: those members lose their line and survive as a
   // count. Nothing is removed from the table — `--all` still prints every one,
   // and json still carries them all (rule 2).
-  const causeAt =
-    entry.group.cause.kind === "declaration" ? entry.group.cause.symbol.declaredAt : undefined;
-  const hoisted =
-    entry.group.cause.kind === "module" ? new Set(hoistedFactTexts(entry)) : undefined;
   const shown = entry.members.slice(0, maxMembers);
-  for (const member of shown) lines.push(...diagnosticLines(member, "    ", causeAt, hoisted));
+  for (const member of shown) lines.push(...diagnosticLines(member, "    ", said));
 
   const hidden = entry.members.length - shown.length;
   if (hidden > 0) lines.push(`    +${plural(hidden, "more site")} (--all for every one)`);

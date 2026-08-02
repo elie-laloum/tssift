@@ -46,6 +46,15 @@ export interface DiagnosticContext {
   expected?: SymbolRef;
   /** Supplied type. */
   actual?: string;
+  /**
+   * Required members of `expected` that the supplied type does not have.
+   *
+   * Only TS2739/2740/2741 fill it, and only TS2740 has a reader for it: that is
+   * the one code where TypeScript truncates its own list (at four, from six
+   * missing upwards). On 2739 and 2741 the message is already complete, so this
+   * field exists there and is deliberately unused (PROJECT.md §4, §5.2).
+   */
+  missing?: string[];
 }
 
 export interface NormalizedDiagnostic {

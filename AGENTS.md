@@ -21,9 +21,9 @@ H1 se construit d'abord. H2 ne se construit **que** sur les codes où l'éval mo
 
 ## État actuel
 
-**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**539 tests**, mesuré le 2026-08-02 après 2739/2741). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **20** — la cible de §8 lot B est atteinte (**T0 de B1**). Un lot intermédiaire a dévié du tsconfig canonique pour épuiser les catégories de **configuration** de §7, dont deux fixtures portent une **arborescence installée commitée** (liens `.pnpm`, projet PnP sans `node_modules`) demandant les exceptions `!fixtures/**/…` du `.gitignore` ; le dernier lot (T0) ajoute la dernière catégorie de §7, `missing-type-import`, deux cascades témoins et un second témoin négatif.
+**P0 + B0 livrés le 2026-07-27. P1 est livrée en entier le même jour — T0 → T7.** Le dépôt est initialisé sur `main`, la chaîne d'outils est en place, et `mise exec -- bun run typecheck && … test && … check` passe (**560 tests**, mesuré le 2026-08-02 après 2740). Depuis le 2026-07-28, le corpus de fixtures est passé de 4 à **20** — la cible de §8 lot B est atteinte (**T0 de B1**). Un lot intermédiaire a dévié du tsconfig canonique pour épuiser les catégories de **configuration** de §7, dont deux fixtures portent une **arborescence installée commitée** (liens `.pnpm`, projet PnP sans `node_modules`) demandant les exceptions `!fixtures/**/…` du `.gitignore` ; le dernier lot (T0) ajoute la dernière catégorie de §7, `missing-type-import`, deux cascades témoins et un second témoin négatif.
 
-Ce qui existe : les **20** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724 · 2739 · 2741) · le canal `ProgramFacts.resolution` (`sources/resolution.ts`, 2026-08-02) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget**, et `enrich/` à **sept codes** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7 · le harnais modèle `eval/agent/` et le corpus figé de `corpus/` · un **`README.md` public en anglais** et les métadonnées d'empaquetage `0.0.1` (2026-08-01).
+Ce qui existe : les **21** fixtures de contrat · `src/types.ts` + `src/codes.ts` · `TsApiSource` avec **capture sélective de contexte** (`sources/context.ts`, codes 2305 · 2339 · 2345 · 2353 · 2554 · 2724 · 2739 · 2740 · 2741) · le canal `ProgramFacts.resolution` (`sources/resolution.ts`, 2026-08-02) · `src/pipeline/` complet — **dedupe, causalité, regroupement, budget**, et `enrich/` à **sept codes** · renderers `json` et `agent-text` · CLI avec sorties 0/1/2 et `--all` / `--budget-tokens` · `eval/measure.ts` et `EVAL.md` · la CI trois axes + garde TS 7 · le harnais modèle `eval/agent/` et le corpus figé de `corpus/` · un **`README.md` public en anglais** et les métadonnées d'empaquetage `0.0.1` (2026-08-01).
 
 **`0.0.1` est préparé, pas publié.** `package.json` porte la version, les URL GitHub, les mots-clés et les portes `prepack` / `prepublishOnly` ; le README annonce explicitement que ces URL sont des destinations. Rien n'est poussé, aucun miroir GitHub n'existe, `npm publish` n'a pas été lancé. Détail : `.plans/2026-08-01_0.0.1-release-prep.md`.
 
@@ -41,7 +41,11 @@ Ce qui existe : les **20** fixtures de contrat · `src/types.ts` + `src/codes.ts
 
 **2739/2741 sont livrés le 2026-08-02, et la mesure a corrigé §5.2 au passage.** Cette table leur demandait « la liste exacte des manquants » parce que TypeScript tronquerait la sienne. **Il ne la tronque pas** : sondé de 1 à 8 manquants, 1 ⇒ **2741**, 2 à 5 ⇒ **2739** liste complète, 6+ ⇒ **TS2740** tronqué à quatre — et **2740 est hors de la table des dix**, donc hors périmètre sans décision humaine. Le gain réel est ailleurs et il est plus grand : le type cible est une **cause partagée**, donc les deux codes entrent dans `CONTEXT_CAPTURE_CODES` et leurs deux fixtures passent de **3 entrées à 1**. Le pliage à cause unique va de **8/17 à 10/17**. Coût **+313 caractères**, structurel et non volumétrique — sous le plafond d'affichage les trois diagnostics s'impriment encore et l'en-tête s'ajoute par-dessus, comme sur `partial-interface-rename`.
 
-Ce qui n'existe pas encore : les deux codes restants de §5.2 — **2322** et **18047/18048** — bloqués chacun par une donnée non capturée, pas par du code à écrire. Et **TS2740**, qui n'est pas dans la table des dix : c'est le seul endroit où la troncature de §5.2 existe vraiment, et l'y ajouter demande un feu vert.
+**TS2740 est ajouté à §5.2 et livré le 2026-08-02, sur décision humaine** — c'est le seul endroit où la troncature décrite par §5.2 existe vraiment. Il partage le résolveur et l'enrichisseur de 2739/2741, plus la **soustraction contre le message verbatim** : il nomme les membres que sa propre phrase a comptés sans les écrire. Coût **nul sur les 25 cibles préexistantes** — le total ne bouge que parce qu'une 26ᵉ cible s'y ajoute, la fixture `missing-many-properties`, seule à émettre ce code.
+
+**Et il a fait tomber une hypothèse du renderer.** La suppression des faits d'un membre était **tout ou rien** depuis le 2026-08-01, au motif que les faits d'un diagnostic décrivent tous le symbole résolu — donc que la présence de la déclaration parmi eux signifiait que l'en-tête avait déjà tout dit. 2740 le contredit : sa ligne de complétion n'est dérivable d'aucun `SymbolRef`, et se voyait donc **supprimée dans le rendu par défaut** et visible sous `--all` seulement — l'enrichissement absent de la vue pour laquelle il est écrit. La règle est désormais fait par fait, contre ce que l'en-tête a réellement imprimé (égalité **ou suffixe**, ce qui reconnaît `'X' has 3 properties: a, b, c` comme la même liste que `3 properties: a, b, c`). **Preuve que la refonte est neutre : le diff de snapshot est de 32 insertions et 0 suppression, aucune fixture préexistante ne bouge.**
+
+Ce qui n'existe pas encore : les deux codes restants de §5.2 — **2322** et **18047/18048** — bloqués chacun par une donnée non capturée, pas par du code à écrire.
 
 **H1 est confirmée sur du vrai code, et le chiffre est dans `EVAL.md`.** Ligne de base P0 : 283 diagnostics des deux côtés, sortie à **141 %** de `tsc` brut. Après P1 : **283 diagnostics rendus en 29 entrées (pliage de 90 %), sortie à 20 %** — soit sept fois moins de caractères que la ligne de base. Sur les trois entrées de corpus, qui sont les seules cibles réalistes, le rapport tombe à **6 – 42 %** ; `lekes-ok-arity-changed` rend 153 diagnostics en **2 entrées**. *(La quatrième fixture est entrée dans la mesure après coup : le total publié devient 286 → 30 et 22 %, et à périmètre constant les chiffres ci-dessus sont inchangés.)*
 
@@ -79,6 +83,7 @@ La porte d'arrêt du créneau a été franchie : `.plans/2026-07-27_prior-art.md
 | `phantom-dependency-pnpm` | 2307 | 3 → 1 | topologie **pnpm** commitée ; le fichier à deux imports dont un seul échoue |
 | `yarn-pnp-project` | 2307 | 3 → 1 | le seul `before/` **sans bug** : du code juste, mal lu, faute du runtime PnP |
 | `two-roots-one-file` | 2339 | 4 → **2** | le témoin négatif **dur** : deux racines, **un fichier, un code** — deux groupes, pas un |
+| `missing-many-properties` | 2740 | 3 → 1 | le **seul** TS2740 : la liste que TypeScript élide, et les deux formes de nœud du résolveur dans un fichier |
 
 **Le chiffre à connaître : sur les dix-sept fixtures qui sont des cascades à cause unique, le seuil en plie dix** (cinq avant T1, huit après, dix depuis que 2739/2741 sont capturés le 2026-08-02). Les neuf autres sortent entre 117 % et 225 %, c'est-à-dire au surcoût de P0. Le pliage tient à **deux** liens structurels : un `declaredAt` identique (sept fixtures) et un spécificateur non résolu partagé (les trois 2307, depuis T1). Les non-pliages sont commités pour rendre le manque **mesurable** : plusieurs de leurs codes sont dans la table des dix de §5.2 et attendent les chiffres (règle 8). *(Les trois exclues du dénombrement : `overload-mismatch`, un seul diagnostic, et les deux témoins négatifs à plusieurs racines, `two-independent-roots` et `two-roots-one-file`.)*
 
@@ -269,7 +274,7 @@ En pratique — **tout ce qui suit est en place**, dans `src/sources/resolution.
 
 ## Recette — ajouter un enrichisseur
 
-Périmètre V1 : les 10 codes de PROJECT.md §5.2, par ordre de rentabilité (2769, 2345, 2339, 2353, 2322, 2307, 2554, 2739/2741, 18047/18048, 2551). **Couvrir 10 codes bien vaut mieux que 60 à moitié.** Hors table ⇒ format natif.
+Périmètre V1 : les codes de PROJECT.md §5.2 — dix à l'origine (2769, 2345, 2339, 2353, 2322, 2307, 2554, 2739/2741, 18047/18048, 2551), **onze depuis le 2026-08-02** avec l'ajout délibéré de **2740**. **Couvrir un petit ensemble entièrement vaut mieux que 60 à moitié.** Hors table ⇒ format natif, et **y ajouter un code demande un feu vert humain** — c'est ainsi que 2740 est entré.
 
 1. Écrire d'abord la **fixture** qui déclenche le code. Sans fixture, pas d'enrichisseur.
 2. Vérifier que tout ce dont l'enrichisseur a besoin est **déjà dans `NormalizedDiagnostic`**. Si non : l'ajouter à la capture dans `sources/ts-api.ts`, pas à l'enrichisseur (règle 4).
@@ -283,10 +288,11 @@ Périmètre V1 : les 10 codes de PROJECT.md §5.2, par ordre de rentabilité (27
 
 ```
 fixtures/<nom-kebab>/
-  meta.json     { rootCause, expectedFix, tags, difficulty, purpose?, deviatesFromCanonicalConfig? }
+  meta.json     { rootCause, expectedFix, tags, difficulty, purpose?, deviatesFromCanonicalConfig?, rootCauseFiles? }
   before/       projet cassé, ne compile pas
-  after/        état corrigé attendu
 ```
+
+**Il n'y a pas de `after/`, et c'est l'état réel des vingt-et-une fixtures** — la description ci-dessus en annonçait un jusqu'au 2026-08-02, sans qu'aucune ne l'ait jamais porté. L'état corrigé attendu vit dans `meta.json.expectedFix`, en prose, qui est ce que lit le harnais d'éval ; un `after/` dupliquerait un projet entier pour une information que le harnais n'ouvre pas. `rootCauseFiles` est ce que le bras modèle compare pour compter les faux départs.
 
 `rootCause` et `expectedFix` sont la vérité terrain que lira le harnais d'éval — ils décrivent le correctif, et c'est leur rôle ; la règle 1 porte sur les `Fact.text` produits par l'outil, pas sur les métadonnées de fixture. `tags` porte les codes TS attendus (`TS2769`…), ce qui rend visible en diff le jour où une version de TS change de code. `purpose` est **optionnel** et dit pourquoi la fixture existe — ce qu'elle est le seul témoin à couvrir, ou ce qu'elle ne doit jamais produire. `deviatesFromCanonicalConfig` est **optionnel et obligatoire dès qu'il y a déviation** : il nomme ligne à ligne ce qui s'écarte du bloc canonique ci-dessous, sans quoi un lecteur ne peut pas distinguer un écart voulu d'une fixture écrite de travers.
 
