@@ -1,86 +1,176 @@
-# EVAL — mesures
+# EVAL — measurements
 
-**Dernière mise à jour :** 2026-07-29 (T3+T4 — corpus figé, et le bras modèle qui appuie enfin H1)
-**Étage courant :** **B0** — mesure déterministe, **sans aucun appel de modèle**
-**Reproduction :** `mise exec -- bun run corpus:build && mise exec -- bun run eval`
+**Last updated:** 2026-08-03 — B2, and the first real-code check of the P2 enrichers
+**Stages reported here:** **B0** (deterministic, no model call) · **B1** and **B2** (model arm)
+**Reproduction:** `mise exec -- bun run eval` (B0) · `mise exec -- bun run eval:agent` (B1/B2, endpoint in `.env`)
+
+> **This file is in English; the rest of the project documentation is in French.** The
+> convention was changed on 2026-08-03, deliberately and for one reason: every number here
+> is meant to be reproducible and citable by someone who did not write it, and the renderer
+> output quoted throughout is English (rule 13). A French frame around English samples made
+> this the one document where the reader had to switch languages mid-table. `PROJECT.md` and
+> `AGENTS.md` stay in French — see AGENTS.md § "Conventions de code".
+
+**The rule this file obeys:** report the measurement obtained, not the measurement hoped
+for. Several sections below weaken a hypothesis this project is built on. They stay.
 
 ---
 
-## Ce que B0 mesure, et ce qu'il ne mesure pas
+## Contents
 
-B0 compare deux textes, rien d'autre :
+- [What B0 measures, and what it does not](#what-b0-measures-and-what-it-does-not)
+- [Baseline — 2026-07-27, P0 (before causality)](#baseline--2026-07-27-p0-before-causality)
+- [An honest reading of the baseline](#an-honest-reading-of-the-baseline)
+- [Results — 2026-07-27, after P1 (causality + grouping)](#results--2026-07-27-after-p1-causality--grouping)
+- [P1 T1 — what selective capture returns, and what it costs](#p1-t1--what-selective-capture-returns-and-what-it-costs)
+- [Corpus limits](#corpus-limits)
+- [An unplanned witness for rule 15](#an-unplanned-witness-for-rule-15)
+- [B1 — the model arm](#b1--the-model-arm)
+- [P2 — enrichment: what it adds and what it costs (2026-08-01)](#p2--enrichment-what-it-adds-and-what-it-costs-2026-08-01)
+- [P2 / 2307 — the module enricher, and a published number that did not reproduce (2026-08-02)](#p2--2307--the-module-enricher-and-a-published-number-that-did-not-reproduce-2026-08-02)
+- [P2 / 2739 · 2741 — the measurement that corrected §5.2 (2026-08-02)](#p2--2739--2741--the-measurement-that-corrected-52-2026-08-02)
+- [P2 / 2740 — the code §5.2 described without naming (2026-08-02)](#p2--2740--the-code-52-described-without-naming-2026-08-02)
+- [P2 / 2322 — the last enrichable code, and not for the announced reason (2026-08-02)](#p2--2322--the-last-enrichable-code-and-not-for-the-announced-reason-2026-08-02)
+- [B2 — the model arm re-measured on enriched output (2026-08-03)](#b2--the-model-arm-re-measured-on-enriched-output-2026-08-03)
+- [Real code — `keyzia/data-explorer` (2026-08-03)](#real-code--keyziadata-explorer-2026-08-03)
 
-| Bras | Contenu |
+**Numbers that are known not to reproduce, and where their correction lives:**
+
+| published | where | status |
+|---|---|---|
+| P2 totals `16 861 → 17 538`, B/A `54 % → 56 %` (2026-08-01) | [P2 volume cost](#the-volume-cost-measured-against-the-p1-baseline) | **do not reproduce** — `rootLabel` bug, corrected 2026-08-02. Deltas remain valid; absolute values and ratios do not. See [P2/2307](#first-the-correction-the-harness-was-measuring-a-product-nobody-ships). |
+| B1 false-start rates (2026-07-29) | [B1 corpus results](#results-on-the-frozen-corpus--the-real-test-of-h1-2026-07-29) | **not comparable to B2** — the control arm drifted 6 %. And the `order-book` metric is defective. See [B2 §1](#1-b1-and-b2-do-not-subtract--the-control-arm-moved) and [B2 §3](#3-and-the-false-start-metric-is-wrong-on-order-book). |
+
+---
+
+## What B0 measures, and what it does not
+
+B0 compares two texts, nothing else:
+
+| Arm | Content |
 |---|---|
-| **A** | la sortie brute de `tsc --noEmit --pretty false` du **compilateur du projet mesuré**, lancé dans le dossier du projet |
-| **B** | la sortie `agent-text` de `tssift` sur le même projet |
+| **A** | raw output of `tsc --noEmit --pretty false`, from **the measured project's own compiler**, run in the project directory |
+| **B** | the `agent-text` output of `tssift` on the same project |
 
-Trois familles de cibles : les **fixtures** (le contrat, minuscules), les **dépôts réels vivants** (représentatifs mais instables), et le **corpus** — du vrai code figé à un commit épinglé puis cassé par une mutation d'une ligne, décrit dans `eval/corpus.json`. C'est le corpus qui porte le signal.
+Three families of targets: the **fixtures** (the contract, tiny), **live real repositories**
+(representative but unstable), and the **corpus** — real code frozen at a pinned commit and
+then broken by a one-line mutation, described in `eval/corpus.json`. The corpus is what
+carries the signal.
 
-Deux métriques : le **nombre de diagnostics** affichés de chaque côté, et le **nombre de caractères**. Le caractère est le primitif publié — n'importe qui peut le reproduire sans faire confiance à notre tokenizer, et le **rapport** A/B, qui est la revendication réelle, est de toute façon quasi indépendant du tokenizer.
+Two metrics: the **number of diagnostics** displayed on each side, and the **number of
+characters**. The character is the published primitive — anyone can reproduce it without
+trusting our tokenizer, and the A/B **ratio**, which is the actual claim, is nearly
+tokenizer-independent anyway.
 
-Une estimation en tokens est donnée en `caractères / 4`. **Le diviseur est 4, il est annoncé ici, et c'est une estimation, pas une mesure.**
+A token estimate is given as `characters / 4`. **The divisor is 4, it is announced here,
+and it is an estimate, not a measurement.**
 
-B0 ne dit **rien** de H2, rien du taux de correction, rien des faux départs. Ces métriques exigent un modèle et arrivent en B1/B2.
+B0 says **nothing** about H2, nothing about fix rate, nothing about false starts. Those
+metrics require a model and arrive in B1/B2.
 
-### Précautions de mesure
+### Measurement precautions
 
-- Le bras A **lance réellement le `tsc` du projet** (`node <typescript résolu>/../tsc.js`) plutôt que de réimplémenter son formatage : le nombre publié est littéralement le texte que l'agent lirait, ligne de résumé comprise.
-- `--incremental false` et un `--tsBuildInfoFile` en dossier temporaire : sans quoi un projet en `incremental` déposerait un `.tsbuildinfo` dans un dépôt réel simplement parce qu'on l'a mesuré.
-- Pour chaque dépôt réel, `git status --porcelain` est relevé avant et après, et un écart fait sortir le harnais en 1 en **nommant** le dépôt concerné.
+- Arm A **actually runs the project's own `tsc`** (`node <resolved typescript>/../tsc.js`)
+  rather than reimplementing its formatting: the published number is literally the text an
+  agent would read, summary line included.
+- `--incremental false` and a `--tsBuildInfoFile` in a temp directory: without them, a
+  project configured as `incremental` would drop a `.tsbuildinfo` into a real repository
+  merely because we measured it.
+- For every real repository, `git status --porcelain` is recorded before and after, and a
+  discrepancy makes the harness exit 1 **naming** the repository concerned.
 
 ---
 
-## Ligne de base — 2026-07-27, P0 (avant causalité)
+## Baseline — 2026-07-27, P0 (before causality)
 
-Chiffres obtenus par deux exécutions consécutives donnant un résultat **identique**, sans avertissement de l'arbre de travail.
+Numbers obtained from two consecutive runs giving an **identical** result, with no working
+tree warning.
 
-| cible | type | ts | A diags | B diags | A car. | B car. | B/A car. | A ~tok | B ~tok |
+| target | type | ts | A diags | B diags | A chars | B chars | B/A chars | A ~tok | B ~tok |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|
 | partial-interface-rename | fixture | 5.9.3 | 3 | 3 | 523 | 697 | **133 %** | 131 | 174 |
 | two-independent-roots | fixture | 5.9.3 | 2 | 2 | 223 | 319 | **143 %** | 56 | 80 |
 | overload-mismatch | fixture | 5.9.3 | 1 | 1 | 571 | 1176 | **206 %** | 143 | 294 |
-| lekes | dépôt réel | 5.9.3 | 8 | 8 | 1475 | 1877 | **127 %** | 369 | 469 |
-| tccp | dépôt réel | 5.9.3 | 0 | 0 | 0 | 40 | n/a | 0 | 10 |
-| keyzia/data-explorer | dépôt réel | — | — | — | — | — | **refusé, sortie 2** ¹ | — | — |
-| nextp/cursor-rules-hooks | dépôt réel | 6.0.3 | — | — | — | — | **refusé, sortie 2** | — | — |
+| lekes | real repo | 5.9.3 | 8 | 8 | 1475 | 1877 | **127 %** | 369 | 469 |
+| tccp | real repo | 5.9.3 | 0 | 0 | 0 | 40 | n/a | 0 | 10 |
+| keyzia/data-explorer | real repo | — | — | — | — | — | **refused, exit 2** ¹ | — | — |
+| nextp/cursor-rules-hooks | real repo | 6.0.3 | — | — | — | — | **refused, exit 2** | — | — |
 | corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 112 | 18 548 | 19 102 | **103 %** | 4 637 | 4 776 |
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 12 | 1 677 | 1 804 | **108 %** | 419 | 451 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 153 | 17 602 | 32 025 | **182 %** | 4 401 | 8 006 |
 
-**Totaux sur les 8 cibles mesurées : diagnostics A = 283, B = 283. Caractères A = 39 144, B = 55 243, soit B/A = 141 %.**
+**Totals over the 8 measured targets: diagnostics A = 283, B = 283. Characters A = 39 144,
+B = 55 243, i.e. B/A = 141 %.**
 
-*C'est la ligne de base contre laquelle P1 se mesure (T7 du plan).*
+*This is the baseline P1 measures itself against (T7 of the plan).*
 
-¹ **`keyzia/data-explorer` a changé de statut le 2026-07-27, et pas par dérive : par correction d'un bug.** Sa racine porte un tsconfig *solution* (`"files": []`, `"include": []`, `"references": [4]`). `tsc -p` n'y typecheckait **rien** et sortait 0 ; les deux bras étaient d'accord sur `0 diagnostic`, et ce `0` était **faux** — les erreurs du monorepo existent, elles sont logées dans les projets référencés. Un agent y lisait un « propre » imaginaire, exactement le repli silencieux que la règle 15 interdit. La cible sort désormais en **2** en nommant le tsconfig, les comptes et les quatre chemins référencés. Décision et mesure en PROJECT.md §9.
+¹ **`keyzia/data-explorer` changed status on 2026-07-27, and not through drift: through a
+bug fix.** Its root holds a *solution* tsconfig (`"files": []`, `"include": []`,
+`"references": [4]`). `tsc -p` typechecked **nothing** there and exited 0; both arms agreed
+on `0 diagnostics`, and that `0` was **false** — the monorepo's errors exist, lodged in the
+referenced projects. An agent read an imaginary "clean" there, exactly the silent fallback
+rule 15 forbids. The target now exits **2**, naming the tsconfig, the counts and the four
+referenced paths. Decision and measurement in PROJECT.md §9. *(Confirmed again on
+2026-08-03 by targeting a referenced sub-project directly — see
+[Real code](#real-code--keyziadata-explorer-2026-08-03).)*
 
-Effet sur les totaux : une cible mesurée en moins (9 → 8) et **33 caractères de moins** côté B — le bras A y valait 0 caractère, donc le rapport B/A reste **141 %**. Le chiffre de diagnostics, lui, ne bouge pas d'une unité.
+Effect on the totals: one fewer measured target (9 → 8) and **33 fewer characters** on the
+B side — arm A was worth 0 characters there, so the B/A ratio stays at **141 %**. The
+diagnostic count does not move by one unit.
 
-**Deux autres écarts à ne pas prendre pour du bruit** si l'on rejoue la mesure aujourd'hui. D'abord, `lekes` **vivant** est redescendu à `0 / 0` : c'est l'instabilité déjà documentée en « Limites du corpus », et la raison même de figer un corpus. Ensuite, un run propre imprime désormais `0 errors · N files checked` au lieu de `0 errors` — le compte de fichiers voyage avec le zéro pour le rendre vérifiable, ce qui ajoute une vingtaine de caractères aux seules cibles sans diagnostic.
+**Two other discrepancies not to mistake for noise** if the measurement is replayed today.
+First, **live** `lekes` has dropped back to `0 / 0`: this is the instability already
+documented under [Corpus limits](#corpus-limits), and the very reason for freezing a
+corpus. Second, a clean run now prints `0 errors · N files checked` instead of `0 errors` —
+the file count travels with the zero to make it verifiable, which adds about twenty
+characters to the targets with no diagnostics.
 
-### Le corpus réel confirme l'hypothèse du coût fixe
+### Real code confirms the fixed-cost hypothesis
 
-Les trois entrées `corpus/` sont du **vrai code** (`lekes`, 169 fichiers TS), figé à un commit épinglé, cassé par une mutation d'une ligne. Détail et méthode : `eval/corpus.json`.
+The three `corpus/` entries are **real code** (`lekes`, 169 TS files), frozen at a pinned
+commit, broken by a one-line mutation. Detail and method: `eval/corpus.json`.
 
-Sur les deux cascades à cause unique et large, le surcoût **s'effondre** : **103 %** et **108 %**. C'est la confirmation directe de ce que la tendance des fixtures laissait deviner — l'essentiel du surcoût de P0 est **fixe** (en-tête, préfixes de code), donc il se dilue dès que le rapport grossit. Sur les cibles qui ressemblent au cas d'usage réel, `agent-text` coûte aujourd'hui **3 à 8 % de plus** que `tsc` brut, pas 106 %.
+On the two wide single-cause cascades, the overhead **collapses**: **103 %** and **108 %**.
+This directly confirms what the fixture trend suggested — most of P0's overhead is **fixed**
+(header, code prefixes), so it dilutes as soon as the report grows. On the targets that
+resemble the real use case, `agent-text` currently costs **3 to 8 % more** than raw `tsc`,
+not 106 %.
 
-**L'exception à 182 % (`lekes-ok-arity-changed`) est instructive et a été vérifiée.** 152 de ses 153 diagnostics portent un `relatedInformation` — *« An argument for 'origin' was not provided. »* pointant `src/shared/domain/result.ts:15:33` — que `tsc --pretty false` n'imprime **pas du tout**. Le surcoût est donc, à 100 %, de l'information ajoutée, répétée 152 fois.
+**The 182 % exception (`lekes-ok-arity-changed`) is instructive and was verified.** 152 of
+its 153 diagnostics carry a `relatedInformation` — *"An argument for 'origin' was not
+provided."* pointing at `src/shared/domain/result.ts:15:33` — that `tsc --pretty false` does
+**not print at all**. The overhead is therefore, 100 %, added information, repeated 152
+times.
 
-Et cette information n'est pas décorative : **chacun de ces 152 related désigne la déclaration qui est la cause racine.** C'est un lien structurel, présent dans les données capturées, exactement du type que PROJECT.md §5.1 autorise à exploiter — et c'est P1 qui devra décider s'il s'en sert pour dériver, puis replier ces 152 lignes en une racine et un compteur.
+And that information is not decorative: **each of those 152 related entries designates the
+declaration that is the root cause.** It is a structural link, present in the captured data,
+exactly the kind PROJECT.md §5.1 allows exploiting — and it is P1 that will have to decide
+whether to derive from it, then fold those 152 lines into one root plus a counter.
 
-⚠️ **Ne pas citer le total seul.** Il est dominé par la cible la plus grosse, et il bouge donc avec elle sans rien dire du produit : au cours de la même session, avec un `lekes` plus cassé, ce même total valait 124 %. **Les rapports par cible et leur tendance avec la taille sont les seuls chiffres lisibles ici.**
+⚠️ **Do not quote the total alone.** It is dominated by the largest target, so it moves with
+it while saying nothing about the product: during the same session, with a more broken
+`lekes`, that same total was 124 %. **The per-target ratios and their trend with size are the
+only readable numbers here.**
 
 ---
 
-## Lecture honnête de la ligne de base
+## An honest reading of the baseline
 
-**Le gain de P0 était nul sur les diagnostics et négatif sur les caractères.** Même nombre des deux côtés — **283 contre 283** — et une sortie 3 % à 106 % plus grosse selon la cible. *(Une version antérieure de cette phrase annonçait « 14 contre 14 » : c'était le total d'avant l'existence du corpus, resté en place après que le tableau eut été refait. Corrigé le 2026-07-27.)*
+**P0's gain was zero on diagnostics and negative on characters.** Same count on both sides —
+**283 against 283** — and output 3 % to 106 % larger depending on the target. *(An earlier
+version of this sentence said "14 against 14": that was the total from before the corpus
+existed, left in place after the table was redone. Corrected 2026-07-27.)*
 
-Ce n'est pas une contre-performance, c'est le résultat attendu et annoncé (`.plans/2026-07-27_p0-b0.md` § T9, PROJECT.md §6) : **en P0 il n'y a ni causalité ni enrichissement.** Le bras B contient exactement les mêmes diagnostics que le bras A, seulement reformatés et annotés. Le pliage des cascades — le mécanisme qui porte H1 — arrive en **P1**, et le tableau « après P1 » plus bas est ce qu'il a donné.
+This is not underperformance, it is the expected and announced result
+(`.plans/2026-07-27_p0-b0.md` § T9, PROJECT.md §6): **in P0 there is neither causality nor
+enrichment.** Arm B contains exactly the same diagnostics as arm A, only reformatted and
+annotated. Cascade folding — the mechanism that carries H1 — arrives in **P1**, and the
+"after P1" table below is what it produced.
 
-### D'où viennent les caractères en plus
+### Where the extra characters come from
 
-Vérifié sur `overload-mismatch`, où l'écart est le plus fort (571 → 1176 caractères). Le bras A brut, en entier :
+Verified on `overload-mismatch`, where the gap is widest (571 → 1176 characters). Arm A raw,
+in full:
 
 ```
 src/transport/client.ts(4,10): error TS2769: No overload matches this call.
@@ -92,29 +182,48 @@ src/transport/client.ts(4,10): error TS2769: No overload matches this call.
     Type '"POST"' is not assignable to type '"STREAM"'.
 ```
 
-Les 605 caractères supplémentaires de B se répartissent en trois postes, et un seul est du pur formatage :
+B's 605 extra characters break down into three items, and only one of them is pure
+formatting:
 
-1. **~430 caractères de `relatedInformation` que `tsc --pretty false` n'imprime pas du tout.** C'est le poste dominant, et le fait est vérifié : la sortie ci-dessus ne contient aucun des trois `The expected type comes from property … which is declared here`, ni leur position. `tssift` les imprime avec `fichier:ligne:colonne`. **Ce ne sont pas des caractères gaspillés : c'est une information que l'agent devrait autrement aller chercher avec un `Read` ou un `Grep`,** dont le coût n'apparaît dans aucune colonne de ce tableau.
-2. **~48 caractères de préfixes `TSxxxx: `** sur les nœuds de chaîne. `tsc` indente les nœuds sans jamais donner leur code, alors qu'une chaîne 2769 se termine ici sur un 2820 et que c'est ce code-là qui informe.
-3. **~45 caractères d'en-tête** (`root:` + ligne de résumé), payés une fois par run, donc négligeables dès qu'un projet a plusieurs erreurs.
+1. **~430 characters of `relatedInformation` that `tsc --pretty false` does not print at
+   all.** This is the dominant item, and the fact is verified: the output above contains
+   none of the three `The expected type comes from property … which is declared here`, nor
+   their positions. `tssift` prints them with `file:line:column`. **These are not wasted
+   characters: this is information the agent would otherwise have to fetch with a `Read` or a
+   `Grep`,** whose cost appears in no column of this table.
+2. **~48 characters of `TSxxxx: ` prefixes** on chain nodes. `tsc` indents nodes without ever
+   giving their code, while a 2769 chain here ends on a 2820 and that is the code that
+   informs.
+3. **~45 characters of header** (`root:` plus the summary line), paid once per run, hence
+   negligible as soon as a project has several errors.
 
-**La tendance avec la taille est le chiffre à retenir** : 206 % sur une fixture à 1 diagnostic, 127 % sur un dépôt réel à 8. Le surcoût est en grande partie fixe ; c'est le bruit en cascade, que P1 attaque, qui croît.
+**The trend with size is the number to remember**: 206 % on a 1-diagnostic fixture, 127 % on
+a real 8-diagnostic repository. The overhead is largely fixed; it is the cascade noise, which
+P1 attacks, that grows.
 
-### Ce que ce tableau ne dit pas
+### What this table does not say
 
-- **Il ne dit rien de H1.** H1 porte sur les faux départs et sur les tokens *une fois les cascades pliées*. Aucune cascade n'est pliée ici.
-- **Il ne compte pas les lectures évitées.** Un `related` positionné remplace potentiellement un `Read`. B0 mesure la taille du rapport, pas le coût total de la boucle d'agent. C'est B1 qui tranchera, et c'est aussi ce qui décidera de la variante `--snippets`.
-- **Il ne compare que du texte.** La sortie `json`, rapport complet et futur consommable MCP, est plus grosse encore et n'est pas mesurée ici.
+- **It says nothing about H1.** H1 is about false starts and about tokens *once cascades are
+  folded*. No cascade is folded here.
+- **It does not count avoided reads.** A positioned `related` potentially replaces a `Read`.
+  B0 measures report size, not the total cost of the agent loop. B1 will settle that, and it
+  is also what will decide the `--snippets` variant.
+- **It only compares text.** The `json` output, the complete report and future MCP payload,
+  is larger still and is not measured here.
 
 ---
 
-## Résultats — 2026-07-27, après P1 (causalité + regroupement)
+## Results — 2026-07-27, after P1 (causality + grouping)
 
-**C'est le chiffre de H1.** Même protocole, même corpus, même jour, même version de TypeScript que la ligne de base ci-dessus. Seul le bras B a changé : il passe désormais par `dedupe → detectCausality → entriesOf` avant le renderer.
+**This is the H1 number.** Same protocol, same corpus, same day, same TypeScript version as
+the baseline above. Only arm B changed: it now goes through `dedupe → detectCausality →
+entriesOf` before the renderer.
 
-`B diags` compte les **entrées** du rapport, pas les diagnostics. C'est précisément le déplacement que P1 revendique : après pliage, une entrée peut représenter toute une cascade. Le total qu'elles couvrent reste intégralement dans `json`, et `--all` le restitue ligne à ligne.
+`B entries` counts report **entries**, not diagnostics. That is precisely the shift P1
+claims: after folding, one entry can represent a whole cascade. The total they cover stays
+entirely in `json`, and `--all` restores it line by line.
 
-| cible | type | ts | A diags | B entrées | pliage | A car. | B car. | B/A car. | A ~tok | B ~tok |
+| target | type | ts | A diags | B entries | fold | A chars | B chars | B/A chars | A ~tok | B ~tok |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | partial-interface-rename | fixture | 5.9.3 | 3 | 1 | 67 % | 523 | 831 | 159 % | 131 | 208 |
 | **two-independent-roots** | fixture | 5.9.3 | 2 | **2** | **0 %** | 223 | 319 | 143 % | 56 | 80 |
@@ -140,135 +249,323 @@ Les 605 caractères supplémentaires de B se répartissent en trois postes, et u
 | corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
 | corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
-**Totaux sur les 25 cibles mesurées : diagnostics A = 349 → entrées B = 72 (pliage de 79 %). Caractères A = 46 766, B = 18 149, soit B/A = 39 %.**
+**Totals over the 25 measured targets: diagnostics A = 349 → entries B = 72 (79 % fold).
+Characters A = 46 766, B = 18 149, i.e. B/A = 39 %.**
 
-*Les quatre lignes `missing-type-import`, `cannot-find-name`, `missing-multiple-properties` et `two-roots-one-file` datent du 2026-07-28 (T0 de B1). Les trois lignes 2307 — `wrong-tsconfig-paths`, `phantom-dependency-pnpm`, `yarn-pnp-project` — ont été **remesurées le même jour après T1** : elles plient désormais (78 → 72 entrées). Fait à ne pas mélire : leur `B/A` de caractères **monte** (121–133 % → 140–159 %) alors qu'elles plient. C'est le même effet que `partial-interface-rename` — sous le plafond de trois sites tous les diagnostics s'impriment encore, et l'en-tête de cause (`cause: unresolved module 'qs'` + la ligne de compte) s'ajoute par-dessus. **Le gain de T1 y est structurel — le lecteur apprend que la panne est UN module absent, pas trois — pas volumétrique.** Le total passe donc de 38 % à 39 % en pliant, exactement pour cette raison.*
+*The four lines `missing-type-import`, `cannot-find-name`, `missing-multiple-properties` and
+`two-roots-one-file` date from 2026-07-28 (T0 of B1). The three 2307 lines —
+`wrong-tsconfig-paths`, `phantom-dependency-pnpm`, `yarn-pnp-project` — were **re-measured the
+same day after T1**: they now fold (78 → 72 entries). A fact not to misread: their character
+`B/A` **rises** (121–133 % → 140–159 %) even as they fold. This is the same effect as
+`partial-interface-rename` — below the three-site display cap every diagnostic still prints,
+and the cause header (`cause: unresolved module 'qs'` plus the count line) is added on top.
+**T1's gain there is structural — the reader learns the failure is ONE missing module, not
+three — not volumetric.** The total therefore goes from 38 % to 39 % by folding, for exactly
+that reason.*
 
-### Le chiffre que vingt fixtures permettent de donner : **8 sur 17** (5 avant T1)
+### The number twenty fixtures make it possible to give: **8 out of 17** (5 before T1)
 
-Vingt fixtures, dont trois ne sont pas des cascades à cause unique : `overload-mismatch` n'a qu'un diagnostic, et **deux témoins négatifs à plusieurs racines** — `two-independent-roots` (deux causes, deux fichiers, deux codes) et `two-roots-one-file` (deux causes, un fichier, un code). Restent **dix-sept cascades à cause unique**. Avant T1 le seuil en pliait cinq ; **la règle 2307 (T1, 2026-07-28) en ajoute trois**, portant le compte à **huit** :
+Twenty fixtures, of which three are not single-cause cascades: `overload-mismatch` has only
+one diagnostic, and there are **two multi-root negative controls** — `two-independent-roots`
+(two causes, two files, two codes) and `two-roots-one-file` (two causes, one file, one code).
+That leaves **seventeen single-cause cascades**. Before T1 the threshold folded five; **the
+2307 rule (T1, 2026-07-28) adds three**, bringing the count to **eight**:
 
-| plie | ne plie pas |
+| folds | does not fold |
 |---|---|
 | `partial-interface-rename` (3 → 1) · `broken-barrel-export` (3 → 1) · `arity-changed` (4 → 1) · `narrowed-union-member` (8 → 1) · `monorepo-cross-package` (4 → 1) · **`wrong-tsconfig-paths` (4 → 2)** · **`phantom-dependency-pnpm` (3 → 1)** · **`yarn-pnp-project` (3 → 1)** | `nullable-chain` (18047) · `missing-required-property` (2741) · `missing-multiple-properties` (2739) · `assignability-mismatch` (2322) · `misspelled-property` (2551) · `unconstrained-generic` (2536) · `value-used-as-type` (2749) · `missing-type-import` (1484) · `cannot-find-name` (2304) |
 
-`wrong-tsconfig-paths` plie **4 → 2** et non 4 → 1 : ses deux spécificateurs (`@domain/order` ×3, `@domain/customer` ×1) sont deux modules distincts, et le second, seul, reste sous le minimum de deux membres. Regrouper deux alias sous un en-tête serait le sur-regroupement que §11 classe critique — la règle sort donc deux entrées, à dessein.
+`wrong-tsconfig-paths` folds **4 → 2** and not 4 → 1: its two specifiers (`@domain/order` ×3,
+`@domain/customer` ×1) are two distinct modules, and the second, alone, stays below the
+two-member minimum. Grouping two aliases under one header would be the over-grouping §11
+classifies as critical — so the rule emits two entries, by design.
 
-**C'est la mesure la plus utile produite depuis le chiffre de H1.** Jusqu'à T1 elle disait que le pliage ne reposait pas sur une propriété générale des cascades mais sur **la liste de six codes de `src/codes.ts`** ; T1 l'a nuancée. **2307 plie sans être dans cette liste** — il ne demande aucun code de capture, il travaille sur `ProgramFacts.imports` et le message verbatim. Le pliage tient donc à deux mécanismes : un `declaredAt` identique (les cinq premiers) et un spécificateur non résolu partagé (les trois 2307). Hors de ces deux liens, une cascade parfaitement réelle est encore rendue à plat, et les neuf non-pliages sortent entre **117 % et 225 %**, le surcoût de P0.
+**This is the most useful measurement produced since the H1 number.** Until T1 it said that
+folding did not rest on a general property of cascades but on **the six-code list in
+`src/codes.ts`**; T1 qualified that. **2307 folds without being in that list** — it needs no
+capture code, it works on `ProgramFacts.imports` and the verbatim message. Folding therefore
+rests on two mechanisms: an identical `declaredAt` (the first five) and a shared unresolved
+specifier (the three 2307). Outside those two links, a perfectly real cascade is still
+rendered flat, and the nine non-folds come out between **117 % and 225 %**, P0's overhead.
 
-**Le rapport a monté puis rebaissé selon ce qui entrait — 4/10, 5/14, 5/17 (T0), puis 8/17 (T1) — et rien de tout cela n'est une régression.** T0 ajoutait des cascades de codes non capturés (`missing-type-import` TS1484, `cannot-find-name` TS2304, `missing-multiple-properties` TS2739) plus le témoin négatif `two-roots-one-file` ; le rapport tombait donc. T1, le même jour, a écrit la règle 2307 et fait plier les trois fixtures qui la débloquaient : `wrong-tsconfig-paths` (4 → 2), `phantom-dependency-pnpm` et `yarn-pnp-project` (3 → 1). Les cinq pliages `declaredAt` sont inchangés au caractère près.
+**The ratio rose then fell back depending on what came in — 4/10, 5/14, 5/17 (T0), then 8/17
+(T1) — and none of that is a regression.** T0 added cascades of uncaptured codes
+(`missing-type-import` TS1484, `cannot-find-name` TS2304, `missing-multiple-properties`
+TS2739) plus the `two-roots-one-file` negative control; the ratio therefore fell. T1, the same
+day, wrote the 2307 rule and made the three fixtures that unblocked it fold:
+`wrong-tsconfig-paths` (4 → 2), `phantom-dependency-pnpm` and `yarn-pnp-project` (3 → 1). The
+five `declaredAt` folds are unchanged to the character.
 
-À noter que ce n'est pas un plafond de conception :
+Note that this is not a design ceiling:
 
-- 18047 · 2741 · 2739 · 2322 · 2551 sont dans la table des dix de §5.2 et attendent les chiffres (règle 8) ; 2749 et 1484 sont hors table (format natif assumé), et 2304 est la deuxième moitié de la liste de racines de §5.1, sœur non écrite de la règle 2307 ;
-- **2307 est désormais un pliage acquis, pas un manque.** Sa règle de dérivation (T1) ne travaille que sur `ProgramFacts.imports` et le message, sans capture de contexte ; elle n'était pas différée par manque de données mais par manque de fixture, et ce manque a été comblé au T0 précédent. Détail ci-dessous.
+- 18047 · 2741 · 2739 · 2322 · 2551 are in the §5.2 table of ten and await the numbers (rule
+  8); 2749 and 1484 are outside the table (native format assumed), and 2304 is the second half
+  of the §5.1 root list, the unwritten sister of the 2307 rule;
+- **2307 is now an acquired fold, not a gap.** Its derivation rule (T1) works only on
+  `ProgramFacts.imports` and the message, with no context capture; it was not deferred for
+  lack of data but for lack of a fixture, and that gap was filled in the preceding T0. Detail
+  below.
 
-### `assignability-mismatch` tranche la question de conception n° 2 — et la réponse est non
+### `assignability-mismatch` settles design question 2 — and the answer is no
 
-La question du plan P1 : **le span d'un `related` peut-il servir de clé de regroupement ?** Elle avait été classée *sans objet*, puis rouverte par `missing-required-property`, dont les trois diagnostics impriment tous un `related` désignant exactement leur cause commune. Cette fixture-ci la referme, dans l'autre sens, par construction plutôt que par argument.
+The P1 plan's question: **can a `related` span serve as a grouping key?** It had been
+classified *moot*, then reopened by `missing-required-property`, whose three diagnostics all
+print a `related` designating exactly their common cause. This fixture closes it again, in
+the other direction, by construction rather than by argument.
 
-Sa cause est `type Currency = "EUR" | "USD"` à `src/pricing/currency.ts:6` — l'union a perdu `"GBP"`. Or :
+Its cause is `type Currency = "EUR" | "USD"` at `src/pricing/currency.ts:6` — the union lost
+`"GBP"`. However:
 
-- **deux** de ses trois diagnostics portent un `related`, et il pointe `currency.ts:9:3` — la **propriété** `currency` de `Rate`. Cette ligne est **du code correct**, que le lecteur ne doit pas toucher ;
-- le **troisième** — une annotation directe, `const reportingCurrency: Currency = "GBP"` — ne porte **aucun** `related`.
+- **two** of its three diagnostics carry a `related`, and it points at `currency.ts:9:3` — the
+  `currency` **property** of `Rate`. That line is **correct code**, which the reader must not
+  touch;
+- the **third** — a direct annotation, `const reportingCurrency: Currency = "GBP"` — carries
+  **no** `related` at all.
 
-Une règle indexée sur le `related` regrouperait donc deux diagnostics sur trois, **en tête desquels une déclaration qui n'a pas besoin d'être modifiée**, et laisserait le troisième dehors. Envoyer le lecteur sur la mauvaise ligne est le mode de défaillance que §11 classe critique ; il est simplement plus discret que la fusion de deux bugs indépendants. **Un `related` pointe là où le compilateur a jugé utile d'expliquer *ce* diagnostic-là, ce qui n'est pas la même chose que la cause.**
+A rule indexed on the `related` would therefore group two diagnostics out of three, **headed
+by a declaration that does not need changing**, and leave the third outside. Sending the
+reader to the wrong line is the failure mode §11 classifies as critical; it is simply more
+discreet than merging two independent bugs. **A `related` points where the compiler judged it
+useful to explain *that* diagnostic, which is not the same thing as the cause.**
 
-Les deux fixtures se lisent donc ensemble : `missing-required-property` montre un lien présent et juste, `assignability-mismatch` un lien présent et trompeur. La règle n'est pas seulement non prouvée, elle est **fausse**. Un test nommé la garde (`test/causality.test.ts`).
+The two fixtures therefore read together: `missing-required-property` shows a link that is
+present and correct, `assignability-mismatch` a link that is present and misleading. The rule
+is not merely unproven, it is **wrong**. A named test guards it (`test/causality.test.ts`).
 
-### `value-used-as-type` marque le bord extérieur du seuil
+### `value-used-as-type` marks the outer edge of the threshold
 
-Quatre diagnostics, une cause, et **rien à capturer** : ni `related`, ni déclaration résolvable. `OrderStatus` existe bel et bien — c'est un objet `const` — il n'a simplement aucun sens en position de type. Le compilateur n'a donc aucun lien structurel à offrir. Toute règle qui plierait cette cascade devrait travailler sur l'identifiant et `ProgramFacts.imports`, c'est-à-dire dériver sur « le même nom » — précisément ce que §5.1 interdit. Ce n'est pas un manque de capture, c'est la limite de ce que le seuil structurel peut atteindre, et il est utile de l'avoir commitée.
+Four diagnostics, one cause, and **nothing to capture**: no `related`, no resolvable
+declaration. `OrderStatus` really does exist — it is a `const` object — it simply makes no
+sense in type position. The compiler therefore has no structural link to offer. Any rule
+folding this cascade would have to work on the identifier and `ProgramFacts.imports`, that is,
+derive on "the same name" — precisely what §5.1 forbids. This is not a capture gap, it is the
+limit of what the structural threshold can reach, and it is useful to have committed it.
 
-### La règle 2307, écrite en T1 — ce que les trois fixtures lui ont imposé
+### The 2307 rule, written in T1 — what the three fixtures forced on it
 
-§5.1 laissait la règle 2307 — « tout ce qui importe le module non résolu est dérivé » — non écrite. **Elle l'est depuis T1 (2026-07-28)**, et elle plie les TS2307 par spécificateur : `phantom-dependency-pnpm` et `yarn-pnp-project` 3 → 1, `wrong-tsconfig-paths` 4 → 2, le 2307 solitaire de `two-independent-roots` inchangé. Trois choses que ces fixtures ont imposées à sa forme, et qu'aucun raisonnement à sec n'avait données :
+§5.1 left the 2307 rule — "everything importing the unresolved module is derived" — unwritten.
+**It has existed since T1 (2026-07-28)**, and it folds TS2307 by specifier:
+`phantom-dependency-pnpm` and `yarn-pnp-project` 3 → 1, `wrong-tsconfig-paths` 4 → 2, the
+lone 2307 of `two-independent-roots` unchanged. Three things those fixtures forced on its
+shape, that no dry reasoning had produced:
 
-1. **La cascade est *de* 2307, pas *depuis* un 2307.** Un import non résolu donne `any` aux liaisons importées et n'émet plus rien en aval : sur les trois fixtures, **tout** diagnostic est un 2307. La règle plie donc des 2307 entre eux — elle ne récolte pas « les erreurs des fichiers qui importent », il n'y en a aucune.
-2. **La clé est le spécificateur, jamais le fichier.** `src/api-client.ts` de `phantom-dependency-pnpm` importe `@acme/http`, qui résout, **et** `qs`, qui ne résout pas. `imports[file]` seul ne dit pas lequel a échoué ; le **message verbatim** nomme le spécificateur en échec (`Cannot find module 'qs' …`), et ce nom, recoupé avec `imports[file]`, donne la clé. Ce recoupement est le garde de correction : tout ce que la table d'imports ne confirme pas — gabarit dérivé, spécificateur relatif, forme non parcourue — reste une racine isolée, jamais une fusion.
-3. **Regrouper tous les 2307 d'un projet serait un sur-regroupement.** `wrong-tsconfig-paths` en porte trois sur `@domain/order` et un sur `@domain/customer` — une cause unique en amont, la ligne `paths`, mais elle n'est dans **aucun fichier du programme**, donc rien dans les données ne la nomme. La règle sort **deux entrées**, une par spécificateur, et non une.
+1. **The cascade is *of* 2307, not *from* a 2307.** An unresolved import gives `any` to the
+   imported bindings and emits nothing further downstream: on all three fixtures, **every**
+   diagnostic is a 2307. The rule therefore folds 2307s among themselves — it does not harvest
+   "errors in the files that import", there are none.
+2. **The key is the specifier, never the file.** `src/api-client.ts` in
+   `phantom-dependency-pnpm` imports `@acme/http`, which resolves, **and** `qs`, which does
+   not. `imports[file]` alone does not say which one failed; the **verbatim message** names the
+   failing specifier (`Cannot find module 'qs' …`), and that name, cross-checked against
+   `imports[file]`, gives the key. That cross-check is the correctness guard: anything the
+   import table does not confirm — a derived template, a relative specifier, an untraversed
+   form — stays an isolated root, never a merge.
+3. **Grouping all of a project's 2307 would be over-grouping.** `wrong-tsconfig-paths` carries
+   three on `@domain/order` and one on `@domain/customer` — a single upstream cause, the
+   `paths` line, but it is in **no file of the program**, so nothing in the data names it. The
+   rule emits **two entries**, one per specifier, and not one.
 
-Le point 3 est le plus intéressant des trois : `wrong-tsconfig-paths` est la fixture dont la cause racine n'est pas dans le programme du tout. Aucun `declaredAt` ne peut la désigner, par construction — un module qui ne résout pas n'a pas de déclaration —, d'où l'en-tête d'un genre nouveau, `cause: unresolved module '<spec>'`, sans « declared at ». C'est un bord du seuil différent de celui de `value-used-as-type` : là il n'y avait aucun lien à capturer, ici le lien est le spécificateur lui-même.
+Point 3 is the most interesting of the three: `wrong-tsconfig-paths` is the fixture whose root
+cause is not in the program at all. No `declaredAt` can designate it, by construction — a
+module that does not resolve has no declaration — hence a header of a new kind, `cause:
+unresolved module '<spec>'`, without "declared at". This is a different edge of the threshold
+from `value-used-as-type`: there, there was no link to capture; here, the link is the specifier
+itself.
 
-### `monorepo-cross-package` fait travailler le garde-fou plutôt que de le répéter
+### `monorepo-cross-package` exercises the guard rather than repeating it
 
-Le garde-fou n° 1 de §5.1 refuse comme cause toute déclaration hors des fichiers du programme — `<ts-lib>/…`, `node_modules/…` — et il est né d'un TS2345 du corpus qui résolvait vers `interface Map`. Jusqu'ici toutes les fixtures qui plient avaient leur cause dans le même paquet, donc le garde-fou n'y était jamais mis en tension. Celle-ci a ses quatre diagnostics dans `packages/api` et `packages/web`, et sa cause dans `packages/core` : un paquet frère n'est ni `<ts-lib>/…` ni `node_modules/…`, donc le garde-fou doit **admettre**, et il admet. `ProgramFacts.files` fait autorité, pas un test de préfixe — c'est ce choix-là qui est vérifié ici.
+Guard 1 of §5.1 refuses as a cause any declaration outside the program's files —
+`<ts-lib>/…`, `node_modules/…` — and it was born from a corpus TS2345 that resolved to
+`interface Map`. Until now every folding fixture had its cause in the same package, so the
+guard was never put under tension. This one has its four diagnostics in `packages/api` and
+`packages/web`, and its cause in `packages/core`: a sibling package is neither `<ts-lib>/…`
+nor `node_modules/…`, so the guard must **admit**, and it does. `ProgramFacts.files` is the
+authority, not a prefix test — that is the choice being verified here.
 
-Accessoirement, c'est la première fixture à dépasser le plafond de trois sites en pliant : quatre diagnostics, trois affichés, `+1 more site`.
+Incidentally, this is the first fixture to exceed the three-site cap while folding: four
+diagnostics, three displayed, `+1 more site`.
 
-### `yarn-pnp-project` est la seule fixture dont le `before/` ne contient aucun bug
+### `yarn-pnp-project` is the only fixture whose `before/` contains no bug
 
-Le code y est correct, `@acme/http` est déclaré dans `package.json`, verrouillé dans `yarn.lock`, présent sur le disque sous `.yarn/unplugged/`, et référencé par `.pnp.cjs`. Les trois TS2307 ne disent rien du projet : ils disent que le compilateur a été lancé en processus Node nu, sans charger la carte de résolution de PnP. Toutes les autres fixtures sont du code cassé ; celle-ci est du code juste, mal lu.
+The code there is correct, `@acme/http` is declared in `package.json`, locked in `yarn.lock`,
+present on disk under `.yarn/unplugged/`, and referenced by `.pnp.cjs`. The three TS2307 say
+nothing about the project: they say the compiler was launched as a bare Node process, without
+loading PnP's resolution map. Every other fixture is broken code; this one is correct code,
+misread.
 
-**Conséquence sur tssift lui-même, à écrire dans le README plutôt qu'à découvrir dans une issue : tssift est un processus Node nu.** Sous un projet PnP il produirait exactement cette sortie — trois erreurs plausibles et entièrement fausses — s'il n'était pas lancé au travers du runtime (`yarn tssift`). C'est le mode de défaillance le plus coûteux imaginable pour un outil dont l'argument est « faites confiance à la hiérarchisation » : rien n'est signalé, la sortie a l'air normale.
+**Consequence for tssift itself, to be written in the README rather than discovered in an
+issue: tssift is a bare Node process.** Under a PnP project it would produce exactly this
+output — three plausible and entirely false errors — if it were not launched through the
+runtime (`yarn tssift`). This is the costliest imaginable failure mode for a tool whose
+argument is "trust the ranking": nothing is flagged, the output looks normal.
 
-**Tranché et implémenté en T2 (2026-07-28) : le CLI refuse.** `run.ts` détecte un `.pnp.cjs` à la racine du projet **sans** `process.versions.pnp` **et** au moins un TS2307 rendu, et sort en **2** avec un message qui nomme le manifeste trouvé et le remède (`yarn tssift`). Le triple garde évite de refuser un projet PnP sain lancé hors runtime mais sans erreur de résolution. La garde vit en **couche CLI**, pas dans la source : la bibliothèque et l'éval continuent de plier `yarn-pnp-project` 3 → 1 (c'est ce qui rend le pliage mesurable ci-dessus), seul le CLI refuse. Prédicat pur `isPnpMisread`, testé.
+**Settled and implemented in T2 (2026-07-28): the CLI refuses.** `run.ts` detects a `.pnp.cjs`
+at the project root **without** `process.versions.pnp` **and** at least one TS2307 rendered, and
+exits **2** with a message naming the manifest found and the remedy (`yarn tssift`). The triple
+guard avoids refusing a healthy PnP project launched outside the runtime but with no resolution
+error. The guard lives in the **CLI layer**, not in the source: the library and the eval keep
+folding `yarn-pnp-project` 3 → 1 (which is what makes the fold measurable above), only the CLI
+refuses. Pure predicate `isPnpMisread`, tested.
 
-### Les quatre fixtures de T0 — la dernière catégorie de §7, et le témoin négatif dur
+### The four T0 fixtures — the last §7 category, and the hard negative control
 
-Le quatrième lot porte le corpus à vingt et **ferme la liste des catégories de §7**. Aucun des quatre ne plie, et pour trois d'entre eux c'est le comportement voulu.
+The fourth batch brings the corpus to twenty and **closes the §7 category list**. None of the
+four folds, and for three of them that is the intended behaviour.
 
-- **`missing-type-import` (TS1484)** couvre la dernière catégorie de §7 sans témoin, « import de type manquant ». `verbatimModuleSyntax` est activé et deux fichiers importent des types avec un import de valeur : trois TS1484, le module résolvant parfaitement — ce n'est donc pas un TS2307, le correctif est un mot-clé et non une dépendance. C'est le complément de `value-used-as-type` (une valeur en position de type, 2749) : ici un type en position de valeur. Hors table des dix, il sort au format natif, et il témoigne au passage que trois diagnostics d'un même code sur deux fichiers restent trois racines isolées faute de lien de dérivation.
-- **`cannot-find-name` (TS2304)** est la première fixture à produire 2304, que §5.1 classe **racine quasi certaine** au même titre que 2307 et qu'aucune fixture n'exerçait — le seuil n'avait jamais vu que la moitié de sa propre liste de racines. Sept références à un seul nom manquant dans un fichier : une vraie cascade à cause unique dont la structure calque celle de 2307 (le nom donne un type d'erreur à chaque usage, rien ne cascade au-delà). Elle ne plie pas — 2304 n'est ni capturé ni dérivé — donc elle chiffre le manque qu'une future règle indexée sur le nom manquant comblerait, sœur de la règle 2307 non écrite.
-- **`missing-multiple-properties` (TS2739)** est le jumeau multi-membres de `missing-required-property` (2741) : trois sites de construction, deux membres requis manquants au lieu d'un, tous pointant la déclaration de `Rect`. Comme son jumeau il ne plie pas — ni 2739 ni 2741 n'est capturé — et il donne enfin un témoin à 2739, présent dans la table des dix sans fixture jusqu'ici.
-- **`two-roots-one-file` (TS2339)** est le témoin négatif dur, sœur de `two-independent-roots`. Là où celle-ci sépare deux causes dans deux fichiers sous deux codes, celle-ci met **deux causes dans un fichier sous un seul code** — le cas où le sur-regroupement est le plus tentant et, selon §11, le plus destructeur. La règle 3 de §5.1 (« mêmes 2339 dans le même fichier ⇒ une racine ») est délibérément **non** appliquée, et c'est ici qu'elle se vérifie : chaque interface est mal lue deux fois, donc une règle indexée sur fichier + code replierait les quatre sous un seul en-tête et cacherait un des deux bugs derrière un compteur. Le moteur indexe sur `declaredAt` et rend `4 errors · 1 file · 2 root causes` — les deux de `Widget` pliés, les deux de `Gauge` pliés, les deux causes tenues à part. Contrairement à `two-independent-roots`, cette fixture **plie** de chaque côté (4 → 2), et c'est précisément l'intérêt : la séparation survit même quand le pliage est actif sur les deux racines. Un test nommé la garde.
+- **`missing-type-import` (TS1484)** covers the last §7 category without a witness, "missing
+  type import". `verbatimModuleSyntax` is on and two files import types with a value import:
+  three TS1484, with the module resolving perfectly — so it is not a TS2307, the fix is a
+  keyword and not a dependency. It is the complement of `value-used-as-type` (a value in type
+  position, 2749): here a type in value position. Outside the table of ten, it renders in
+  native format, and it incidentally witnesses that three diagnostics of the same code across
+  two files stay three isolated roots for want of a derivation link.
+- **`cannot-find-name` (TS2304)** is the first fixture to produce 2304, which §5.1 classifies
+  as a **near-certain root** on the same footing as 2307 and which no fixture exercised — the
+  threshold had only ever seen half of its own root list. Seven references to a single missing
+  name in one file: a genuine single-cause cascade whose structure mirrors 2307's (the name
+  gives an error at each use, nothing cascades beyond). It does not fold — 2304 is neither
+  captured nor derived — so it quantifies the gap a future rule indexed on the missing name
+  would fill, sister to the unwritten 2307 rule. *(That rule is designed on 2026-08-03, driven
+  by real code — see [Real code](#real-code--keyziadata-explorer-2026-08-03).)*
+- **`missing-multiple-properties` (TS2739)** is the multi-member twin of
+  `missing-required-property` (2741): three construction sites, two required members missing
+  instead of one, all pointing at the declaration of `Rect`. Like its twin it does not fold —
+  neither 2739 nor 2741 is captured — and it finally gives 2739 a witness, present in the table
+  of ten without a fixture until now.
+- **`two-roots-one-file` (TS2339)** is the hard negative control, sister to
+  `two-independent-roots`. Where that one separates two causes in two files under two codes,
+  this one puts **two causes in one file under a single code** — the case where over-grouping
+  is most tempting and, per §11, most destructive. Rule 3 of §5.1 ("same 2339 in the same file
+  ⇒ one root") is deliberately **not** applied, and this is where that is verified: each
+  interface is misread twice, so a rule indexed on file + code would fold all four under one
+  header and hide one of the two bugs behind a counter. The engine indexes on `declaredAt` and
+  renders `4 errors · 1 file · 2 root causes` — the two `Widget` ones folded, the two `Gauge`
+  ones folded, the two causes held apart. Unlike `two-independent-roots`, this fixture **folds**
+  on each side (4 → 2), and that is precisely the point: the separation survives even when
+  folding is active on both roots. A named test guards it.
 
-**Le total se dégrade à chaque petite fixture ajoutée, et ce n'est pas une régression du produit.** 20 % à trois fixtures, 22 % à quatre, 27 % à huit, 31 % à douze, 35 % à seize, 38 % à vingt (T0), 39 % après T1 : chaque petite fixture entre avec un rapport supérieur à 100 % et tire la moyenne vers le haut, et le pliage 2307 de T1 en ajoute même un peu — sur une cible minuscule, plier ajoute un en-tête sans rien retrancher (toutes les lignes tiennent sous le plafond). **À périmètre constant les chiffres publiés sont inchangés au caractère près** — retirer les treize lignes ajoutées après coup redonne exactement 283 → 29, 39 144 contre 7 960, soit 20 %. C'est la raison pour laquelle §7 publie un rapport par cible : **ce total-ci mesure surtout la composition de la liste**.
+**The total degrades with every small fixture added, and that is not a product regression.**
+20 % at three fixtures, 22 % at four, 27 % at eight, 31 % at twelve, 35 % at sixteen, 38 % at
+twenty (T0), 39 % after T1: every small fixture enters with a ratio above 100 % and pulls the
+average up, and T1's 2307 fold even adds a little — on a tiny target, folding adds a header
+without removing anything (every line fits under the cap). **At constant scope the published
+numbers are unchanged to the character** — removing the thirteen lines added after the fact
+gives back exactly 283 → 29, 39 144 against 7 960, i.e. 20 %. This is why §7 publishes a
+per-target ratio: **this total mostly measures the composition of the list.**
 
-### Ce que les fixtures de pliage ont appris
+### What the folding fixtures taught
 
-**1. Une petite fixture peut passer sous 100 %, et `narrowed-union-member` est la première : 59 %.** Huit diagnostics pour une entrée. Ce qui change par rapport aux autres petites cibles, c'est que ses diagnostics sont **verbeux** — chacun porte un nœud de chaîne nommant le membre d'union fautif — donc le plafond à trois sites en supprime réellement du volume. Le pliage paie dès que le diagnostic unitaire est gros, pas seulement quand la cascade est longue.
+**1. A small fixture can go under 100 %, and `narrowed-union-member` is the first: 59 %.**
+Eight diagnostics for one entry. What changes compared to the other small targets is that its
+diagnostics are **verbose** — each carries a chain node naming the offending union member — so
+the three-site cap really does remove volume. Folding pays as soon as the unit diagnostic is
+large, not only when the cascade is long.
 
-**2. `arity-changed` sort à 232 %, le pire rapport du tableau — et c'est le même code que la meilleure ligne du tableau.** TS2554 donne **6 %** sur `corpus/lekes-ok-arity-changed` (153 diagnostics) et **232 %** ici (4 diagnostics). Même famille, même règle de causalité, même renderer ; seule la taille de la cascade diffère. La cause du surcoût est identique dans les deux cas — les `relatedInformation` que `tsc --pretty false` n'imprime pas du tout, ici répétées trois fois pour 313 caractères de bras A — mais à 4 sites le pliage n'en retire qu'un, alors qu'à 153 il en retire 150. **C'est H1 énoncée en une comparaison : le gain n'est pas dans le format, il est dans le nombre de sites qu'une cause explique.**
+**2. `arity-changed` comes out at 232 %, the worst ratio in the table — and it is the same code
+as the best line in the table.** TS2554 gives **6 %** on `corpus/lekes-ok-arity-changed` (153
+diagnostics) and **232 %** here (4 diagnostics). Same family, same causality rule, same
+renderer; only cascade size differs. The cause of the overhead is identical in both cases — the
+`relatedInformation` that `tsc --pretty false` does not print at all, repeated three times here
+for 313 characters of arm A — but at 4 sites folding removes only one, while at 153 it removes
+150. **This is H1 stated as a single comparison: the gain is not in the format, it is in the
+number of sites one cause explains.**
 
-**3. Deux fixtures ne plient pas du tout, et c'est leur raison d'être.** `nullable-chain` (4 × TS18047) et `missing-required-property` (3 × TS2741) sont des cascades à cause unique qu'un humain regroupe d'un coup d'œil ; le seuil de §5.1 les laisse en racines isolées, parce que ni 18047 ni 2741 n'est dans `CONTEXT_CAPTURE_CODES`. Les deux codes sont dans la table des dix de §5.2, donc c'est un manque connu en attente des chiffres (règle 8), pas un oubli. Elles sont commitées précisément pour que ce manque soit **mesurable** plutôt qu'anecdotique : 128 % et 169 % sont le prix courant de ce que le seuil refuse.
+**3. Two fixtures do not fold at all, and that is their reason for existing.** `nullable-chain`
+(4 × TS18047) and `missing-required-property` (3 × TS2741) are single-cause cascades a human
+groups at a glance; the §5.1 threshold leaves them as isolated roots, because neither 18047 nor
+2741 is in `CONTEXT_CAPTURE_CODES`. Both codes are in the §5.2 table of ten, so this is a known
+gap awaiting numbers (rule 8), not an oversight. They are committed precisely so that the gap is
+**measurable** rather than anecdotal: 128 % and 169 % are the going price of what the threshold
+refuses.
 
-**4. `missing-required-property` a rouvert une question fermée.** Ses trois diagnostics **impriment déjà leur cause commune** : chacun porte un `related` lisant `src/accounts/profile.ts:10:3: 'locale' is declared here.` Le rapport nomme donc trois fois la même déclaration partagée et refuse quand même de grouper dessus. C'est la question de conception n° 2 du plan P1 — *le span d'un `related` compte-t-il comme un `declaredAt` ?* — classée **sans objet** parce que TS2554 s'était finalement résolu par `getResolvedSignature()`. Ici elle avait un objet. **`assignability-mismatch` l'a refermée depuis, par la négative** — section suivante.
+**4. `missing-required-property` reopened a closed question.** Its three diagnostics **already
+print their common cause**: each carries a `related` reading `src/accounts/profile.ts:10:3:
+'locale' is declared here.` The report therefore names the same shared declaration three times
+and still refuses to group on it. This is design question 2 of the P1 plan — *does a `related`
+span count as a `declaredAt`?* — classified **moot** because TS2554 had ultimately resolved via
+`getResolvedSignature()`. Here it had an object. **`assignability-mismatch` has since closed it
+again, in the negative** — see the section above.
 
-Comparé à la ligne de base P0 — **283 / 283, 141 %** — le rapport de caractères est divisé par **six à sept** selon le périmètre.
+Compared to the P0 baseline — **283 / 283, 141 %** — the character ratio is divided by **six to
+seven** depending on scope.
 
-### Ce que ce tableau dit, et ce qu'il ne dit pas
+### What this table says, and what it does not
 
-**Il dit que H1 tient sur du vrai code.** Sur les trois entrées de corpus, qui sont les seules cibles ressemblant au cas d'usage réel, le rapport passe de 103–182 % à **6–42 %**. `lekes-ok-arity-changed` est le cas d'école : 153 diagnostics répartis sur 31 fichiers deviennent 2 entrées, dont une qui nomme `src/shared/domain/result.ts:15:19` — la ligne qu'il faut lire — et un compteur pour les 149 sites restants.
+**It says H1 holds on real code.** On the three corpus entries, the only targets resembling the
+real use case, the ratio goes from 103–182 % to **6–42 %**. `lekes-ok-arity-changed` is the
+textbook case: 153 diagnostics spread over 31 files become 2 entries, one of which names
+`src/shared/domain/result.ts:15:19` — the line to read — plus a counter for the remaining 149
+sites.
 
-**Il dit aussi que le pliage ne rend rien sur un petit projet *dont les diagnostics sont courts*.** `partial-interface-rename` passe de 133 % à **159 %**, et `broken-barrel-export` sort à **157 %** : leurs trois diagnostics tiennent sous le plafond de trois sites, donc tous s'impriment encore, et l'en-tête de cause s'ajoute par-dessus. Le gain y est structurel — le lecteur apprend *où* est la cause — pas volumétrique. Sur un projet de trois erreurs, `tsc` n'a de toute façon pas de problème de bruit.
+**It also says folding returns nothing on a small project *whose diagnostics are short*.**
+`partial-interface-rename` goes from 133 % to **159 %**, and `broken-barrel-export` comes out at
+**157 %**: their three diagnostics fit under the three-site cap, so all of them still print, and
+the cause header is added on top. The gain there is structural — the reader learns *where* the
+cause is — not volumetric. On a three-error project, `tsc` has no noise problem anyway.
 
-*La restriction en italique a été ajoutée le 2026-07-28 : la version précédente disait « sur un petit projet », sans condition, et `narrowed-union-member` la contredit à **59 %** avec ses huit diagnostics sur trois fichiers. Ce n'est pas la taille du projet qui décide, c'est le produit « nombre de sites × verbosité du diagnostic unitaire ». Détail dans la section suivante.*
+*The italicised restriction was added on 2026-07-28: the previous version said "on a small
+project", unconditionally, and `narrowed-union-member` contradicts it at **59 %** with its eight
+diagnostics over three files. It is not project size that decides, it is the product "number of
+sites × verbosity of the unit diagnostic". Detail in the section above.*
 
-Le cas de `broken-barrel-export` est le plus net des deux, parce que le pliage y est **exactement** ce que la fixture existe pour montrer : trois fichiers différents importent le même symbole d'un barrel, `tsc` les rapporte comme trois échecs sans lien, et `tssift` nomme `src/domain/index.ts:1:1` une fois. 157 % de caractères pour une entrée au lieu de trois, sur un projet où le pliage n'a mécaniquement rien à économiser.
+The `broken-barrel-export` case is the sharper of the two, because folding there is **exactly**
+what the fixture exists to show: three different files import the same symbol from a barrel,
+`tsc` reports them as three unrelated failures, and `tssift` names `src/domain/index.ts:1:1`
+once. 157 % of characters for one entry instead of three, on a project where folding
+mechanically has nothing to save.
 
-**Le témoin négatif tient : `two-independent-roots` reste à 2 entrées pour 2 diagnostics, pliage 0 %.** C'est la mesure la plus importante du tableau après les trois entrées de corpus. Deux échecs sans lien restent deux échecs, et le critère de la Definition of Done (§12) est vérifié par un test nommé, pas seulement observé ici.
+**The negative control holds: `two-independent-roots` stays at 2 entries for 2 diagnostics, 0 %
+fold.** This is the most important measurement in the table after the three corpus entries. Two
+unrelated failures stay two failures, and the Definition of Done criterion (§12) is verified by
+a named test, not merely observed here.
 
-**Il ne dit toujours rien de H2**, ni du taux de correction, ni des faux départs. Ces métriques exigent un modèle et arrivent en B1/B2. Ce que B0 mesure ici est un volume et un compte, pas un comportement.
+**It still says nothing about H2**, nor about fix rate, nor about false starts. Those metrics
+require a model and arrive in B1/B2. What B0 measures here is a volume and a count, not a
+behaviour.
 
-**Le sous-regroupement est visible et volontaire.** `lekes-result-value-renamed` plie 80 %, pas 99 % : 21 de ses 112 diagnostics restent isolés — 10 TS7006 (paramètre `any` implicite, aucune déclaration à viser), 8 TS2339 dont le récepteur est `{}` ou `unknown`, 2 TS2353 et 1 TS2345. Aucun ne porte de lien structurel vers la cause. Les regrouper demanderait de dériver sur une ressemblance, ce que §5.1 interdit. C'est le comportement voulu.
+**Under-grouping is visible and deliberate.** `lekes-result-value-renamed` folds 80 %, not 99 %:
+21 of its 112 diagnostics stay isolated — 10 TS7006 (implicit `any` parameter, no declaration to
+aim at), 8 TS2339 whose receiver is `{}` or `unknown`, 2 TS2353 and 1 TS2345. None carries a
+structural link to the cause. Grouping them would require deriving on a resemblance, which §5.1
+forbids. This is the intended behaviour.
 
 ---
 
-## P1 T1 — ce que la capture sélective rapporte, et ce qu'elle coûte
+## P1 T1 — what selective capture returns, and what it costs
 
-**Mesuré le 2026-07-27** sous TypeScript 5.9.3, reproductible par `mise exec -- bun run capture:measure`. Décision 28 du plan P1 : toute extension de `CONTEXT_CAPTURE_CODES` se paie en allers-retours de checker, donc elle se mesure avant d'être gardée. Codes capturés : **2305 · 2339 · 2345 · 2353 · 2554 · 2724**, justifiés un par un dans `src/codes.ts`.
+**Measured 2026-07-27** under TypeScript 5.9.3, reproducible with `mise exec -- bun run
+capture:measure`. Decision 28 of the P1 plan: any extension of `CONTEXT_CAPTURE_CODES` is paid
+for in checker round-trips, so it is measured before being kept. Captured codes: **2305 · 2339 ·
+2345 · 2353 · 2554 · 2724**, justified one by one in `src/codes.ts`.
 
-**2724 est arrivé en dernier, par T6, et il n'était pas prévu.** La fixture `broken-barrel-export` devait produire du 2305 ; elle produit du 2724 (`… Did you mean 'Order'?`) parce que TypeScript préfère la variante « suggestion » dès qu'un nom proche existe parmi les exports réels du module. **Le code qui sort dépend donc des noms en présence, pas de la nature de la panne** — une cascade identique aurait plié ou non selon l'orthographe choisie par l'auteur. Le tableau ci-dessous le montre : 2305 et 2724 résolvent au même endroit, par le même resolver.
+**2724 arrived last, via T6, and it was not planned.** The `broken-barrel-export` fixture was
+meant to produce 2305; it produces 2724 (`… Did you mean 'Order'?`) because TypeScript prefers
+the "suggestion" variant as soon as a close name exists among the module's real exports. **The
+code emitted therefore depends on the names present, not on the nature of the failure** — an
+identical cascade would have folded or not depending on the spelling the author chose. The table
+below shows it: 2305 and 2724 resolve to the same place, through the same resolver.
 
-Le taux de résolution est la part des diagnostics du code qui reviennent avec un `declaredAt` exploitable.
+The resolution rate is the share of that code's diagnostics that come back with a usable
+`declaredAt`.
 
-| cible | code | résolus | où pointe le `declaredAt` |
+| target | code | resolved | where the `declaredAt` points |
 |---|---|---:|---|
-| partial-interface-rename | 2353 · 2339 · 2345 | 3/3 (100 %) | **une seule et même position**, `src/types/user.ts:7:1` |
-| two-independent-roots | 2339 | 1/1 | `src/billing/invoice.ts:3:1` — et le 2307 n'a **aucun** contexte |
-| broken-barrel-export | 2724 | 3/3 (**100 %**) | 3 sur `src/domain/index.ts:1:1`, le barrel — pas `order.ts`, qui exporte toujours |
-| corpus/lekes-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 sur `src/shared/domain/result.ts:12:4` |
-| corpus/lekes-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 sur `…/domain/task.entity.ts:1:1` |
-| corpus/lekes-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 sur `src/shared/domain/result.ts:15:19` |
+| partial-interface-rename | 2353 · 2339 · 2345 | 3/3 (100 %) | **one and the same position**, `src/types/user.ts:7:1` |
+| two-independent-roots | 2339 | 1/1 | `src/billing/invoice.ts:3:1` — and the 2307 has **no** context |
+| broken-barrel-export | 2724 | 3/3 (**100 %**) | 3 on `src/domain/index.ts:1:1`, the barrel — not `order.ts`, which still exports |
+| corpus/lekes-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 on `src/shared/domain/result.ts:12:4` |
+| corpus/lekes-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 on `…/domain/task.entity.ts:1:1` |
+| corpus/lekes-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 on `src/shared/domain/result.ts:15:19` |
 
-**C'est le gisement de H1, vu pour la première fois sous forme de lien structurel** et non d'intuition : 152 diagnostics sur une déclaration, 91 sur une autre, 12 sur une troisième. Rien n'est encore plié — T3 et T4 le feront — mais la matière du pliage existe et elle est vérifiable.
+**This is H1's seam, seen for the first time as a structural link** rather than an intuition: 152
+diagnostics on one declaration, 91 on another, 12 on a third. Nothing is folded yet — T3 and T4
+will do that — but the material for folding exists and is verifiable.
 
-### Le coût en temps est dans le bruit
+### The time cost is in the noise
 
-Meilleur de 3 exécutions, capture désactivée puis activée :
+Best of 3 runs, capture disabled then enabled:
 
-| cible | off | on | écart |
+| target | off | on | delta |
 |---|---:|---:|---:|
 | partial-interface-rename | 180 ms | 167 ms | −7 % |
 | two-independent-roots | 157 ms | 152 ms | −3 % |
@@ -278,13 +575,22 @@ Meilleur de 3 exécutions, capture désactivée puis activée :
 | corpus/lekes-task-export-renamed | 4 426 ms | 4 006 ms | −10 % |
 | corpus/lekes-ok-arity-changed | 3 781 ms | 4 342 ms | **+15 %** |
 
-*Tableau rejoué le 2026-07-27 en fin de T6, avec 2724 dans la liste. Les valeurs bougent de plusieurs points d'un run à l'autre — `overload-mismatch` était à −3 % au premier passage et sort à +5 % ici, sans qu'aucun de ses diagnostics ne soit capturé, donc sans qu'une seule ligne de code de capture s'y exécute. C'est la meilleure démonstration disponible que ces chiffres mesurent la machine autant que l'outil.*
+*Table replayed on 2026-07-27 at the end of T6, with 2724 in the list. The values move by several
+points from one run to the next — `overload-mismatch` was at −3 % on the first pass and comes out
+at +5 % here, without a single one of its diagnostics being captured, hence without a single line
+of capture code executing on it. This is the best available demonstration that these numbers
+measure the machine as much as the tool.*
 
-Les écarts négatifs sont la preuve que la mesure est dominée par la variance : la capture ne peut pas *accélérer* le chargement. `createProgram` et `getPreEmitDiagnostics` coûtent quatre secondes sur 169 fichiers ; la descente d'arbre par diagnostic et la résolution de type se perdent dedans. **Sous le seuil de ~20 % de la décision 28, donc la capture paresseuse n'a pas lieu d'être discutée — mais le pire cas, `lekes-ok-arity-changed` avec ses 152 résolutions de signature, est monté à +15 % sur ce second run et n'est plus « très en dessous ».** C'est la cible à re-mesurer si un code de plus entre dans la liste.
+The negative deltas prove the measurement is dominated by variance: capture cannot *speed up*
+loading. `createProgram` and `getPreEmitDiagnostics` cost four seconds on 169 files; the per-
+diagnostic tree descent and type resolution get lost inside that. **Below the ~20 % threshold of
+decision 28, so lazy capture need not be discussed — but the worst case,
+`lekes-ok-arity-changed` with its 152 signature resolutions, rose to +15 % on this second run and
+is no longer "well below".** That is the target to re-measure if one more code enters the list.
 
-### Le coût en volume est réel, lui
+### The volume cost is real
 
-| cible | json off | json on | écart |
+| target | json off | json on | delta |
 |---|---:|---:|---:|
 | partial-interface-rename | 2 767 | 5 205 | +88 % |
 | two-independent-roots | 1 711 | 2 217 | +30 % |
@@ -294,104 +600,214 @@ Les écarts négatifs sont la preuve que la mesure est dominée par la variance 
 | corpus/lekes-ok-arity-changed | 183 926 | 276 037 | +50 % |
 | overload-mismatch | 3 378 | 3 378 | 0 % |
 
-*Les deux colonnes ont grossi depuis la première mesure (`partial-interface-rename` : 2 410 → 2 767 côté « off ») parce que le rapport `json` porte désormais `groups`, `role` et `derivedFrom`. Le côté « on » inclut donc aussi les groupes que la capture rend possibles — c'est la comptabilité honnête : sans contexte capturé, aucun groupe n'existe, leurs octets font partie de ce que la capture coûte.*
+*Both columns have grown since the first measurement (`partial-interface-rename`: 2 410 → 2 767
+on the "off" side) because the `json` report now carries `groups`, `role` and `derivedFrom`. The
+"on" side therefore also includes the groups capture makes possible — that is honest accounting:
+without captured context no group exists, so their bytes are part of what capture costs.*
 
-`memberNames`, `signature` et le `snippet` du `declaredAt` sont répétés une fois par diagnostic. **C'est du `json` uniquement — `agent-text` est inchangé, donc la ligne de base B0 ci-dessus ne bouge pas d'un caractère.**
+`memberNames`, `signature` and the `declaredAt` `snippet` are repeated once per diagnostic. **This
+is `json` only — `agent-text` is unchanged, so the B0 baseline above does not move by a
+character.**
 
-**Et l'écart n'est pas devenu négatif après T4, contrairement à ce que cette section pariait.** Le pliage se voit dans `agent-text`, où il fait passer le rapport de 141 % à 20 % ; le `json`, lui, reste le rapport complet par construction (règle 14) et ne plie rien — il *ajoute* l'index de groupes par-dessus le tableau intégral. Le pari était mal posé : il n'y a pas de contradiction à corriger, seulement deux formats qui font deux métiers. Si le volume `json` devient un problème pour MCP, c'est une déduplication du rapport qu'il faudra, jamais un retrait de la capture.
+**And the gap did not turn negative after T4, contrary to what this section was betting.** Folding
+shows up in `agent-text`, where it takes the report from 141 % to 20 %; `json` stays the complete
+report by construction (rule 14) and folds nothing — it *adds* the group index on top of the full
+table. The bet was badly framed: there is no contradiction to fix, only two formats doing two
+jobs. If `json` volume becomes a problem for MCP, what will be needed is report deduplication,
+never removing capture.
 
-### Un avertissement pour T3, sorti de la mesure
+### A warning for T3, out of the measurement
 
-Sur `corpus/lekes-result-value-renamed`, l'unique TS2345 résout son `expected` vers **`<ts-lib>/lib.es2015.collection.d.ts:19:1 (interface Map)`**.
+On `corpus/lekes-result-value-renamed`, the single TS2345 resolves its `expected` to
+**`<ts-lib>/lib.es2015.collection.d.ts:19:1 (interface Map)`**.
 
-C'est correct comme capture, et ce serait un **désastre comme critère de causalité** : deux bugs parfaitement indépendants qui passent chacun un mauvais argument à une méthode de `Map` partageraient ce `declaredAt` et seraient regroupés. C'est très exactement le sur-regroupement que §11 classe *critique*.
+That is correct as capture, and it would be a **disaster as a causality criterion**: two
+perfectly independent bugs each passing a bad argument to a `Map` method would share that
+`declaredAt` and be grouped. This is exactly the over-grouping §11 classifies as *critical*.
 
-Conséquence à tenir en T3 : **une déclaration hors des fichiers du programme — `<ts-lib>/…`, `node_modules/…` — ne peut pas servir de cause racine.** La capture reste, parce qu'elle est vraie et qu'un enrichisseur P2 en voudra ; c'est la dérivation qui doit la refuser.
+Consequence to hold for T3: **a declaration outside the program's files — `<ts-lib>/…`,
+`node_modules/…` — cannot serve as a root cause.** The capture stays, because it is true and a
+P2 enricher will want it; it is derivation that must refuse it.
 
-Second constat de la même famille : sur cette entrée, les 2339 pointent le *littéral de type* (`result.ts:12:4`) et le 2353 pointe l'*alias* (`result.ts:11:1`). Deux positions distinctes, donc deux groupes là où un humain en verrait un. C'est du **sous-regroupement**, l'asymétrie que §5.1 assume explicitement : on desserrera avec des chiffres, on ne resserre pas après un raté.
-
----
-
-## Limites du corpus — à corriger avant B1
-
-Trois problèmes, tous constatés le jour même de la première mesure. Aucun n'invalide la ligne de base ; tous les trois rendent le corpus réel inutilisable tel quel pour B1.
-
-**1. `lekes` est un arbre de travail vivant.** Mesuré trois fois en une heure, il a donné **23, puis 29, puis 8 diagnostics** (6 668, 8 141, puis 1 475 caractères en bras A). Quelque chose le modifie en continu. Le garde-fou `git status` a d'ailleurs signalé un écart avant/après sur une des exécutions ; vérification faite, **notre mesure n'a rien écrit** — aucun fichier des trois dépôts n'a été modifié, et une exécution isolée ressort l'arbre inchangé. C'est une édition concurrente extérieure.
-
-Deux conséquences. D'abord, un dépôt en cours de travail **n'est pas une cible de mesure** : ses chiffres absolus sont l'instantané d'un objet mobile. Ensuite, le garde-fou ne sait pas distinguer « on a écrit » de « quelqu'un d'autre a écrit pendant qu'on lisait » — il le dit désormais explicitement dans son message plutôt que de laisser conclure au pire.
-
-Consolation mesurable : sur ces trois états très différents, le **rapport** B/A est resté dans une bande étroite — 114 %, 113 %, 127 % — alors que les valeurs absolues variaient d'un facteur 5. C'est exactement l'argument pour lequel §7 publie un rapport et non une valeur.
-
-**2. Les dépôts réels vivants sont propres — RÉSOLU le 2026-07-27 par `eval/corpus.json`.** `tccp` et `keyzia/data-explorer` ont zéro diagnostic, et `lekes` oscille autour de zéro. Points de mesure valides mais **sans information**.
-
-La piste évidente — « prendre des instantanés de dépôts au moment où ils étaient cassés » — **ne marche pas**, et c'est un résultat en soi. Scan du 2026-07-27 : **14/14 commits de `lekes` et 24 commits échantillonnés sur 240 de `data-explorer` compilent proprement.** On commite du vert ; la CI y veille. **Les états cassés vivent dans les arbres de travail, pas dans l'historique** — et un arbre de travail bouge sous la mesure (problème 1).
-
-D'où la solution retenue : **commit épinglé + mutation authorée**. Chaque entrée de `eval/corpus.json` est un `sha` réel plus un `find`/`replace` d'une ligne, matérialisé par `bun run corpus:build` dans `.corpus/` via `git archive` — sans jamais toucher à l'arbre source. Trois propriétés qu'aucune autre option n'avait ensemble :
-
-- **figé** — un `sha` ne bouge pas, donc les chiffres sont comparables d'un mois sur l'autre ;
-- **open source** — le dépôt public ne contient que des références et des mutations, jamais le code privé de `lekes` ; `.corpus/` est git-ignoré ;
-- **vérité terrain** — on sait **par construction** quel fichier est la cause. C'est précisément ce que la métrique de faux départ de B1 exige, et qu'un commit cassé trouvé au hasard ne fournit pas.
-
-Le corpus produit aujourd'hui **277 diagnostics répartis sur 3 causes racines**, en trois familles de codes distinctes (TS2339, TS2305, TS2554). Le garde-fou du script refuse une ancre absente, ambiguë, ou qui ne casse finalement rien.
-
-Deux pièges rencontrés en le construisant, tous deux encodés dans le script :
-- une ancre doit viser un fichier **suivi au `sha` épinglé** — `git archive` ignore les fichiers non suivis, et l'arbre de `lekes` en contient plusieurs ;
-- une mutation peut s'appliquer sans rien casser. Retirer un export du barrel `features/agents` n'a produit **aucun** diagnostic : ses 11 importateurs consomment chacun un symbole différent. Cette entrée a été retirée plutôt que maquillée ; le cas barrel reste couvert par la fixture `broken-barrel-export`, la quatrième prévue.
-
-**3. La couverture de versions est plus étroite qu'annoncée.** `.plans/2026-07-27_p0-b0.md` donnait `lekes` en TS 5.7 et `tccp` en TS 5.5 ; les deux sont en fait en **5.9.3** au 2026-07-27. Les deux restent dans la plage, mais la mesure ne couvre en pratique que **5.9.3 et 5.8.3**. La matrice CI reste le seul endroit où 5.4 → 5.7 est exercé.
+Second observation of the same family: on this entry, the 2339s point at the *type literal*
+(`result.ts:12:4`) and the 2353 points at the *alias* (`result.ts:11:1`). Two distinct positions,
+hence two groups where a human would see one. That is **under-grouping**, the asymmetry §5.1
+explicitly accepts: we loosen with numbers, we do not tighten after a miss.
 
 ---
 
-## Un témoin non planifié de la règle 15
+## Corpus limits
 
-`nextp/dev-tools/cursor-rules/hooks` porte **TypeScript 6.0.3**. Il n'était pas prévu au protocole, et il rend sur du code réel le service que le job de garde CI est censé rendre en laboratoire : `tssift` y **sort en 2** avec un message qui nomme la version résolue, son chemin et la plage supportée. Aucun mode dégradé, aucun avertissement sur stderr suivi d'un run bancal.
+*Section title updated 2026-08-03: it used to read "to fix before B1". B1 ran; problem 2 was
+solved by `eval/corpus.json`, problems 1 and 3 remain open, and [B2 §5](#5-what-to-do-before-replaying)
+puts corpus width back at the top of the list.*
 
-C'est la première confirmation hors laboratoire que le refus fonctionne, et elle vaut d'être notée : un dépôt en TS 6 traînait déjà sur la machine de développement avant que la première ligne de code du projet soit écrite. La contrainte de PROJECT.md §3 n'est pas une précaution théorique.
+Three problems, all observed on the very day of the first measurement. None invalidates the
+baseline; all three make the live real-repository corpus unusable as it stands for B1.
+
+**1. `lekes` is a live working tree.** Measured three times in one hour, it gave **23, then 29,
+then 8 diagnostics** (6 668, 8 141, then 1 475 characters in arm A). Something modifies it
+continuously. The `git status` guard did flag a before/after discrepancy on one of the runs;
+on inspection, **our measurement wrote nothing** — no file in any of the three repositories was
+modified, and an isolated run leaves the tree unchanged. This is concurrent outside editing.
+
+Two consequences. First, a repository under active work **is not a measurement target**: its
+absolute numbers are a snapshot of a moving object. Second, the guard cannot distinguish "we
+wrote" from "someone else wrote while we were reading" — it now says so explicitly in its
+message rather than letting the reader conclude the worst.
+
+A measurable consolation: across those three very different states, the B/A **ratio** stayed in a
+narrow band — 114 %, 113 %, 127 % — while the absolute values varied by a factor of 5. That is
+exactly the argument for which §7 publishes a ratio and not a value.
+
+**2. Live real repositories are clean — RESOLVED 2026-07-27 by `eval/corpus.json`.** `tccp` and
+`keyzia/data-explorer` have zero diagnostics, and `lekes` oscillates around zero. Valid
+measurement points but **without information**.
+
+The obvious lead — "take snapshots of repositories at moments when they were broken" — **does not
+work**, and that is a result in itself. Scan of 2026-07-27: **14/14 `lekes` commits and 24 of 240
+sampled `data-explorer` commits compile cleanly.** People commit green; CI sees to it. **Broken
+states live in working trees, not in history** — and a working tree moves under the measurement
+(problem 1).
+
+Hence the chosen solution: **pinned commit + authored mutation**. Each `eval/corpus.json` entry is
+a real `sha` plus a one-line `find`/`replace`, materialised by `bun run corpus:build` into
+`.corpus/` via `git archive` — without ever touching the source tree. Three properties no other
+option had together:
+
+- **frozen** — a `sha` does not move, so the numbers are comparable from month to month;
+- **open source** — the public repository contains only references and mutations, never `lekes`'s
+  private code; `.corpus/` is git-ignored;
+- **ground truth** — we know **by construction** which file is the cause. That is precisely what
+  B1's false-start metric requires, and what a randomly found broken commit does not provide.
+
+The corpus produces today **277 diagnostics over 3 root causes**, in three distinct code families
+(TS2339, TS2305, TS2554). The script's guard rejects an anchor that is absent, ambiguous, or that
+ultimately breaks nothing.
+
+Two traps hit while building it, both encoded in the script:
+- an anchor must target a file **tracked at the pinned `sha`** — `git archive` ignores untracked
+  files, and `lekes`'s tree contains several;
+- a mutation can apply without breaking anything. Removing an export from the `features/agents`
+  barrel produced **no** diagnostic: its 11 importers each consume a different symbol. That entry
+  was removed rather than dressed up; the barrel case stays covered by the `broken-barrel-export`
+  fixture, the fourth one planned.
+
+**3. Version coverage is narrower than announced.** `.plans/2026-07-27_p0-b0.md` gave `lekes` as
+TS 5.7 and `tccp` as TS 5.5; both are in fact on **5.9.3** as of 2026-07-27. Both stay in range,
+but in practice the measurement only covers **5.9.3 and 5.8.3**. The CI matrix remains the only
+place where 5.4 → 5.7 is exercised.
 
 ---
 
-## B1 — le bras modèle (harnais construit, T4 de B1)
+## An unplanned witness for rule 15
 
-**Étage B1, distinct de B0.** B0 (tout ce qui précède) ne compare que deux textes et n'appelle aucun modèle. B1 met un vrai agent dans la boucle et mesure son **comportement** — c'est là que H1 se teste sur autre chose qu'un compte de caractères.
+`nextp/dev-tools/cursor-rules/hooks` carries **TypeScript 6.0.3**. It was not in the protocol, and
+it performs on real code the service the CI guard job is meant to perform in the lab: `tssift`
+**exits 2** there with a message naming the resolved version, its path and the supported range. No
+degraded mode, no stderr warning followed by a wobbly run.
 
-### Protocole (reproductible depuis cette section seule)
+This is the first out-of-lab confirmation that the refusal works, and it is worth noting: a TS 6
+repository was already lying around on the development machine before the first line of the
+project was written. The PROJECT.md §3 constraint is not a theoretical precaution.
 
-Harnais maison sous `eval/agent/` (`mise exec -- bun run eval:agent`), **sans dépendance runtime** : boucle tool-use sur `fetch` global de Node 20 contre un endpoint **OpenAI-compatible** (`POST <base>/chat/completions`), pas de SDK. Le `system` est le premier message, les outils sont des `{type:"function", …}`, et le modèle répond avec des `tool_calls`. Par cible, deux bras qui ne diffèrent **que** par le cadrage initial du diagnostic :
+*(Since 2026-08-02 the range is 5.4 → 6.x and this repository would now be accepted; the witness
+is kept because what it demonstrates — a refusal that names what it looked for and where — is
+unchanged, and TS 7 still exits 2.)*
 
-- **A** = la sortie brute de `tsc --noEmit --pretty false`.
-- **B** = la sortie du **CLI réel** de tssift (`run()`), en `agent-text` — donc B reflète aussi les refus de la garde PnP (T2) : sur `yarn-pnp-project`, le bras B reçoit la sortie 2 « Yarn PnP », pas un rapport.
+---
 
-Même **prompt système** fixe, mêmes **trois outils que nous implémentons** (`read_file`, `write_file`, `run_typecheck`, confinés à une copie jetable de `before/`), même plafond de tours (**12**), `temperature: 0` (reproductible run à run), **n = 5**. Le modèle et l'endpoint sont **pilotés par l'environnement** — `OPENAI_BASE_URL` (défaut `https://api.openai.com/v1`), `OPENAI_API_KEY`, `AGENT_MODEL` — donc le même harnais mène un hôte OpenAI, un fournisseur compatible, ou un serveur local sans changer une ligne. Le modèle exact utilisé sera **consigné ici avec les chiffres**. Cible : les **20 fixtures** + les **3 entrées de corpus** = 23 cibles × 2 bras × 5 = **230 runs**.
+## B1 — the model arm
 
-### Les quatre métriques, et d'où elles sortent
+**Stage B1, distinct from B0.** B0 (everything above) compares two texts only and calls no model.
+B1 puts a real agent in the loop and measures its **behaviour** — that is where H1 gets tested on
+something other than a character count.
 
-| métrique | ce qu'elle teste | source dans le harnais |
+### Protocol (reproducible from this section alone)
+
+In-house harness under `eval/agent/` (`mise exec -- bun run eval:agent`), **with no runtime
+dependency**: a tool-use loop on Node 20's global `fetch` against an **OpenAI-compatible** endpoint
+(`POST <base>/chat/completions`), no SDK. The `system` prompt is the first message, tools are
+`{type:"function", …}`, and the model replies with `tool_calls`. Per target, two arms differing
+**only** in the initial framing of the diagnostics:
+
+- **A** = raw output of `tsc --noEmit --pretty false`.
+- **B** = the output of tssift's **real CLI** (`run()`), in `agent-text` — so B also reflects the
+  PnP guard's refusals (T2): on `yarn-pnp-project`, arm B receives the "Yarn PnP" exit-2 message,
+  not a report.
+
+Same fixed **system prompt**, same **three tools that we implement** (`read_file`, `write_file`,
+`run_typecheck`, confined to a disposable copy of `before/`), same turn cap (**12**), `temperature:
+0` (reproducible run to run), **n = 5**. Model and endpoint are **environment-driven** —
+`OPENAI_BASE_URL` (default `https://api.openai.com/v1`), `OPENAI_API_KEY`, `AGENT_MODEL` — so the
+same harness drives an OpenAI host, a compatible provider, or a local server without changing a
+line. The exact model used is **recorded here with the numbers**. Target set: the **20 fixtures**
+plus the **3 corpus entries** = 23 targets × 2 arms × 5 = **230 runs**.
+
+### The four metrics, and where they come from
+
+| metric | what it tests | source in the harness |
 |---|---|---|
-| correction au 1er essai | H2 | `run_typecheck` final à 0 diagnostic |
-| tours avant vert | H1 + H2 | compteur de boucle |
-| **taux de faux départ** | **H1, le cœur** | un `write_file` **hors** de l'ensemble racine autorisé, intercepté à l'appel |
-| régressions | garde-fou | run non résolu après édition |
+| first-attempt fix | H2 | final `run_typecheck` at 0 diagnostics |
+| turns to green | H1 + H2 | loop counter |
+| **false-start rate** | **H1, the core** | a `write_file` **outside** the allowed root set, intercepted at the call |
+| regressions | guard | run unresolved after editing |
 
-**Le faux départ est la métrique porteuse**, et elle exige une vérité terrain machine-lisible : `rootCauseFiles` a été ajouté à chaque `meta.json` (T4-prep) — l'ensemble des chemins qu'un correctif valide (au sens de `expectedFix`) peut toucher. Écrire hors de cet ensemble est un faux départ. `yarn-pnp-project` porte `rootCauseFiles: []` : son `before/` n'a aucun bug, donc **toute** écriture y est un faux départ.
+**The false start is the load-bearing metric**, and it requires machine-readable ground truth:
+`rootCauseFiles` was added to each `meta.json` (T4-prep) — the set of paths a valid fix (in the
+sense of `expectedFix`) may touch. Writing outside that set is a false start. `yarn-pnp-project`
+carries `rootCauseFiles: []`: its `before/` has no bug, so **any** write there is a false start.
 
-### Résultats — 2026-07-28, `cx/gpt-5.6-terra` (n=5, 230 runs)
+> ⚠️ **This metric is defective on `order-book-field-renamed`, discovered in B2.** See
+> [B2 §3](#3-and-the-false-start-metric-is-wrong-on-order-book). Two of the five corpus targets
+> measure nothing as a result. The B1 numbers below are published as obtained, with that caveat
+> attached.
 
-**Premier balayage réel.** Modèle `cx/gpt-5.6-terra` via un gateway OpenAI-compatible auto-hébergé, `temperature: 0`, plafond 12 tours, n=5, les 20 fixtures + 3 entrées de corpus. Le tableau brut est en fin de section ; ce qui compte est la lecture, et elle **n'est pas flatteuse** — ce qui est un livrable, pas un échec.
+### Results — 2026-07-28, `cx/gpt-5.6-terra` (n=5, 230 runs)
 
-**H2 — correction au 1er essai : aucun signal.** Les 230 runs finissent verts, **100 % des deux côtés, sur chaque cible.** Ce modèle résout toutes les fixtures quel que soit le cadrage ; la métrique ne discrimine donc rien ici. C'est un fait sur *ce* modèle et *ces* tâches (petites, une seule cause locale) — pas une réfutation de H2, mais une absence de prise : il faudrait des tâches plus dures, ou un modèle plus faible, pour que « atteindre le vert » sépare les deux bras.
+**First real sweep.** Model `cx/gpt-5.6-terra` via a self-hosted OpenAI-compatible gateway,
+`temperature: 0`, cap 12 turns, n=5, the 20 fixtures plus 3 corpus entries. The raw table is at the
+end of the section; what matters is the reading, and it is **not flattering** — which is a
+deliverable, not a failure.
 
-**H1, tokens — tient sur le vrai code, comme en B0.** Sur les **trois entrées de corpus**, les seules cibles réalistes, le bras B consomme **34 % de tokens en moins au total** (95 613 contre 144 601) : `lekes-ok-arity-changed` **33 089 → 11 191** (le pliage 153 → 2 du cadrage initial se paie en contexte réémis à chaque tour), `result-value-renamed` 42 403 → 30 770, `task-export-renamed` 69 109 → 53 652. Sur les petites fixtures c'est mitigé, exactement comme le rapport de caractères de B0 : le gain est volumétrique quand la cascade est grosse, nul ou négatif quand elle est courte.
+**H2 — first-attempt fix: no signal.** All 230 runs finish green, **100 % on both sides, on every
+target.** This model solves every fixture whatever the framing; the metric therefore discriminates
+nothing here. That is a fact about *this* model and *these* tasks (small, a single local cause) —
+not a refutation of H2, but an absence of purchase: harder tasks, or a weaker model, would be
+needed for "reaching green" to separate the two arms.
 
-**H1, faux départ — le cœur, et il ne valide pas.** Sur 115 runs par bras : **bras A 16 faux départs, bras B 19** — le rapport structuré n'a *pas* réduit les faux départs, il en a même un peu plus. Ils se concentrent sur une famille précise :
+**H1, tokens — holds on real code, as in B0.** On the **three corpus entries**, the only realistic
+targets, arm B consumes **34 % fewer tokens in total** (95 613 against 144 601):
+`lekes-ok-arity-changed` **33 089 → 11 191** (the 153 → 2 fold of the initial framing is paid for in
+context re-emitted every turn), `result-value-renamed` 42 403 → 30 770, `task-export-renamed`
+69 109 → 53 652. On the small fixtures it is mixed, exactly like B0's character ratio: the gain is
+volumetric when the cascade is large, nil or negative when it is short.
 
-- **module non résolu** (`phantom-dependency-pnpm`, `two-independent-roots`, `yarn-pnp-project`) : ~100 % des deux côtés. Face à `Cannot find module 'qs'`, le modèle atteint le vert en **écrivant un `src/qs.d.ts`** qui déclare le module — un contournement qui compile mais ne touche jamais la vraie cause (`package.json`, l'import, la dépendance manquante). Ni le rapport de tssift, ni même **le refus PnP en sortie 2**, ne l'en détournent : sur `yarn-pnp-project`, à qui le bras B ne rend *que* le message « lance via yarn », l'agent stube quand même et rend le projet « vert » — donc **faux, sur un projet sans bug**. La garde T2 protège un lecteur humain ; un agent déterminé passe outre.
-- **`corpus/lekes-result-value-renamed` : bras B *pire* que A** (80 % contre 40 %), sur une édition d'un fichier non impliqué (`mcp-tool-executor.adapter.ts`). Un contre-signal net à H1 sur une entrée réelle.
+**H1, false starts — the core, and it does not validate.** Over 115 runs per arm: **arm A 16 false
+starts, arm B 19** — the structured report did *not* reduce false starts, it produced slightly more.
+They concentrate in one precise family:
 
-**Ce que ce balayage établit, honnêtement.** Un modèle capable, sur ce corpus étroit : (1) corrige tout, des deux côtés — H2 sans prise ici ; (2) coûte moins de tokens avec le rapport plié, sur le gros code réel — la revendication volumétrique de H1 tient ; (3) ne fait **pas** moins de faux départs avec le rapport structuré — la revendication centrale de H1 n'est **pas** soutenue par ce run, et le mode de défaillance dominant (stuber un `.d.ts` sur une erreur de module) est indépendant du format du diagnostic. C'est **un** point de mesure, un modèle, un corpus que le plan lui-même dit trop étroit (T3 non fait) ; ce n'est pas un verdict, mais c'est le chiffre obtenu, et il tempère H1 plutôt qu'il ne le confirme.
+- **unresolved module** (`phantom-dependency-pnpm`, `two-independent-roots`, `yarn-pnp-project`):
+  ~100 % on both sides. Faced with `Cannot find module 'qs'`, the model reaches green by **writing a
+  `src/qs.d.ts`** declaring the module — a workaround that compiles but never touches the real cause
+  (`package.json`, the import, the missing dependency). Neither tssift's report nor even **the PnP
+  exit-2 refusal** deters it: on `yarn-pnp-project`, where arm B is given *only* the "run through
+  yarn" message, the agent stubs anyway and declares the project "green" — hence **false, on a
+  project with no bug**. The T2 guard protects a human reader; a determined agent walks past it.
+- **`corpus/lekes-result-value-renamed`: arm B *worse* than A** (80 % against 40 %), on an edit to an
+  uninvolved file (`mcp-tool-executor.adapter.ts`). A clear counter-signal to H1 on a real entry.
 
-### Tableau brut
+**What this sweep establishes, honestly.** A capable model, on this narrow corpus: (1) fixes
+everything, on both sides — H2 has no purchase here; (2) costs fewer tokens with the folded report,
+on large real code — H1's volumetric claim holds; (3) does **not** make fewer false starts with the
+structured report — H1's central claim is **not** supported by this run, and the dominant failure
+mode (stubbing a `.d.ts` on a module error) is independent of diagnostic format. This is **one**
+measurement point, one model, a corpus the plan itself calls too narrow (T3 not done); it is not a
+verdict, but it is the number obtained, and it tempers H1 rather than confirming it.
 
-| cible | bras | runs | vert | tours | faux départ | ~tokens |
+### Raw table
+
+| target | arm | runs | green | turns | false start | ~tokens |
 |---|---|---:|---:|---:|---:|---:|
 | partial-interface-rename | A | 5 | 100 % | 5.0 | 0 % | 4 854 |
 | partial-interface-rename | B | 5 | 100 % | 4.0 | 0 % | 4 341 |
@@ -440,15 +856,24 @@ Même **prompt système** fixe, mêmes **trois outils que nous implémentons** (
 | corpus/lekes-ok-arity-changed | A | 5 | 100 % | 4.2 | 0 % | 33 089 |
 | corpus/lekes-ok-arity-changed | B | 5 | 100 % | 4.2 | 0 % | 11 191 |
 
-*`~tokens` = `usage.total_tokens` cumulés sur la boucle, dominés par le cadrage initial réémis à chaque tour. Reproductible : `mise exec -- bun run eval:agent`, endpoint dans `.env`.*
+*`~tokens` = `usage.total_tokens` summed over the loop, dominated by the initial framing re-emitted
+each turn. Reproducible: `mise exec -- bun run eval:agent`, endpoint in `.env`.*
 
-### Résultats sur le corpus figé — le vrai test de H1 (2026-07-29)
+### Results on the frozen corpus — the real test of H1 (2026-07-29)
 
-Le premier balayage (ci-dessus) tournait sur des fixtures trop faciles : le modèle corrigeait tout, sans faux départ, quel que soit le cadrage. Le **corpus figé** (§ « le vrai test de H1 » — cinq cascades profondes de 20 à 65 diagnostics, une cause, des dizaines de sites, correctif ambigu) est écrit pour que le bruit morde. Balayage sur les 5 entrées, deux modèles, `temperature: 0`, n=5 : `cx/gpt-5.6-terra` (fort) et `cx/gpt-5.4-mini` (faible). **Cette fois H1 a une prise, et le signal est positif.**
+The first sweep (above) ran on fixtures that were too easy: the model fixed everything, with no
+false start, whatever the framing. The **frozen corpus** — five deep cascades of 20 to 65
+diagnostics, one cause, dozens of sites, an ambiguous fix — is written so that noise bites. Sweep
+over the 5 entries, two models, `temperature: 0`, n=5: `cx/gpt-5.6-terra` (strong) and
+`cx/gpt-5.4-mini` (weak). **This time H1 has purchase, and the signal is positive.**
 
-**gpt-5.6-terra (fort) :**
+> ⚠️ Read [B2](#b2--the-model-arm-re-measured-on-enriched-output-2026-08-03) before quoting these
+> numbers. The control arm drifted between campaigns, and the `order-book` false-start metric is
+> defective.
 
-| cible | bras | vert | tours | faux départ | ~tokens |
+**gpt-5.6-terra (strong):**
+
+| target | arm | green | turns | false start | ~tokens |
 |---|---|---:|---:|---:|---:|
 | dispatch-arity-changed | A | 100 % | 5.0 | 0 % | 16 503 |
 | dispatch-arity-changed | B | 100 % | 4.8 | 0 % | 7 189 |
@@ -461,9 +886,9 @@ Le premier balayage (ci-dessus) tournait sur des fixtures trop faciles : le mod�
 | shape-tag-renamed | A | 80 % | 8.8 | 100 % | 41 454 |
 | shape-tag-renamed | B | 100 % | 7.6 | 100 % | 15 988 |
 
-**gpt-5.4-mini (faible) :**
+**gpt-5.4-mini (weak):**
 
-| cible | bras | vert | tours | faux départ | ~tokens |
+| target | arm | green | turns | false start | ~tokens |
 |---|---|---:|---:|---:|---:|
 | dispatch-arity-changed | A | 100 % | 5.0 | 0 % | 15 171 |
 | dispatch-arity-changed | B | 100 % | 4.4 | 0 % | 5 832 |
@@ -476,158 +901,279 @@ Le premier balayage (ci-dessus) tournait sur des fixtures trop faciles : le mod�
 | shape-tag-renamed | A | 100 % | 9.6 | 100 % | 66 593 |
 | shape-tag-renamed | B | 100 % | 7.4 | 100 % | 21 942 |
 
-**Ce que ça dit, honnêtement — et c'est plus encourageant que le premier run.**
+**What this says, honestly — and it is more encouraging than the first run.**
 
-1. **Tokens : le bras B fait à peu près moitié moins, sur les deux modèles.** Total fort 115 052 → 47 284 (**41 %**), faible 127 458 → 57 515 (**45 %**). Le pliage du cadrage initial se paie en contexte réémis à chaque tour, et un petit modèle le paie cher. La revendication volumétrique de H1 tient nettement.
+1. **Tokens: arm B does roughly half, on both models.** Strong total 115 052 → 47 284 (**41 %**),
+   weak 127 458 → 57 515 (**45 %**). Folding the initial framing is paid for in context re-emitted
+   each turn, and a small model pays dearly for it. H1's volumetric claim clearly holds.
 
-2. **Faux départ : le bras B les réduit — le cœur de H1, enfin visible.** Fort **10/25 → 5/25** (divisé par deux), faible **10/25 → 8/25**. Le cas d'école est **`order-book-field-renamed`** (un champ d'entité renommé, lu à 17 sites) : le rapport plat pousse **les deux modèles à patcher les 17 sites** (100 % de faux départ), alors que le rapport plié — qui nomme `interface Order declared at src/domain/order.ts` — envoie le modèle fort sur **la seule déclaration** (0 %) et le faible bien mieux (60 %, contre 100 %). C'est très exactement la thèse de H1, démontrée.
+2. **False starts: arm B reduces them — H1's core, finally visible.** Strong **10/25 → 5/25**
+   (halved), weak **10/25 → 8/25**. The textbook case is **`order-book-field-renamed`** (an entity
+   field renamed, read at 17 sites): the flat report pushes **both models to patch all 17 sites**
+   (100 % false start), while the folded report — which names `interface Order declared at
+   src/domain/order.ts` — sends the strong model to **the single declaration** (0 %) and the weak one
+   much better (60 %, against 100 %). That is exactly H1's thesis, demonstrated. *(B2 later showed
+   this particular result is partly an artefact of the metric — see
+   [B2 §3](#3-and-the-false-start-metric-is-wrong-on-order-book).)*
 
-3. **Correction : le bras B l'améliore aussi sur les cascades dures.** Côté fort, `order-book` et `shape-tag` passent de 80 % à 100 % de vert — le rapport plat a fait échouer un run (12 tours à patcher des sites sans converger) là où le rapport plié réussit à chaque fois.
+3. **Fixing: arm B improves it too on the hard cascades.** On the strong side, `order-book` and
+   `shape-tag` go from 80 % to 100 % green — the flat report made one run fail (12 turns patching
+   sites without converging) where the folded report succeeds every time.
 
-4. **Mais ce n'est pas une garantie : `shape-tag-renamed` résiste.** 100 % de faux départ des deux côtés, sur les deux modèles. Nommer la cause (le tag d'union renommé) ne suffit pas : les modèles éditent quand même les consommateurs et la factory plutôt que de revenir sur la déclaration. Le pliage aide fortement quand la cause est une déclaration nette et la tentation « patcher N sites » ; il n'immunise pas contre un modèle qui décide de traiter les symptômes.
+4. **But it is not a guarantee: `shape-tag-renamed` resists.** 100 % false start on both sides, on
+   both models. Naming the cause (the renamed union tag) is not enough: the models still edit the
+   consumers and the factory rather than going back to the declaration. Folding helps strongly when
+   the cause is a clean declaration and the temptation is "patch N sites"; it does not immunise
+   against a model that decides to treat symptoms.
 
-**Verdict corpus.** Sur du code profond — le cas d'usage réel, pas les fixtures — le pliage **économise ~la moitié des tokens et réduit les faux départs**, le plus nettement là où le nombre de sites rend le patch-par-symptôme tentant. Le premier run « H1 non soutenue » était largement un artefact de tâches trop faciles ; ce corpus figé, lui, soutient H1 sur les tokens et l'appuie sur le faux départ, sans le sur-vendre (`shape-tag` reste un contre-exemple honnête).
+**Corpus verdict.** On deep code — the real use case, not the fixtures — folding **saves ~half the
+tokens and reduces false starts**, most clearly where the number of sites makes patch-by-symptom
+tempting. The first "H1 unsupported" run was largely an artefact of tasks that were too easy; this
+frozen corpus supports H1 on tokens and backs it on false starts, without overselling it
+(`shape-tag` remains an honest counter-example).
 
-*Reproductible : `AGENT_TARGETS=corpus/… AGENT_MODEL=… mise exec -- bun run eval:agent`. Corpus committé sous `corpus/`, endpoint dans `.env`.*
+*Reproducible: `AGENT_TARGETS=corpus/… AGENT_MODEL=… mise exec -- bun run eval:agent`. Corpus
+committed under `corpus/`, endpoint in `.env`.*
 
 ---
 
-## P2 — l'enrichissement : ce qu'il ajoute, et ce qu'il coûte (2026-08-01)
+## P2 — enrichment: what it adds and what it costs (2026-08-01)
 
-Six codes reçoivent un enrichisseur — **2339, 2353, 2345, 2554, 2305, 2724** — et la règle qui les sélectionne tient en une ligne : *un enrichisseur sort quand le fait qu'il produit est déjà capturé et que TypeScript ne l'imprime pas déjà.* Ce sont exactement les codes dont la charge utile est un **site de déclaration** et une **liste de membres**, deux choses qu'un lecteur de terminal ne peut obtenir d'aucune façon et qu'un éditeur donne au survol.
+Six codes get an enricher — **2339, 2353, 2345, 2554, 2305, 2724** — and the rule selecting them
+fits in one line: *an enricher ships when the fact it produces is already captured and TypeScript
+does not already print it.* These are exactly the codes whose payload is a **declaration site** and
+a **member list**, two things a terminal reader cannot obtain any other way and an editor gives on
+hover.
 
-### Le coût en volume, mesuré contre la ligne de base P1
+### The volume cost, measured against the P1 baseline
 
-Même harnais B0, mêmes 25 cibles, la seule variable étant la présence de l'étage `enrich` et de la ligne de fait sous l'en-tête de cause.
+> ⚠️ **The absolute values in this table do not reproduce — corrected 2026-08-02.** The harness was
+> then passing the renderer the project's **absolute** path as `rootLabel`, which `run.ts` does not
+> do: arm B carried `/home/<user>/…` and grew by the length of the checkout path, on one arm only.
+> **The deltas below remain valid** (the constant cancels in a difference); the totals and the B/A
+> ratios do not. Re-measured after the fix, the same code gives **16 038 and B/A 51 %**. Detail in
+> [P2/2307](#first-the-correction-the-harness-was-measuring-a-product-nobody-ships).
+
+Same B0 harness, same 25 targets, the only variable being the presence of the `enrich` stage and of
+the fact line under the cause header.
 
 | | B chars, P1 | B chars, P2 | delta | B/A, P1 | B/A, P2 |
 |---|---:|---:|---:|---:|---:|
-> **Les valeurs absolues de ce tableau ne se reproduisent pas — corrigé le 2026-08-02.** Le harnais passait alors au renderer le chemin **absolu** du projet en guise de `rootLabel`, ce que `run.ts` ne fait pas : le bras B portait `/home/<user>/…` et grossissait de la longueur du chemin de checkout, sur un seul des deux bras. **Les deltas ci-dessous restent justes** (la constante s'annule dans une différence) ; les totaux et les rapports B/A ne le sont pas. Mesuré à nouveau après correction, le même code donne **16 038 et B/A 51 %**. Détail en § P2/2307.
-
-| **total, 25 cibles** | 16 861 | 17 538 | **+4,0 %** | **54 %** | **56 %** |
+| **total, 25 targets** | 16 861 | 17 538 | **+4.0 %** | **54 %** | **56 %** |
 | `corpus/shape-tag-renamed` | 759 | 797 | +38 | 8 % | 9 % |
 | `corpus/mapper-argtype-changed` | 990 | 1 043 | +53 | 17 % | 18 % |
 | `corpus/order-book-field-renamed` | 574 | 657 | +83 | 21 % | 24 % |
 | `corpus/registry-barrel-dropped` | 590 | 649 | +59 | 24 % | 26 % |
 | `corpus/dispatch-arity-changed` | 773 | 821 | +48 | 39 % | 41 % |
 
-**Le chiffre à retenir : sur une cascade profonde, l'enrichissement coûte 40 à 85 caractères — de l'ordre de 10 à 20 tokens — pour un site de déclaration et la liste des propriétés réelles.** C'est le pliage qui paie la facture : les faits se rendent **une fois par groupe**, pas une fois par diagnostic, donc une cascade de 65 diagnostics repliée en une entrée porte une seule ligne de propriétés. Le rapport global passe de 54 % à 56 % et les cinq cibles de corpus restent entre 9 % et 41 %.
+**The number to remember: on a deep cascade, enrichment costs 40 to 85 characters — on the order of
+10 to 20 tokens — for a declaration site and the list of real properties.** Folding pays the bill:
+facts are rendered **once per group**, not once per diagnostic, so a 65-diagnostic cascade folded
+into one entry carries a single property line. The overall ratio goes from 54 % to 56 % and the five
+corpus targets stay between 9 % and 41 %.
 
-La contrepartie est visible sous `--all`, où il n'y a plus de groupe pour amortir : chaque diagnostic reporte ses faits. C'est le comportement voulu — `--all` restitue tout — mais c'est là que l'enrichissement est cher, et il faut le savoir avant de le mesurer par accident.
+The flip side is visible under `--all`, where there is no longer a group to amortise: every
+diagnostic carries its facts. This is the intended behaviour — `--all` restores everything — but it
+is where enrichment is expensive, and one should know that before measuring it by accident.
 
-### Le near-match n'existe pas, et c'est une mesure
+### Near-match does not exist, and that is a measurement
 
-§5.2 demandait un « candidat proche (Levenshtein) » sur 2339. Il n'est pas implémenté, et la raison n'est pas la difficulté.
+§5.2 asked for a "close candidate (Levenshtein)" on 2339. It is not implemented, and the reason is
+not difficulty.
 
-**TypeScript émet TS2551 / TS2724 *à la place de* TS2339 / TS2305 dès que son propre correcteur orthographique trouve un candidat.** Tout diagnostic qui parvient à un enrichisseur est donc, par construction, un cas que TypeScript a déjà examiné et rejeté. Une suggestion de notre part ne peut se déclencher que là où le sien a dit non.
+**TypeScript emits TS2551 / TS2724 *instead of* TS2339 / TS2305 as soon as its own spell-checker
+finds a candidate.** Any diagnostic reaching an enricher is therefore, by construction, a case
+TypeScript already examined and rejected. A suggestion from us can only fire where its own said no.
 
-Mesuré le 2026-08-01 sur les 20 fixtures et les 5 cascades de corpus, avec un seuil transcrit de `getSpellingSuggestion` (`len × 0,4 + 1`) :
+Measured 2026-08-01 over the 20 fixtures and the 5 corpus cascades, with a threshold transcribed
+from `getSpellingSuggestion` (`len × 0.4 + 1`):
 
-| code | diagnostics avec liste de membres résolue | TS avait suggéré | notre near-match se déclenche |
+| code | diagnostics with a resolved member list | TS had suggested | our near-match fires |
 |---|---:|---:|---:|
 | 2339 | 113 | **0** | **38** |
 | 2353 | 1 | 0 | 0 |
 | 2305 / 2724 | 24 | 0 | 0 |
 
-Les 38 déclenchements sont **deux cas distincts, faux tous les deux** : `kind` → `id` et `side` → `id`, distance 2, sur `shape-tag-renamed`. Sur un nom de quatre lettres une distance de 2 ne signifie rien. Et la cible est précisément la cascade qui **résiste à 100 % dans les deux bras en B1** : un fait qui y nomme `id` enverrait le modèle sur la mauvaise déclaration, c'est-à-dire exactement la panne que la règle 1 existe pour empêcher. Aucun `Fact` de type `near-match` n'est produit, sur aucun code, et un test le garde.
+The 38 firings are **two distinct cases, both wrong**: `kind` → `id` and `side` → `id`, distance 2,
+on `shape-tag-renamed`. On a four-letter name a distance of 2 means nothing. And the target is
+precisely the cascade that **resists at 100 % in both arms in B1**: a fact naming `id` there would
+send the model to the wrong declaration, which is exactly the failure rule 1 exists to prevent. No
+`Fact` of type `near-match` is produced, on any code, and a test guards it.
 
-### Deux choses que §5.2 et §6 supposaient et que les fixtures ont démenties
+### Two things §5.2 and §6 assumed that the fixtures disproved
 
-1. **`checker.typeToString` d'un type nommé rend son nom, pas sa forme.** L'exemple de §6 montrait `interface 'CreateUserInput'` suivi de `{ id: string; email: string; name?: string }` ; ce rendu n'existe pas pour un type nommé — on obtient `CreateUserInput`, et la ligne se lirait `type 'CreateUserInput' CreateUserInput`. **C'est donc la liste des propriétés, et non la forme, qui porte l'information sur un type nommé.** La forme n'est rendue que là où elle n'est pas le nom : une signature résolue (`(action: string, actor: string): AuditEvent` sur TS2554) ou un type anonyme.
-2. **« member » est le mauvais mot.** Pour une union, un *member* est un constituant, pas une propriété : `1 member: type` sur `type Shape = Circle | Square` se lit « cette union a un bras » alors qu'il faut lire « une propriété est accessible dessus ». La fixture qui l'a révélé s'appelle `narrowed-union-member`. La sortie dit **`property`** pour un type et **`export`** pour un module.
+1. **`checker.typeToString` of a named type returns its name, not its shape.** The §6 example showed
+   `interface 'CreateUserInput'` followed by `{ id: string; email: string; name?: string }`; that
+   rendering does not exist for a named type — you get `CreateUserInput`, and the line would read
+   `type 'CreateUserInput' CreateUserInput`. **It is therefore the property list, not the shape, that
+   carries the information on a named type.** The shape is rendered only where it is not the name: a
+   resolved signature (`(action: string, actor: string): AuditEvent` on TS2554) or an anonymous type.
+2. **"member" is the wrong word.** For a union, a *member* is a constituent, not a property: `1
+   member: type` on `type Shape = Circle | Square` reads as "this union has one arm" when it should
+   read "one property is accessible on it". The fixture that revealed it is called
+   `narrowed-union-member`. The output says **`property`** for a type and **`export`** for a module.
 
-### Quatre codes de §5.2 ne sortent pas, chacun pour une raison nommée
+### Four §5.2 codes do not ship, each for a named reason
 
-- **2769** — §5.2 le classe premier, la mesure le rétrograde. Toute sa charge utile est **déjà dans `chain`** : TypeScript imbrique un TS2772 par candidat, portant la signature *et* l'erreur qui l'a tué, et le renderer imprime cet arbre depuis P0. Ce que §5.2 voulait ajouter — « laquelle échoue le plus tard, et sur quel argument » — **n'est pas dérivable du capturé** : sur `overload-mismatch`, la seule fixture à chaîne ramifiée, les trois branches ont la même profondeur et une feuille chacune. Aucun signal structurel ne les sépare ; les classer voudrait dire lire les messages sémantiquement, c'est-à-dire deviner.
-- **2322** — le chemin de divergence demande les deux types comme structures. Seul le côté attendu est capturé, et comme `SymbolRef`, pas comme arbre.
-- **2307** — ses faits portent sur la **topologie installée** (déclaré ou non dans `package.json`, hoisting, PnP, `paths`). C'est de la lecture de fichiers, qu'un étage de pipeline n'a pas le droit de faire (règle 4) : il faut un nouveau canal `ProgramFacts` rempli par la source. La moitié *causalité* de 2307 est livrée depuis B1/T1 et plie ses trois fixtures. — **Levé le 2026-08-02** : le canal existe (`ProgramFacts.resolution`) et 2307 est le septième enrichisseur. Ce diagnostic-ci s'est avéré exact au mot près, ce qui est la seule raison de le laisser écrit ; § P2/2307.
-- **18047 / 18048** — l'origine de la nullabilité est une question de flot de contrôle ; rien de capturé n'y répond.
+- **2769** — §5.2 ranks it first, the measurement demotes it. Its whole payload is **already in
+  `chain`**: TypeScript nests a TS2772 per candidate, carrying the signature *and* the error that
+  killed it, and the renderer has printed that tree since P0. What §5.2 wanted to add — "which one
+  fails latest, and on which argument" — **is not derivable from what is captured**: on
+  `overload-mismatch`, the only branched-chain fixture, all three branches have the same depth and one
+  leaf each. No structural signal separates them; ranking them would mean reading the messages
+  semantically, i.e. guessing.
+- **2322** — the divergence path requires both types as structures. Only the expected side is
+  captured, and as a `SymbolRef`, not as a tree. — **Lifted 2026-08-02**, though not by deriving the
+  divergence path; see [P2/2322](#p2--2322--the-last-enrichable-code-and-not-for-the-announced-reason-2026-08-02).
+- **2307** — its facts are about the **installed topology** (declared or not in `package.json`,
+  hoisting, PnP, `paths`). That is file reading, which a pipeline stage is not allowed to do (rule 4):
+  a new `ProgramFacts` channel filled by the source is needed. The *causality* half of 2307 has
+  shipped since B1/T1 and folds its three fixtures. — **Lifted 2026-08-02**: the channel exists
+  (`ProgramFacts.resolution`) and 2307 is the seventh enricher. This diagnosis turned out to be exact
+  to the word, which is the only reason to leave it written; see
+  [P2/2307](#p2--2307--the-module-enricher-and-a-published-number-that-did-not-reproduce-2026-08-02).
+- **18047 / 18048** — the origin of nullability is a control-flow question; nothing captured answers
+  it. **Still open — the only §5.2 code that remains so.**
 
-Et **2551 sort en no-op délibéré** : il est déjà bon nativement et §5.2 interdit de le dégrader. Il est absent de la table, donc il se rend exactement comme TypeScript l'a écrit.
+And **2551 ships as a deliberate no-op**: it is already good natively and §5.2 forbids degrading it.
+It is absent from the table, so it renders exactly as TypeScript wrote it.
 
-### Un garde-fou ajouté au harnais, parce qu'un total absurde a failli être publié
+### A guard added to the harness, because an absurd total was nearly published
 
-Le `.corpus/` privé (trois copies dérivées d'un dépôt qui n'existe plus sur cette machine) rendait un bras A à **0 diagnostic** et un bras B à 754 : son propre `tsc` ne typecheckait plus rien pendant que `TsApiSource` parcourait encore l'arbre. Replié dans les totaux, cela donnait un **`B/A 1235 %`** — un nombre qui décrit une copie cassée et se lit comme une affirmation sur le produit.
+The private `.corpus/` (three copies derived from a repository that no longer exists on this machine)
+gave an arm A at **0 diagnostics** and an arm B at 754: its own `tsc` no longer typechecked anything
+while `TsApiSource` still walked the tree. Folded into the totals, that produced a **`B/A 1235 %`** —
+a number describing a broken copy and reading as a claim about the product.
 
-`measure.ts` refuse désormais ces lignes : les deux bras lisent le même tsconfig avec le même compilateur, donc « A trouve 0, B trouve beaucoup » n'est pas un résultat mais une cible périmée. La ligne est marquée `incoherent`, exclue des totaux, et la raison est imprimée. Le `corpus/` committé de T3 est immunisé par construction — c'est exactement pourquoi il a été committé.
+`measure.ts` now refuses those lines: both arms read the same tsconfig with the same compiler, so "A
+finds 0, B finds many" is not a result but a stale target. The line is marked `incoherent`, excluded
+from the totals, and the reason is printed. T3's committed `corpus/` is immune by construction —
+which is exactly why it was committed.
 
 ---
 
-## P2 / 2307 — l'enrichisseur de module, et un chiffre publié qui ne se reproduisait pas (2026-08-02)
+## P2 / 2307 — the module enricher, and a published number that did not reproduce (2026-08-02)
 
-Septième enrichisseur, et le seul qui ne lit **aucun** `context` : ses faits viennent du canal `ProgramFacts.resolution` que la source remplit à l'ingestion (PROJECT.md §4). Le blocage annoncé le 2026-08-01 — « il manque un canal, pas du code » — s'est vérifié à la lettre : le canal fait 148 lignes, l'enrichisseur 60.
+Seventh enricher, and the only one that reads **no** `context`: its facts come from the
+`ProgramFacts.resolution` channel that the source fills at ingestion (PROJECT.md §4). The blocker
+announced on 2026-08-01 — "a channel is missing, not code" — proved exact to the letter: the channel
+is 148 lines, the enricher 60.
 
-### D'abord, la correction : le harnais mesurait un produit que personne ne livre
+### First, the correction: the harness was measuring a product nobody ships
 
-`measure.ts` passait au renderer `rootLabel: projectDir`, **le chemin absolu**, là où `run.ts` passe `relative(process.cwd(), facts.root)`. La ligne `root:` du bras B portait donc `/home/<user>/…` dans la seule métrique que ce projet publie. Trois conséquences, toutes mauvaises :
+`measure.ts` was passing the renderer `rootLabel: projectDir`, **the absolute path**, where `run.ts`
+passes `relative(process.cwd(), facts.root)`. Arm B's `root:` line therefore carried `/home/<user>/…`
+in the one metric this project publishes. Three consequences, all bad:
 
-- **le bras B grossissait de la longueur du chemin de checkout** — ~27 caractères par cible ici, soit **~675 sur un total de 25** ;
-- **un seul des deux bras était touché.** Le bras A lance `tsc` avec `cwd: projectDir` et imprime des chemins relatifs. Le biais gonflait donc exactement le côté dont ce dépôt affirme qu'il est plus petit ;
-- **deux machines mesurant le même commit publiaient des rapports B/A différents**, sans qu'aucune des deux ne corresponde à la sortie réelle de l'outil.
+- **arm B grew by the length of the checkout path** — ~27 characters per target here, i.e. **~675
+  over a total of 25**;
+- **only one of the two arms was affected.** Arm A runs `tsc` with `cwd: projectDir` and prints
+  relative paths. The bias therefore inflated exactly the side this repository claims is smaller;
+- **two machines measuring the same commit published different B/A ratios**, with neither matching
+  the tool's real output.
 
-C'est ce qui explique que les totaux publiés le 2026-08-01 (**16 861 → 17 538, B/A 54 % → 56 %**) **ne se reproduisent pas** sur ce dépôt : mesuré à `HEAD` avec le harnais corrigé, le même code donne **16 038, B/A 51 %**. L'écart est un décalage constant par cible, pas une régression — et **les deltas publiés en P2 restent justes**, la constante s'annulant dans une différence : les `+38 à +83 caractères` par cascade de corpus sont mesurés à nouveau à l'identique. Ce sont les **valeurs absolues et les rapports** de ce tableau-là qui étaient contaminés, pas ses conclusions.
+This is why the totals published on 2026-08-01 (**16 861 → 17 538, B/A 54 % → 56 %**) **do not
+reproduce** on this repository: measured at `HEAD` with the corrected harness, the same code gives
+**16 038, B/A 51 %**. The gap is a constant per-target offset, not a regression — and **the deltas
+published in P2 remain valid**, the constant cancelling in a difference: the `+38 to +83 characters`
+per corpus cascade re-measure identically. It is the **absolute values and ratios** of that table
+that were contaminated, not its conclusions.
 
-Corrigé le 2026-08-02 ; tous les chiffres ci-dessous sont post-correction et reproductibles depuis n'importe quel chemin de checkout.
+Fixed 2026-08-02; every number below is post-fix and reproducible from any checkout path.
 
-### Le coût de 2307, mesuré
+### The cost of 2307, measured
 
-Même harnais, mêmes 25 cibles, seule variable l'enregistrement de `2307` dans la table des enrichisseurs.
+Same harness, same 25 targets, the only variable being the registration of `2307` in the enricher
+table.
 
-| | B chars, sans 2307 | B chars, avec | delta | B/A sans | B/A avec |
+| | B chars, without 2307 | B chars, with | delta | B/A without | B/A with |
 |---|---:|---:|---:|---:|---:|
-| **total, 25 cibles** | 16 038 | 16 635 | **+3,7 %** | **51 %** | **53 %** |
+| **total, 25 targets** | 16 038 | 16 635 | **+3.7 %** | **51 %** | **53 %** |
 | `wrong-tsconfig-paths` | 639 | 854 | +215 | 134 % | 179 % |
 | `yarn-pnp-project` | 483 | 654 | +171 | 146 % | 198 % |
 | `phantom-dependency-pnpm` | 454 | 615 | +161 | 150 % | 203 % |
 | `two-independent-roots` | 423 | 473 | +50 | 190 % | 212 % |
-| **les 21 autres cibles** | — | — | **0** | — | — |
+| **the other 21 targets** | — | — | **0** | — | — |
 
-**Le chiffre à lire en premier : le coût est nul sur les cinq cascades de corpus.** Aucune n'est une cascade de module — ce sont des cascades de type. 2307 ne se paie que là où il parle, ce qui est la propriété qu'on veut d'un enrichisseur sélectif, et **c'est aussi la limite honnête de ce jalon** : sa valeur n'est mesurée sur aucun code réel, seulement sur trois fixtures d'installateur. Le corpus figé n'en contient pas, et en fabriquer un serait une fixture de plus, pas une mesure.
+**The number to read first: the cost is zero on the five corpus cascades.** None of them is a module
+cascade — they are type cascades. 2307 is paid for only where it speaks, which is the property one
+wants from a selective enricher, and **it is also this milestone's honest limit**: its value is
+measured on no real code, only on three installer fixtures. The frozen corpus contains none, and
+manufacturing one would be another fixture, not a measurement. *(Partly addressed on 2026-08-03 —
+see [Real code](#real-code--keyziadata-explorer-2026-08-03), where 2307 fires on a real monorepo and
+where its weakest observation shows.)*
 
-**Le pliage paie encore la facture, et cette fois on peut le chiffrer exactement.** Sur `phantom-dependency-pnpm`, les deux lignes de fait pèsent 160 caractères et le delta mesuré est de +161 : elles sont rendues **une fois** pour trois importateurs. Ungrouped — c'est-à-dire sous `--all` — les mêmes deux lignes coûteraient 480. Le rapport 3:1 est la remontée des faits vers l'en-tête de groupe, et sa condition est l'intersection sur *tous* les membres (PROJECT.md §6).
+**Folding still pays the bill, and this time it can be quantified exactly.** On
+`phantom-dependency-pnpm`, the two fact lines weigh 160 characters and the measured delta is +161:
+they are rendered **once** for three importers. Ungrouped — that is, under `--all` — the same two
+lines would cost 480. The 3:1 ratio is facts being lifted to the group header, and its condition is
+intersection over *all* members (PROJECT.md §6).
 
-`two-independent-roots` est le cas sans amortissement : son TS2307 est seul, donc son unique fait (`no node_modules directory at the project root`) se paie plein tarif, +50 caractères sur un rapport de 423. C'est le comportement attendu d'un diagnostic isolé, et c'est aussi pourquoi le rapport B/A d'un témoin négatif se dégrade — il n'a rien à replier, par construction.
+`two-independent-roots` is the case with no amortisation: its TS2307 is alone, so its single fact
+(`no node_modules directory at the project root`) is paid at full price, +50 characters on a 423
+report. That is the expected behaviour for an isolated diagnostic, and it is also why a negative
+control's B/A ratio degrades — it has nothing to fold, by construction.
 
-### Ce que les trois fixtures rendent, et pourquoi c'est la bonne réponse dans les trois cas
+### What the three fixtures render, and why it is the right answer in all three cases
 
-Une seule phrase de TypeScript, trois vérités différentes derrière — le constat pour lequel les fixtures d'installateur avaient été committées le 2026-07-28, enfin exploité :
+One TypeScript sentence, three different truths behind it — the observation for which the installer
+fixtures were committed on 2026-07-28, finally exploited:
 
-| fixture | ce que TypeScript dit | ce que la sortie ajoute |
+| fixture | what TypeScript says | what the output adds |
 |---|---|---|
 | `wrong-tsconfig-paths` | `Cannot find module '@domain/order'` | `matches the tsconfig 'paths' pattern '@domain/*', mapped to 'src/lib/*', baseUrl '.'` |
 | `phantom-dependency-pnpm` | `Cannot find module 'qs'` | `'qs' is not declared in … package.json` · `installer: pnpm (pnpm-lock.yaml)` |
 | `yarn-pnp-project` | `Cannot find module '@acme/http'` | `'@acme/http' is declared in dependencies … as '1.2.0'` · `installer: yarn (yarn.lock); '.pnp.cjs' at the project root, and no node_modules directory` |
 
-`wrong-tsconfig-paths` est le seul endroit du produit où une cause est nommée **hors de tout fichier du programme** : une ligne de `tsconfig.json`, qu'aucun `declaredAt` ne peut atteindre. Et `yarn-pnp-project` est le cas où le fait le plus utile est celui qui **réfute** la lecture par défaut : le paquet *est* déclaré, *est* verrouillé, *est* installé — ce sont trois imports que seul le mode de lancement rend irrésolus.
+`wrong-tsconfig-paths` is the only place in the product where a cause is named **outside any file of
+the program**: a line of `tsconfig.json`, which no `declaredAt` can reach. And `yarn-pnp-project` is
+the case where the most useful fact is the one that **refutes** the default reading: the package *is*
+declared, *is* locked, *is* installed — these are three imports that only the launch mode leaves
+unresolved.
 
-### Trois choses qui ne sont pas dites, sur décision
+### Three things that are not said, by decision
 
-1. **Rien sur ce qui est réellement posé sur le disque.** `qs` est bien présent dans `phantom-dependency-pnpm`, un cran plus bas sous `node_modules/.pnpm/qs@6.11.2/`, et le dire serait la ligne la plus utile de tout ce jalon. Elle n'est pas dite : l'atteindre demande soit de parcourir la topologie **privée** de pnpm — une convention, pas un fichier déclaratif (règle 10) —, soit de parser `pnpm-lock.yaml`, donc d'introduire un parseur YAML, donc la **première dépendance runtime du projet**, pour un seul code. L'installateur et la déclaration manquante sont rendus à la place ; entre les deux le cas est identifiable, et chaque mot est vérifiable contre un fichier.
-2. **Rien sur ce que chaque installateur fait d'un paquet non déclaré.** Que le hoisting le rende joignable sous npm et que la topologie de pnpm ne le rende pas est vrai, documenté — et n'est pas un fait *sur ce projet-ci*. C'est là qu'un fait devient une explication, et une explication est à un pas d'une prescription (règle 1).
-3. **Rien du tout quand le manifeste n'a pas pu être lu.** `two-independent-roots` n'a pas de `package.json` : « non déclaré » serait une affirmation sur un fichier jamais ouvert. Seule survit l'observation qu'aucun `node_modules` n'est là. `ResolutionFacts.dependencies` est **absent** plutôt que vide exactement pour rendre cette distinction représentable (règle 5).
+1. **Nothing about what is actually on disk.** `qs` is indeed present in `phantom-dependency-pnpm`,
+   one level down under `node_modules/.pnpm/qs@6.11.2/`, and saying so would be the most useful line
+   in this whole milestone. It is not said: reaching it requires either walking pnpm's **private**
+   topology — a convention, not a declarative file (rule 10) — or parsing `pnpm-lock.yaml`, hence
+   introducing a YAML parser, hence **the project's first runtime dependency**, for a single code. The
+   installer and the missing declaration are rendered instead; between the two the case is
+   identifiable, and every word is verifiable against a file.
+2. **Nothing about what each installer does with an undeclared package.** That hoisting makes it
+   reachable under npm and that pnpm's topology does not is true, documented — and is not a fact *about
+   this project*. That is where a fact becomes an explanation, and an explanation is one step from a
+   prescription (rule 1).
+3. **Nothing at all when the manifest could not be read.** `two-independent-roots` has no
+   `package.json`: "not declared" would be a claim about a file never opened. All that survives is the
+   observation that no `node_modules` is there. `ResolutionFacts.dependencies` is **absent** rather
+   than empty precisely to make that distinction representable (rule 5). *(Seen on real code
+   2026-08-03: in a monorepo whose tsconfig sits in a directory with no manifest, this fallback is all
+   2307 has left to say — see [Real code](#real-code--keyziadata-explorer-2026-08-03).)*
 
-### Vérification
+### Verification
 
-`typecheck`, **534 tests** (518 avant ce jalon), `check` — tous verts. Les **8 snapshots** régénérés ont été relus : le diff est **purement additif**, 24 insertions et 0 suppression, et ne touche que les quatre cibles portant un TS2307. Les deux témoins négatifs gardent leur compte d'entrées.
+`typecheck`, **534 tests** (518 before this milestone), `check` — all green. The **8 regenerated
+snapshots** were re-read: the diff is **purely additive**, 24 insertions and 0 deletions, and touches
+only the four targets carrying a TS2307. Both negative controls keep their entry count.
 
 ---
 
-## P2 / 2739 · 2741 — la mesure qui a corrigé §5.2 (2026-08-02)
+## P2 / 2739 · 2741 — the measurement that corrected §5.2 (2026-08-02)
 
-Huitième et neuvième codes enrichis. Mais l'essentiel de ce jalon n'est pas dans
-l'enrichissement : c'est une **entrée dans `CONTEXT_CAPTURE_CODES`**, donc un
-gain de **causalité**, et c'est une mesure faite avant d'écrire une ligne qui a
-révélé que §5.2 se trompait de code.
+Eighth and ninth enriched codes. But the substance of this milestone is not in the enrichment: it is
+an **entry into `CONTEXT_CAPTURE_CODES`**, hence a **causality** gain, and it was a measurement made
+before writing a line that revealed §5.2 had the wrong code.
 
-### TS2739 ne tronque pas. TS2740 tronque, et il n'est pas dans la table des dix
+### TS2739 does not truncate. TS2740 does, and it is not in the table of ten
 
-§5.2 demande à 2739/2741 « la liste exacte des manquants, sans le reste du
-type », au motif explicite que TypeScript tronque la sienne. Sondé sur 5.9.3
-avec une interface de 1 à 8 propriétés manquantes :
+§5.2 asks 2739/2741 for "the exact list of what is missing, without the rest of the type", on the
+explicit grounds that TypeScript truncates its own. Probed on 5.9.3 with an interface missing 1 to 8
+properties:
 
-| propriétés manquantes | code émis | liste |
+| missing properties | code emitted | list |
 |---:|---|---|
-| 1 | **TS2741** | la nomme (`Property 'p0' is missing …`) |
+| 1 | **TS2741** | names it (`Property 'p0' is missing …`) |
 | 2 | TS2739 | `p0, p1` |
 | 3 | TS2739 | `p0, p1, p2` |
 | 4 | TS2739 | `p0, p1, p2, p3` |
@@ -636,91 +1182,82 @@ avec une interface de 1 à 8 propriétés manquantes :
 | 7 | **TS2740** | `p0, p1, p2, p3, and 3 more.` |
 | 8 | **TS2740** | `p0, p1, p2, p3, and 4 more.` |
 
-**La troncature décrite par §5.2 appartient à TS2740, qui n'est pas dans sa
-table des dix.** Pour 2739 et 2741, la liste est déjà complète à l'écran, et la
-répéter serait exactement ce que `facts.ts` interdit : un fait qui redit le
-message. Le payload que §5.2 leur attribuait n'existe donc pas pour eux.
+**The truncation §5.2 describes belongs to TS2740, which is not in its table of ten.** For 2739 and
+2741 the list is already complete on screen, and repeating it would be exactly what `facts.ts`
+forbids: a fact that restates the message. The payload §5.2 assigned them therefore does not exist
+for them.
 
-C'est le troisième cas où une table a désigné le mauvais code (après 2724 trouvé
-par la fixture, et 2769 rétrogradé par `chain`), et le troisième où la règle
-d'AGENTS.md a payé : **avant d'ajouter un code à une table, vérifier sur une
-fixture réelle lequel sort vraiment.**
+This is the third case where a table designated the wrong code (after 2724 found by the fixture, and
+2769 demoted by `chain`), and the third where the AGENTS.md rule paid off: **before adding a code to a
+table, check on a real fixture which one actually comes out.**
 
-### Ce que ces deux codes apportent vraiment : une cause partagée
+### What these two codes really bring: a shared cause
 
-Le type cible (`Rect`, `Profile`) est nommé dans chacun de ces messages et
-**jamais situé**. Or c'est une cause partagée : N sites de construction d'une
-interface cassent ensemble le jour où elle gagne un membre requis. Les deux
-codes entrent donc dans `CONTEXT_CAPTURE_CODES`, et le gain est un gain de §5.1.
+The target type (`Rect`, `Profile`) is named in each of those messages and **never located**. Yet it
+is a shared cause: N construction sites of an interface break together the day it gains a required
+member. Both codes therefore enter `CONTEXT_CAPTURE_CODES`, and the gain is a §5.1 gain.
 
-Deux formes de nœud arrivent au résolveur, mesurées avant implémentation :
+Two node shapes reach the resolver, measured before implementation:
 
-| forme | occurrences | ce qui résout |
+| shape | occurrences | what resolves |
 |---|---:|---|
-| nom d'une `VariableDeclaration` (`const origin: Rect = { … }`) | 4/6 | `getTypeAtLocation` **est** déjà le type cible |
-| `ReturnStatement` (`return { x, y }`) | 2/6 | le type de retour de la signature englobante — `getTypeAtLocation` y rend `any` |
+| name of a `VariableDeclaration` (`const origin: Rect = { … }`) | 4/6 | `getTypeAtLocation` **is** already the target type |
+| `ReturnStatement` (`return { x, y }`) | 2/6 | the return type of the enclosing signature — `getTypeAtLocation` gives `any` there |
 
-La seconde branche n'est pas une optimisation : sans elle, 2 diagnostics sur 6
-ne résolvent rien, et une cascade plierait 2 sites sur 3 — **pire que ne pas
-plier**, le membre resté dehors se lisant comme une seconde cause. Avec les
-deux : **6/6, un `declaredAt` par fixture.**
+The second branch is not an optimisation: without it, 2 diagnostics out of 6 resolve nothing, and a
+cascade would fold 2 sites out of 3 — **worse than not folding**, since the member left outside reads
+as a second cause. With both: **6/6, one `declaredAt` per fixture.**
 
-### Le résultat, mesuré
+### The result, measured
 
-| | sans capture 2739/2741 | avec | delta |
+| | without 2739/2741 capture | with | delta |
 |---|---:|---:|---:|
-| **total, 25 cibles** | 16 635 | 16 948 | **+1,9 %** (B/A 53 % → 54 %) |
-| **entrées rendues** | 52 | **48** | **−4** |
-| `missing-required-property` | 732 (3 entrées) | 896 (**1 entrée**) | +164 |
-| `missing-multiple-properties` | 506 (3 entrées) | 655 (**1 entrée**) | +149 |
+| **total, 25 targets** | 16 635 | 16 948 | **+1.9 %** (B/A 53 % → 54 %) |
+| **entries rendered** | 52 | **48** | **−4** |
+| `missing-required-property` | 732 (3 entries) | 896 (**1 entry**) | +164 |
+| `missing-multiple-properties` | 506 (3 entries) | 655 (**1 entry**) | +149 |
 
-**Pliage à cause unique : 8/17 → 10/17.** Le lien structurel `declaredAt`
-identique passe de cinq à sept fixtures.
+**Single-cause folding: 8/17 → 10/17.** The identical-`declaredAt` structural link goes from five
+fixtures to seven.
 
-**Et les caractères montent alors que les entrées baissent — c'est attendu, et
-il faut le dire plutôt que de le cacher.** C'est le même effet que sur
-`partial-interface-rename` : sous le plafond d'affichage de trois sites, les
-trois diagnostics s'impriment encore et l'en-tête de cause s'ajoute par-dessus.
-**Le gain est structurel, pas volumétrique** — sur une fixture de trois erreurs,
-`tsc` n'a pas de problème de bruit. Ce que ces deux fixtures démontrent est que
-le lien existe et se capture ; ce qu'elles ne démontrent pas est une économie,
-et aucune cascade de corpus ne porte ces codes pour le trancher.
+**And the characters rise while the entries fall — this is expected, and it should be said rather than
+hidden.** It is the same effect as on `partial-interface-rename`: below the three-site display cap,
+all three diagnostics still print and the cause header is added on top. **The gain is structural, not
+volumetric** — on a three-error fixture, `tsc` has no noise problem. What these two fixtures
+demonstrate is that the link exists and can be captured; what they do not demonstrate is a saving, and
+no corpus cascade carries these codes to settle it.
 
-### Un test qui a fait son travail
+### A test that did its job
 
-`test/causality.test.ts` portait depuis P1 une assertion `groups: []` sur
-`missing-required-property`, avec en commentaire : *« ces tests existent pour
-que, le jour où la capture est étendue, le changement apparaisse comme un échec
-ici plutôt que comme une amélioration silencieuse que personne n'a mesurée. »*
-Il a échoué exactement comme prévu. Il est réécrit pour enregistrer le pliage —
-et il garde sa moitié la plus tranchante : **le pliage se fait sur l'interface
-(`profile.ts:7:1`), pas sur le `related` (`profile.ts:10:3`)**. Deux positions
-distinctes, donc la question 2 du plan P1 reste close dans le sens où
-`assignability-mismatch` l'avait close.
+`test/causality.test.ts` had carried since P1 a `groups: []` assertion on
+`missing-required-property`, with the comment: *"these tests exist so that, the day capture is
+extended, the change shows up as a failure here rather than as a silent improvement nobody
+measured."* It failed exactly as designed. It is rewritten to record the fold — and it keeps its
+sharpest half: **the fold happens on the interface (`profile.ts:7:1`), not on the `related`
+(`profile.ts:10:3`)**. Two distinct positions, so question 2 of the P1 plan stays closed in the sense
+`assignability-mismatch` closed it.
 
-### Vérification
+### Verification
 
-`typecheck`, **539 tests** (534 avant), `check` — verts. **4 snapshots** relus :
-les deux fixtures passent de 3 entrées à 1, et sous `--all` chaque diagnostic
-porte sa ligne `required by:`. 23 insertions, 15 suppressions — les suppressions
-sont les lignes `[2]`/`[3]` que le pliage remplace, pas des diagnostics perdus
-(`--all` les restitue tous, règle 2).
+`typecheck`, **539 tests** (534 before), `check` — green. **4 snapshots** re-read: both fixtures go
+from 3 entries to 1, and under `--all` each diagnostic carries its `required by:` line. 23 insertions,
+15 deletions — the deletions are the `[2]`/`[3]` lines that folding replaces, not lost diagnostics
+(`--all` restores them all, rule 2).
 
 ---
 
-## P2 / 2740 — le code que §5.2 décrivait sans le nommer (2026-08-02)
+## P2 / 2740 — the code §5.2 described without naming (2026-08-02)
 
-Ajouté à la table de §5.2 **sur décision humaine**, la règle d'AGENTS.md
-interdisant d'y faire entrer un code sans la demander. La mesure de la section
-précédente avait montré que la troncature attribuée à 2739/2741 appartient à
-2740 ; c'est donc le seul endroit où « la liste exacte des manquants » est une
-information que le lecteur n'a pas déjà.
+Added to the §5.2 table **by human decision**, the AGENTS.md rule forbidding a code from entering it
+without asking. The previous section's measurement had shown that the truncation attributed to
+2739/2741 belongs to 2740; it is therefore the only place where "the exact list of what is missing"
+is information the reader does not already have.
 
-### Ce qu'il rend
+### What it renders
 
-Une fixture, `missing-many-properties`, seule à émettre ce code — trois sites
-construisant un `ShipmentLabel` à six champs près. Identique sous **5.4.5 et
-5.9.3** : trois TS2740, quatre membres nommés, `and 2 more.`
+One fixture, `missing-many-properties`, the only one emitting this code — three sites constructing a
+six-field-short `ShipmentLabel`. Identical under **5.4.5 and 5.9.3**: three TS2740, four members
+named, `and 2 more.`
 
 ```
 [1] cause: interface 'ShipmentLabel' declared at src/shipping/label.ts:5:1
@@ -730,96 +1267,81 @@ construisant un `ShipmentLabel` à six champs près. Identique sous **5.4.5 et
     …
 ```
 
-**La complétion est calculée par soustraction contre le message verbatim**, et
-non en prenant `missing.slice(4)`. La queue n'est la bonne réponse que si
-TypeScript imprime dans l'ordre de `getPropertiesOfType` — une supposition sur
-ses internes, pas une vérification. La comparaison à ce qui a réellement été
-imprimé tient quel que soit son ordre, et dégrade en « ne rien ajouter » s'il
-cesse un jour d'imprimer des noms.
+**The completion is computed by subtraction against the verbatim message**, not by taking
+`missing.slice(4)`. The tail is only the right answer if TypeScript prints in `getPropertiesOfType`
+order — an assumption about its internals, not a verification. Comparing against what was actually
+printed holds whatever the order, and degrades to "add nothing" if it ever stops printing names.
 
-*(La ligne `8 properties:` et la ligne de complétion se recouvrent
-partiellement — les deux noms apparaissent deux fois. C'est le prix d'une règle
-uniforme : l'en-tête décrit le type cause pour **tout** code pliant sur une
-déclaration, et lui faire une exception ici coûterait plus en cas particulier
-qu'en caractères.)*
+*(The `8 properties:` line and the completion line overlap partially — both names appear twice. That
+is the price of a uniform rule: the header describes the cause type for **every** code that folds on a
+declaration, and making an exception here would cost more in special-casing than in characters.)*
 
-### Coût : nul sur les cibles préexistantes
+### Cost: zero on pre-existing targets
 
-| | 25 cibles | 26 cibles |
+| | 25 targets | 26 targets |
 |---|---:|---:|
-| avant 2740 | 16 948 | — |
-| après 2740 | **16 948** | 18 010 |
+| before 2740 | 16 948 | — |
+| after 2740 | **16 948** | 18 010 |
 
-`18 010 − 1 062 = 16 948` exactement : la fixture nouvelle est la seule ligne
-qui bouge, et aucune des vingt-cinq autres ne coûte un caractère de plus. Le
-rapport global passe de 54 % à 56 % **uniquement** parce qu'une cible s'ajoute,
-et cette cible-là plie 3 diagnostics en 1 pour 157 %.
+`18 010 − 1 062 = 16 948` exactly: the new fixture is the only line that moves, and none of the other
+twenty-five costs one extra character. The overall ratio goes from 54 % to 56 % **only** because a
+target is added, and that target folds 3 diagnostics into 1 for 157 %.
 
-### Une hypothèse du renderer que ce code a fait tomber
+### A renderer assumption this code brought down
 
-Depuis le 2026-08-01, la suppression des faits d'un membre de groupe était
-**tout ou rien**, au motif — écrit dans le code — que *« les faits d'un
-diagnostic décrivent tous le seul symbole que son contexte a résolu, donc si la
-déclaration est parmi eux, l'ensemble est ce que l'en-tête a déjà dit »*.
+Since 2026-08-01, suppressing a group member's facts was **all or nothing**, on the grounds — written
+in the code — that *"a diagnostic's facts all describe the single symbol its context resolved, so if
+the declaration is among them, the set is what the header already said"*.
 
-**2740 réfute la prémisse.** Sa ligne `2 more not listed above: …` est une
-propriété de la *panne*, pas du type cible : aucun `SymbolRef` ne peut la
-produire, donc aucun en-tête ne l'avait dite. Sous l'ancienne règle elle était
-supprimée dans le **rendu par défaut** et ne survivait que sous `--all` —
-l'enrichissement absent exactement de la vue pour laquelle il est écrit.
+**2740 refutes the premise.** Its `2 more not listed above: …` line is a property of the *failure*, not
+of the target type: no `SymbolRef` can produce it, so no header had said it. Under the old rule it was
+suppressed in the **default rendering** and survived only under `--all` — the enrichment absent from
+exactly the view it is written for.
 
-La règle est maintenant **fait par fait**, contre ce que l'en-tête a réellement
-imprimé : égalité, **ou suffixe**. Le suffixe est ce qui reconnaît
-`'CreateUserInput' has 3 properties: id, email, name` et l'en-tête
-`3 properties: id, email, name` comme la même liste écrite deux fois, sans coder
-en dur ni l'une ni l'autre formulation. Et ce qui reste commun à tous les
-membres sans avoir été dit remonte **une fois** sur l'en-tête, comme pour les
-groupes `module`.
+The rule is now **fact by fact**, against what the header actually printed: equality, **or suffix**.
+The suffix is what recognises `'CreateUserInput' has 3 properties: id, email, name` and the header `3
+properties: id, email, name` as the same list written twice, without hard-coding either phrasing. And
+whatever remains common to all members without having been said is lifted **once** onto the header, as
+for `module` groups.
 
-**La refonte est neutre, et le snapshot le prouve : 32 insertions, 0
-suppression.** Aucune des vingt fixtures préexistantes ne change d'un caractère,
-ce qui est la démonstration que la règle du suffixe reproduit l'ancienne partout
-où elle s'appliquait.
+**The rework is neutral, and the snapshot proves it: 32 insertions, 0 deletions.** None of the twenty
+pre-existing fixtures changes by a character, which is the demonstration that the suffix rule
+reproduces the old one everywhere it applied.
 
-### Vérification
+### Verification
 
-`typecheck`, **560 tests** (539 avant), `check`, et `fixtures:verify` sur **21**
-fixtures — verts. La fixture nouvelle émet 3 × TS2740 sous 5.4.5 comme sous
-5.9.3, seuil de troncature compris.
+`typecheck`, **560 tests** (539 before), `check`, and `fixtures:verify` on **21** fixtures — green. The
+new fixture emits 3 × TS2740 under 5.4.5 as under 5.9.3, truncation threshold included.
 
 ---
 
-## P2 / 2322 — le dernier code enrichissable, et pas pour la raison annoncée (2026-08-02)
+## P2 / 2322 — the last enrichable code, and not for the announced reason (2026-08-02)
 
-§5.2 demande à 2322 « le chemin de divergence (`a.b[0].c`) ». Il reste non
-dérivable : il faudrait les deux types comme structures, et seul l'attendu est
-capturé. **Ce qui l'est valait davantage** — où le type cible est déclaré, et,
-pour une union, ce qu'il autorise réellement.
+§5.2 asks 2322 for "the divergence path (`a.b[0].c`)". It remains underivable: it would require both
+types as structures, and only the expected side is captured. **What is captured was worth more** —
+where the target type is declared, and, for a union, what it actually allows.
 
-`Type '"GBP"' is not assignable to type 'Currency'.` nomme le type au nom
-duquel la valeur est refusée, et ne dit ni où `Currency` vit, ni qu'il vaut
-`"EUR" | "USD"`. Les deux sont à un survol de souris dans un éditeur et
-inatteignables depuis un terminal — la définition même, dans ce projet, d'un
-fait qui vaut ses tokens.
+`Type '"GBP"' is not assignable to type 'Currency'.` names the type in whose name the value is
+refused, and says neither where `Currency` lives nor that it equals `"EUR" | "USD"`. Both are one
+mouse-hover away in an editor and unreachable from a terminal — the very definition, in this project,
+of a fact worth its tokens.
 
-### Le résultat le plus net du jalon : la fixture anti-`related` plie correctement
+### The milestone's cleanest result: the anti-`related` fixture folds correctly
 
-`assignability-mismatch` a été écrite pour **interdire** une règle : indexer sur
-le span d'un `relatedInformation`. Deux de ses trois diagnostics portent un
-`related` désignant `currency.ts:9:3` — la *propriété* `currency` de `Rate`, du
-code parfaitement correct — et le troisième n'en porte aucun.
+`assignability-mismatch` was written to **forbid** a rule: indexing on a `relatedInformation` span. Two
+of its three diagnostics carry a `related` designating `currency.ts:9:3` — the `currency` *property* of
+`Rate`, perfectly correct code — and the third carries none.
 
-Résolu sur le **type contextuel**, les trois atterrissent sur
-`currency.ts:6:1`, `type Currency`, la ligne que `meta.json` nomme cause racine.
+Resolved on the **contextual type**, all three land on `currency.ts:6:1`, `type Currency`, the line
+`meta.json` names as root cause.
 
-| clé | atteint | où |
+| key | reaches | where |
 |---|---:|---|
-| span du `related` | 2 / 3 | `currency.ts:9:3` — code correct, à ne pas toucher |
-| **type contextuel** | **3 / 3** | **`currency.ts:6:1` — l'union qui a perdu `"GBP"`** |
+| `related` span | 2 / 3 | `currency.ts:9:3` — correct code, not to be touched |
+| **contextual type** | **3 / 3** | **`currency.ts:6:1` — the union that lost `"GBP"`** |
 
-La fixture porte donc désormais les **deux** moitiés de l'argument au lieu
-d'une : le `related` est la mauvaise clé, *et* le type contextuel en est une
-bonne. Rendu :
+The fixture therefore now carries **both** halves of the argument instead of one: the `related` is the
+wrong key, *and* the contextual type is a good one. Rendering:
 
 ```
 [1] cause: type-alias 'Currency' declared at src/pricing/currency.ts:6:1
@@ -827,159 +1349,140 @@ bonne. Rendu :
     3 diagnostics, all TS2322
 ```
 
-### Une inversion mesurée : objet vs primitif
+### A measured inversion: object vs primitive
 
-P2 avait établi que pour un type **objet nommé**, `typeToString` rend le nom et
-c'est la **liste des propriétés** qui porte l'information. Pour une union de
-**primitifs**, c'est l'exact inverse :
+P2 had established that for a named **object** type, `typeToString` returns the name and it is the
+**property list** that carries the information. For a union of **primitives**, it is the exact
+opposite:
 
-| type | `typeToString` | `getPropertiesOfType` | ce qui informe |
+| type | `typeToString` | `getPropertiesOfType` | what informs |
 |---|---|---|---|
-| `interface CreateUserInput` | `CreateUserInput` (le nom) | `id, email, name` | **les propriétés** |
-| `type Currency = "EUR" \| "USD"` | `Currency` (le nom) | **50 membres de `String`** — `charAt`, `blink`, `fontcolor` | **les constituants** |
+| `interface CreateUserInput` | `CreateUserInput` (the name) | `id, email, name` | **the properties** |
+| `type Currency = "EUR" \| "USD"` | `Currency` (the name) | **50 members of `String`** — `charAt`, `blink`, `fontcolor` | **the constituents** |
 
-Aucune des deux ne se généralise, d'où un test sur le type (`hasOwnMembers`)
-plutôt qu'une règle unique. Vérifié dans les deux sens : `narrowed-union-member`
-— une union d'**objets**, où la liste commune est l'information — sort **au
-caractère près** comme avant, et une version intermédiaire qui expansait toutes
-les unions lui infligeait 130 caractères de littéraux d'objet à la place de
-`1 property: type`, qui est la ligne qui répond vraiment à « pourquoi `.kind`
-n'existe pas sur Shape ».
+Neither generalises, hence a test on the type (`hasOwnMembers`) rather than a single rule. Verified in
+both directions: `narrowed-union-member` — a union of **objects**, where the common list is the
+information — comes out **to the character** as before, and an intermediate version that expanded every
+union inflicted 130 characters of object literals on it in place of `1 property: type`, which is the
+line that actually answers "why doesn't `.kind` exist on Shape".
 
-### Un garde étendu, et une règle 1 qui a sonné juste
+### A guard extended, and a rule 1 that rang true
 
-Capturer 2322 a produit le premier cas d'un type attendu **hors du programme** :
-`unconstrained-generic` résout vers `Map` dans `lib.es2015.collection.d.ts`. Ce
-qui sortait :
+Capturing 2322 produced the first case of an expected type **outside the program**:
+`unconstrained-generic` resolves to `Map` in `lib.es2015.collection.d.ts`. What came out:
 
 ```
 expected type: interface 'Map' Map<string, User> at <ts-lib>/lib.es2015.collection.d.ts:19:1
 'Map' has 12 properties: clear, delete, forEach, get, has, set, size, …, __@iterator@2156
 ```
 
-Vrai, vérifiable, et sans valeur pour le lecteur d'un échec d'inférence
-générique — plus deux noms internes (`__@iterator@2156`) dont l'identifiant
-change d'une compilation à l'autre. **Et le test de non-prescription de la
-règle 1 a échoué dessus**, sur `set` et `delete`, membres de `Map` : le test
-n'avait pas tort, la sortie n'avait rien à faire là.
+True, verifiable, and worthless to the reader of a generic inference failure — plus two internal names
+(`__@iterator@2156`) whose identifier changes from one compilation to the next. **And rule 1's
+non-prescription test failed on it**, on `set` and `delete`, members of `Map`: the test was not wrong,
+the output had no business being there.
 
-Deux corrections, toutes deux générales :
-- **un enrichisseur ne décrit jamais une déclaration hors des fichiers du
-  programme** — même autorité que §5.1 pour une cause, `ProgramFacts.files`,
-  tout ou rien puis repli natif (règle 5) ;
-- **les noms de symboles bien connus (`__@…`) sont filtrés** de `memberNames`,
-  pour la même raison que `displayName` refuse `__type`.
+Two fixes, both general:
+- **an enricher never describes a declaration outside the program's files** — the same authority as
+  §5.1 for a cause, `ProgramFacts.files`, all or nothing then native fallback (rule 5);
+- **well-known symbol names (`__@…`) are filtered** out of `memberNames`, for the same reason
+  `displayName` refuses `__type`.
 
-### Coût
+### Cost
 
-| | entrées | B chars | B/A |
+| | entries | B chars | B/A |
 |---|---:|---:|---:|
-| avant 2322 | 49 | 18 010 | 56 % |
-| après | **47** | 18 150 | 57 % |
+| before 2322 | 49 | 18 010 | 56 % |
+| after | **47** | 18 150 | 57 % |
 
-**+140 caractères, −2 entrées.** Le seul poste qui bouge est
-`assignability-mismatch`, 284 → 753 (265 %) : trois diagnostics repliés en une
-entrée, plus l'en-tête et la ligne d'union. Comme les autres petites fixtures,
-le gain y est **structurel et non volumétrique**.
+**+140 characters, −2 entries.** The only item that moves is `assignability-mismatch`, 284 → 753
+(265 %): three diagnostics folded into one entry, plus the header and the union line. As with the other
+small fixtures, the gain there is **structural and not volumetric**.
 
-**Pliage à cause unique : 12 sur 18** — contre 8 sur 17 en début de journée. Le
-lien `declaredAt` identique porte neuf fixtures, le spécificateur partagé trois.
+**Single-cause folding: 12 out of 18** — against 8 out of 17 at the start of the day. The identical
+`declaredAt` link carries nine fixtures, the shared specifier three.
 
-### Ce que 2322 ne plie pas, et c'est correct
+### What 2322 does not fold, and that is correct
 
-`unconstrained-generic` porte un TS2322 et **ne plie pas** : son type attendu est
-`Map`, hors programme, et le garde le refuse. C'est le comportement voulu — la
-fixture est le témoin des diagnostics *sur* leur propre cause — et c'est aussi
-le rappel que capturer un code ne fait pas plier tous ses diagnostics.
+`unconstrained-generic` carries a TS2322 and **does not fold**: its expected type is `Map`, outside the
+program, and the guard refuses it. This is the intended behaviour — the fixture is the witness for
+diagnostics sitting *on* their own cause — and it is also the reminder that capturing a code does not
+make all its diagnostics fold.
 
-### Vérification
+### Verification
 
-`typecheck`, **560 tests**, `check` — verts. Diff de snapshot : **12 insertions,
-8 suppressions, sur la seule `assignability-mismatch`**. Toutes les autres
-fixtures, `narrowed-union-member` et `unconstrained-generic` comprises, sortent
-au caractère près comme avant — la démonstration que les corrections apportées à
-`symbolRefOfType` sont ciblées et non des effets de bord.
+`typecheck`, **560 tests**, `check` — green. Snapshot diff: **12 insertions, 8 deletions, on
+`assignability-mismatch` alone**. Every other fixture, `narrowed-union-member` and
+`unconstrained-generic` included, comes out to the character as before — the demonstration that the
+fixes made to `symbolRefOfType` are targeted and not side effects.
 
 ---
 
-## B2 — le bras modèle re-mesuré sur la sortie enrichie (2026-08-03)
+## B2 — the model arm re-measured on enriched output (2026-08-03)
 
-Même protocole que B1 : cinq cascades du corpus figé, deux bras, deux modèles,
-`temperature: 0`, n=5 — 100 runs. La seule variable voulue est que le bras B
-porte désormais l'enrichissement de P2 (onze codes).
+Same protocol as B1: five frozen-corpus cascades, two arms, two models, `temperature: 0`, n=5 — 100
+runs. The only intended variable is that arm B now carries P2's enrichment (eleven codes).
 
-**Le résultat principal est négatif, et il faut le lire en entier avant de
-conclure quoi que ce soit.**
+**The headline result is negative, and it has to be read in full before concluding anything.**
 
-### Les chiffres bruts
+### The raw numbers
 
-| modèle | tokens A | tokens B | B/A | faux départ A | faux départ B |
+| model | tokens A | tokens B | B/A | false start A | false start B |
 |---|---:|---:|---:|---:|---:|
-| fort `cx/gpt-5.6-terra` | 108 049 | 68 054 | **63 %** | **10/25** | **10/25** |
-| faible `cx/gpt-5.4-mini` | 127 583 | 72 551 | **57 %** | **10/25** | **10/25** |
+| strong `cx/gpt-5.6-terra` | 108 049 | 68 054 | **63 %** | **10/25** | **10/25** |
+| weak `cx/gpt-5.4-mini` | 127 583 | 72 551 | **57 %** | **10/25** | **10/25** |
 
-Correction au 1er essai : **100 % partout, les deux bras, les deux modèles.**
+First-attempt fix: **100 % everywhere, both arms, both models.**
 
-### 1. B1 et B2 ne se soustraient pas — le bras A a bougé
+### 1. B1 and B2 do not subtract — the control arm moved
 
-Le bras A est du `tsc` brut : **son code n'a pas changé d'une ligne** entre les
-deux campagnes. Il a pourtant bougé.
+Arm A is raw `tsc`: **its code did not change by a line** between the two campaigns. It moved anyway.
 
-| cible | vert B1 → B2 | tours | tokens |
+| target | green B1 → B2 | turns | tokens |
 |---|---|---|---|
 | `order-book-field-renamed` A | 80 % → **100 %** | 7.2 → 5.8 | 25 215 → 23 280 |
 | `shape-tag-renamed` A | 80 % → **100 %** | 8.8 → 7.2 | 41 454 → 34 888 |
 | **total A** | | | 115 052 → 108 049 (**−6 %**) |
 
-Un bras témoin qui se déplace de 6 % en tokens et remonte deux taux de
-correction de 80 à 100 % dit une chose : **l'environnement a changé entre le
-2026-07-29 et le 2026-08-03** — endpoint auto-hébergé, même *nom* de modèle, pas
-nécessairement le même service derrière. Toute différence B1 → B2 est donc
-confondue avec cette dérive, et **la seule comparaison valide est A contre B à
-l'intérieur de B2**.
+A control arm that shifts 6 % in tokens and lifts two fix rates from 80 to 100 % says one thing: **the
+environment changed between 2026-07-29 and 2026-08-03** — self-hosted endpoint, same model *name*, not
+necessarily the same service behind it. Any B1 → B2 difference is therefore confounded with that drift,
+and **the only valid comparison is A against B inside B2**.
 
-C'est aussi une leçon de protocole : `temperature: 0` ne donne pas la
-reproductibilité entre campagnes, et n=5 à température nulle n'est pas cinq
-échantillons indépendants mais un échantillon répété. Un bras témoin daté est ce
-qui a permis de s'en apercevoir ; sans lui, on aurait publié une régression.
+It is also a protocol lesson: `temperature: 0` does not give reproducibility across campaigns, and n=5
+at zero temperature is not five independent samples but one repeated sample. A dated control arm is
+what made this noticeable; without it, a regression would have been published.
 
-### 2. Ce que B2 établit : le gain en tokens, oui ; le faux départ, non
+### 2. What B2 establishes: the token gain, yes; the false start, no
 
-- **Tokens : le bras B fait 63 % (fort) et 57 % (faible) du bras A.** Sur les
-  trois cibles où aucun bras ne part à faux, il descend à **49 % / 52 %**. La
-  revendication volumétrique de H1 tient, et elle tient avec l'enrichissement
-  dedans — donc le surcoût de P2 est absorbé et au-delà.
-- **Faux départ : 10/25 dans les deux bras, sur les deux modèles. Aucun gain.**
-  Le résultat vedette de B1 — `order-book` passant de 100 % à 0 % côté fort — **ne
-  se reproduit pas** : les deux bras y sont à 100 %.
+- **Tokens: arm B is at 63 % (strong) and 57 % (weak) of arm A.** On the three targets where neither arm
+  goes astray, it drops to **49 % / 52 %**. H1's volumetric claim holds, and it holds with enrichment
+  included — so P2's overhead is absorbed and then some.
+- **False starts: 10/25 in both arms, on both models. No gain.** B1's headline result — `order-book`
+  going from 100 % to 0 % on the strong side — **does not reproduce**: both arms are at 100 % there.
 
-### 3. Et la métrique de faux départ est fausse sur `order-book`
+### 3. And the false-start metric is wrong on `order-book`
 
-En diagnostiquant le point précédent, un défaut de **la mesure** est apparu, pas
-de l'outil. Le `meta.json` de la fixture dit, dans cet ordre :
+While diagnosing the previous point, a defect appeared in **the measurement**, not the tool. The
+fixture's `meta.json` says, in this order:
 
-> « **soit** garder `grandTotal` et mettre à jour les lectures, **soit** revenir
-> au nom `total` dans `src/domain/order.ts` […] L'alternative site-par-site est
-> un faux départ. »
+> "**either** keep `grandTotal` and update the reads, **or** revert to the name `total` in
+> `src/domain/order.ts` […] The site-by-site alternative is a false start."
 
-Les deux premières propositions sont données comme **également acceptables**, et
-la phrase suivante qualifie la première de faux départ. Or la métrique compte
-tout `write_file` hors de `rootCauseFiles`, et `rootCauseFiles` ne contient que
-la déclaration : **mettre à jour les lectures — un correctif que la fixture
-déclare valide — est compté comme 100 % de faux départ.**
+The first two propositions are given as **equally acceptable**, and the next sentence calls the first a
+false start. But the metric counts every `write_file` outside `rootCauseFiles`, and `rootCauseFiles`
+contains only the declaration: **updating the reads — a fix the fixture declares valid — is scored as
+100 % false start.**
 
-Le bras B de B2 a produit un typecheck vert en choisissant cette stratégie-là.
-Il est scoré 100 %. En B1 le modèle avait choisi l'autre, et scoré 0 %.
+B2's arm B produced a green typecheck by choosing that very strategy. It is scored 100 %. In B1 the
+model chose the other, and scored 0 %.
 
-**Conséquence sur la lecture de B1 : son résultat le plus fort repose en partie
-sur le choix, par le modèle, de l'une des deux stratégies valides** — pas
-seulement sur le fait d'avoir compris la cause. La métrique ne distingue pas
-« a patché 30 consommateurs sans comprendre » de « a délibérément choisi la
-stratégie *mettre à jour les lectures* ». C'est le défaut à corriger avant de
-rejouer quoi que ce soit : soit `rootCauseFiles` admet les deux ensembles, soit
-la fixture tranche une seule stratégie dans son `expectedFix`.
+**Consequence for reading B1: its strongest result rests partly on the model's choice between two valid
+strategies** — not solely on having understood the cause. The metric does not distinguish "patched 30
+consumers without understanding" from "deliberately chose the *update the reads* strategy". That is the
+defect to fix before replaying anything: either `rootCauseFiles` admits both sets, or the fixture settles
+on a single strategy in its `expectedFix`.
 
-Le rapport rendu au modèle, lui, n'a pas régressé — il est meilleur qu'en B1 :
+The report handed to the model, for its part, has not regressed — it is better than in B1:
 
 ```
 [1] cause: interface 'Order' declared at src/domain/order.ts:5:1
@@ -987,33 +1490,146 @@ Le rapport rendu au modèle, lui, n'a pas régressé — il est meilleur qu'en B
     30 diagnostics, all TS2339
 ```
 
-599 caractères, la cause nommée, et `grandTotal` — le vrai nom du champ — écrit
-noir sur blanc. *(Hypothèse non testée, à retenir pour la suite : nommer la
-propriété réelle rend peut-être le patch des sites **plus** attrayant, pas
-moins. Elle est plausible et non mesurée ; on ne la publie pas comme un
-résultat.)*
+599 characters, the cause named, and `grandTotal` — the field's real name — written in black and white.
+*(Untested hypothesis, worth keeping for later: naming the real property may make patching the sites
+**more** attractive, not less. It is plausible and unmeasured; we do not publish it as a result.)*
 
-### 4. Ce que B2 dit de P2, honnêtement
+### 4. What B2 says about P2, honestly
 
-**Aucun bénéfice mesurable de l'enrichissement sur le faux départ ou sur le taux
-de correction.** Son coût, lui, est mesuré et réel (+13 % de caractères sur le
-rapport au fil de la journée). Dans la boucle d'agent ce coût disparaît dans le
-bruit — le bras B reste à 57–63 % du bras A — mais **rien dans ces 100 runs ne
-montre que P2 gagne quelque chose.**
+**No measurable benefit from enrichment on false starts or on fix rate.** Its cost, by contrast, is
+measured and real (+13 % of report characters over the course of the day). In the agent loop that cost
+disappears into the noise — arm B stays at 57–63 % of arm A — but **nothing in these 100 runs shows P2
+gaining anything.**
 
-Ce n'est pas « P2 est inutile » : c'est « P2 n'est pas mesuré utile », et sur ce
-corpus la mesure ne peut pas trancher, parce que 2 des 5 cibles sont saturées à
-100 % dans les deux bras et que l'une des deux l'est pour une raison de
-métrique. **La conclusion honnête est que la question reste ouverte et que le
-corpus actuel ne peut pas y répondre** — ce qui remet la largeur du corpus
-(§ « Limites du corpus ») devant l'ajout de fonctionnalités.
+This is not "P2 is useless": it is "P2 is not measured useful", and on this corpus the measurement
+cannot settle it, because 2 of the 5 targets are saturated at 100 % in both arms and one of those two is
+so for a metric reason. **The honest conclusion is that the question stays open and the current corpus
+cannot answer it** — which puts corpus width ([Corpus limits](#corpus-limits)) ahead of adding features.
 
-### 5. Ce qu'il faut faire avant de rejouer
+### 5. What to do before replaying
 
-1. **Réparer la métrique** : `rootCauseFiles` doit décrire l'ensemble des
-   fichiers qu'un correctif *valide* peut toucher, ou la fixture doit n'admettre
-   qu'une stratégie. En l'état, deux des cinq cibles ne mesurent rien.
-2. **Élargir le corpus** — cinq cascades dont deux inexploitables laissent trois
-   points de mesure.
-3. **Rejouer les deux bras dans la même campagne**, toujours, et publier la
-   dérive du bras A comme partie du résultat.
+1. **Fix the metric**: `rootCauseFiles` must describe the set of files a *valid* fix may touch, or the
+   fixture must admit only one strategy. As it stands, two of the five targets measure nothing.
+2. **Widen the corpus** — five cascades of which two are unusable leaves three measurement points.
+3. **Replay both arms in the same campaign**, always, and publish the control arm's drift as part of the
+   result.
+
+---
+
+## Real code — `keyzia/data-explorer` (2026-08-03)
+
+**The first time a P2 enricher fires on real code.** Every P2 number above is measured on fixtures and
+on the frozen corpus; the [2307 section](#the-cost-of-2307-measured) states plainly that its value "is
+measured on no real code". This section is a spot check on a private Nx monorepo, not a campaign — one
+project, one run, no n=5, no model arm. It is recorded because it produced two things the fixtures did
+not: a confirmation on code nobody wrote for us, and a folding gap that only real code made visible.
+
+**Target:** `apps/data-explorer/tsconfig.json` in a private Next/Nx monorepo, **TypeScript 5.8.3**, 919
+files checked. Errors are the developer's own, not authored for this measurement.
+
+*Reproduction, and a trap worth knowing:* the repository root holds a **solution tsconfig** (`"files":
+[]`, `"include": []`, four `references`) — the same configuration that made this target exit 2 in the
+[P0 baseline](#baseline--2026-07-27-p0-before-causality). Both `tsc -p .` and `tssift --project .`
+report **0 errors over 0 files** there; the referenced sub-projects have to be targeted individually.
+
+```bash
+# arm A
+./node_modules/.bin/tsc --noEmit -p apps/data-explorer/tsconfig.json
+# arm B — run from the tssift checkout: the target repository pins Node 18, tssift needs ≥ 20.19
+mise exec -- node dist/cli.js --project <abs>/apps/data-explorer/tsconfig.json
+```
+
+### The numbers
+
+| | diagnostics | entries | chars | vs tsc |
+|---|---:|---:|---:|---:|
+| `tsc --noEmit` | 19 | 19 | 3 564 | 100 % |
+| `tssift` | 19 | **10** | 2 416 | **68 %** |
+| `tssift --all` | 19 | 19 | 4 887 | 137 % (rule 2 upheld) |
+
+Overall fold 19 → 10 (47 %); on the single cascade, **10 → 1 (90 %)**.
+
+### The fold, and it is correct
+
+```
+[1] cause: class 'NotificationHelpers' declared at app/_helpers/notification.ts:4:1
+      typeof NotificationHelpers
+      'NotificationHelpers' has 1 property: prototype
+    10 diagnostics, all TS2339
+```
+
+Ten TS2339 across four files, folded into one entry on an identical `declaredAt`. The file was opened to
+check the enricher was not inventing:
+
+```ts
+export class NotificationHelpers {
+}
+```
+
+The class body is **empty**. `has 1 property: prototype` is literally true, and it is the fact that
+settles the case — without it, ten "Property 'error' does not exist" messages read as a typo on `error`.
+Line 4, column 1: the right declaration. No imperative, rule 1 upheld.
+
+This is the P2 claim working as designed on code nobody wrote for the fixture set: the payload is a
+declaration site plus a member list, rendered once per group, on a cascade where `tsc` names the target
+type ten times and locates it zero times.
+
+### What it exposes: TS2304 and TS2552 do not fold, and here that is a gap
+
+Entries `[2]`–`[9]` are **six TS2304 and two TS2552 for only four distinct names**:
+
+| missing name | code | occurrences | entries rendered |
+|---|---|---:|---:|
+| `BlocksControllerGetEstimationImmobiliereRequest` | 2552 | 2 | 2 |
+| `GetKeyscoreKeyscoreKeyscoreIdGetRequest` | 2304 | 2 | 2 |
+| `GetKeyscoresByUserAndWorkspace…GetRequest` | 2304 | 2 | 2 |
+| `PostKeyscoreKeyscorePostRequest` | 2304 | 2 | 2 |
+
+The six TS2304 are in a **single file** (`app/_api/keyscore/apis/KeyscoreApi.ts`), an OpenAPI generator
+output that lost its request types. This is the same shape as 2307 before T1: **the key is the name, not
+the file.** A second causality pass indexed on the missing name — extracted from the verbatim message,
+exactly as the 2307 rule extracts the specifier, and cross-checked against something the program
+confirms — would fold these 8 entries into 4, taking the whole report from 10 entries to 6.
+
+**The `cannot-find-name` fixture could never have shown this**: it carries **one name at one site**, so
+its 0 % fold is a property of the fixture, not of the code. This is the first real witness of a 2304
+cascade with repetition, and it is what puts the rule on the table. §5.1 classifies 2304 as a
+near-certain root on the same footing as 2307, and its rule was the half of that list left unwritten in
+P1.
+
+*The rule is designed from this observation — see `.plans/` for the current plan. What is recorded here
+is the measurement that motivated it, not the rule.*
+
+### A second target, and 2307's honest limit on real code
+
+`libs/chat-components/tsconfig.lib.json` in the same monorepo: 5 diagnostics (2 × TS7006, 3 × TS2307),
+713 characters in arm A against 860 in arm B (**121 %**), **0 % fold**.
+
+**The 0 % fold is correct**: the three TS2307 carry three *distinct* specifiers
+(`@radix-ui/react-checkbox`, `react-hook-form`, `@radix-ui/react-select`), hence three roots. The rule
+refuses to merge them, exactly as on `wrong-tsconfig-paths`. No cascade, so no H1 gain to show.
+
+What 2307 renders on each of them is a single line: `no node_modules directory at the project root`.
+That statement is **true and correctly scoped** — the project root is the tsconfig's directory,
+`libs/chat-components/`, and there is indeed no `node_modules` there (`resolution.ts` tests
+`join(root, "node_modules")` and does not walk up). It is also **all the enricher has left to say**,
+because that directory holds no `package.json` at all: by [decision 3](#three-things-that-are-not-said-by-decision),
+`ResolutionFacts.dependencies` is absent rather than empty, so no "not declared in package.json" fact is
+produced. The behaviour is exactly as specified — and on a monorepo whose libraries have no manifest of
+their own, the specification's most conservative branch is also its least informative one.
+
+Recorded as an observation, not a bug: saying more would mean either walking up to a workspace root the
+data does not name, or claiming something about a file never opened. Both are what rule 5 and decision 3
+exist to prevent. Whether a monorepo-aware `ResolutionFacts` is worth its complexity is a question this
+one data point does not answer.
+
+### What this section does and does not establish
+
+- **It does** show a P2 enricher producing a verified, useful, non-prescriptive fact on unseen real code,
+  and a 90 % fold on a real cascade.
+- **It does** produce the first real-code evidence for a 2304/2552 folding rule, which no fixture could
+  have produced.
+- **It does not** measure agent behaviour: no model was run on this project. B/A = 68 % is a character
+  ratio, nothing more.
+- **It is not a campaign.** One project, one run, private code that cannot be committed. It does not
+  enter the totals of any table above, and it does not answer the question B2 left open.
