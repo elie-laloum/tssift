@@ -104,21 +104,14 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders broken-barrel-export with -
 
 exports[`agent-text · snapshots @ ts5.9.3 > renders cannot-find-name 1`] = `
 "root: fixtures/cannot-find-name/before
-7 errors · 1 file
+7 errors · 1 file · 1 root cause
 
-[1] src/billing/invoice.ts:5:13 error TS2304: Cannot find name 'Cents'.
-
-[2] src/billing/invoice.ts:6:8 error TS2304: Cannot find name 'Cents'.
-
-[3] src/billing/invoice.ts:7:10 error TS2304: Cannot find name 'Cents'.
-
-[4] src/billing/invoice.ts:10:40 error TS2304: Cannot find name 'Cents'.
-
-[5] src/billing/invoice.ts:14:29 error TS2304: Cannot find name 'Cents'.
-
-[6] src/billing/invoice.ts:14:39 error TS2304: Cannot find name 'Cents'.
-
-[7] src/billing/invoice.ts:14:47 error TS2304: Cannot find name 'Cents'.
+[1] cause: unresolved name 'Cents' in src/billing/invoice.ts
+    7 diagnostics, all TS2304
+    src/billing/invoice.ts:5:13 error TS2304: Cannot find name 'Cents'.
+    src/billing/invoice.ts:6:8 error TS2304: Cannot find name 'Cents'.
+    src/billing/invoice.ts:7:10 error TS2304: Cannot find name 'Cents'.
+    +4 more sites (--all for every one)
 "
 `;
 
@@ -535,6 +528,39 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders two-independent-roots with 
 
 [2] src/reporting/export.ts:3:23 error TS2307: Cannot find module '@acme/csv-writer' or its corresponding type declarations.
     no node_modules directory at the project root
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders two-missing-names-one-file 1`] = `
+"root: fixtures/two-missing-names-one-file/before
+5 errors · 1 file · 2 root causes
+
+[1] cause: unresolved name 'Cents' in src/pricing.ts
+    3 diagnostics, all TS2304
+    src/pricing.ts:15:14 error TS2304: Cannot find name 'Cents'.
+    src/pricing.ts:19:43 error TS2304: Cannot find name 'Cents'.
+    src/pricing.ts:23:34 error TS2304: Cannot find name 'Cents'.
+
+[2] cause: unresolved name 'TaxRates' in src/pricing.ts
+    2 diagnostics, all TS2552
+    src/pricing.ts:23:47 error TS2552: Cannot find name 'TaxRates'. Did you mean 'TaxRate'?
+    src/pricing.ts:27:32 error TS2552: Cannot find name 'TaxRates'. Did you mean 'TaxRate'?
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders two-missing-names-one-file with --all 1`] = `
+"root: fixtures/two-missing-names-one-file/before
+5 errors · 1 file
+
+[1] src/pricing.ts:15:14 error TS2304: Cannot find name 'Cents'.
+
+[2] src/pricing.ts:19:43 error TS2304: Cannot find name 'Cents'.
+
+[3] src/pricing.ts:23:34 error TS2304: Cannot find name 'Cents'.
+
+[4] src/pricing.ts:23:47 error TS2552: Cannot find name 'TaxRates'. Did you mean 'TaxRate'?
+
+[5] src/pricing.ts:27:32 error TS2552: Cannot find name 'TaxRates'. Did you mean 'TaxRate'?
 "
 `;
 

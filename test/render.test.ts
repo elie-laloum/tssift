@@ -30,6 +30,7 @@ const FIXTURES = [
   "missing-multiple-properties",
   "two-roots-one-file",
   "missing-many-properties",
+  "two-missing-names-one-file",
 ] as const;
 
 /**
@@ -201,7 +202,8 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
         groups: Array<{
           cause:
             | { kind: "declaration"; symbol: { name: string; declaredAt: { file: string } } }
-            | { kind: "module"; specifier: string };
+            | { kind: "module"; specifier: string }
+            | { kind: "name"; name: string; file: string };
         }>;
         diagnostics: Array<{
           id: string;
@@ -217,10 +219,19 @@ describe("json is the complete report, agent-text a lossy projection (rule 14)",
 
       // Group headers rendered in text must be findable in json — this is the
       // direction rule 14 forbids reversing. A module cause names its specifier
-      // and no declaration site; a declaration cause names its symbol and file.
+      // and no declaration site; a name cause names the identifier and the file
+      // it is missing from; a declaration cause names its symbol and file.
+      //
+      // The exhaustive switch is the point, not decoration: when the `name` arm
+      // was added on 2026-08-04 this test failed with a TypeError rather than
+      // silently skipping the new arm, which is how it caught that the arm had
+      // reached the text renderer before it had been checked against json.
       for (const group of json.groups) {
         if (group.cause.kind === "module") {
           expect(text).toContain(`'${group.cause.specifier}'`);
+        } else if (group.cause.kind === "name") {
+          expect(text).toContain(`'${group.cause.name}'`);
+          expect(text).toContain(group.cause.file);
         } else {
           expect(text).toContain(`'${group.cause.symbol.name}'`);
           expect(text).toContain(group.cause.symbol.declaredAt.file);

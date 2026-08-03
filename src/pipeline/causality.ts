@@ -41,6 +41,32 @@
  * TS2305 needs none of this: its module *does* resolve, so it is already an
  * identical-`declaredAt` case (12/12 on the corpus).
  *
+ * ## TS2304 / TS2552 — grouped by the missing name, within one file
+ *
+ * §5.1 excludes "the same identifier" by name, and its stated reason is
+ * shadowing: *two distinct bindings that shadow one another carry the same name*.
+ * **That reason cannot apply here.** Shadowing needs at least one binding, and
+ * `Cannot find name 'X'` is the compiler stating there is none reachable at that
+ * position. So the exclusion — written generally, justified by a mechanism that
+ * is structurally impossible for these two codes — was narrowed on 2026-08-04 to
+ * *bound* names, which is what its rule 3 was about. The exclusion still stands
+ * for 2339 and friends, and two named tests below hold it there.
+ *
+ * The key is the name **and the file**, not the name alone. This is where the
+ * analogy with 2307 stops: a non-relative module specifier means the same package
+ * from any file, whereas an identifier is scope-local, so the same missing name
+ * in two files is two causes that may take two different fixes. Under-grouping,
+ * per §5.1's asymmetry.
+ *
+ * TS2552 rides with TS2304 for the reason 2724 rides with 2305: TypeScript emits
+ * it *instead of* 2304 as soon as a close name is in scope, so which code comes
+ * out depends on the analysed author's spelling and not on the failure. Splitting
+ * them would make an identical cascade fold or not by accident.
+ *
+ * TS2503 (`Cannot find namespace`) and TS2686 (UMD global) are §5.1 roots too and
+ * are deliberately **not** handled: no fixture, no real-code witness, and a
+ * different message template. They are a measurement away, not a guess away.
+ *
  * No `typescript` import here, ever (rule 4) — asserted by
  * `test/architecture.test.ts`.
  */
@@ -82,9 +108,10 @@ function anchorOf(diagnostic: NormalizedDiagnostic): SymbolRef | undefined {
 
 /** The comparable identity of a cause, per arm — a total order for the ranking. */
 function causeKey(group: DiagnosticGroup): string {
-  return group.cause.kind === "module"
-    ? `module|${group.cause.specifier}`
-    : siteOf(group.cause.symbol.declaredAt);
+  const { cause } = group;
+  if (cause.kind === "module") return `module|${cause.specifier}`;
+  if (cause.kind === "name") return `name|${cause.file}|${cause.name}`;
+  return siteOf(cause.symbol.declaredAt);
 }
 
 /**
@@ -109,6 +136,42 @@ export function unresolvedSpecifier(
   const specifier = /module '([^']+)'/.exec(diagnostic.message)?.[1];
   if (!specifier || specifier.startsWith(".") || specifier.startsWith("/")) return undefined;
   return imports[diagnostic.primary.file]?.includes(specifier) ? specifier : undefined;
+}
+
+/** A plain TypeScript identifier — anything else means the template drifted. */
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
+/**
+ * The unresolvable identifier a TS2304/TS2552 names — the key its group folds on.
+ *
+ * The regex is **anchored at the start**, and that anchor is load-bearing: TS2552
+ * reads `Cannot find name 'X'. Did you mean 'Y'?`, so an unanchored pattern would
+ * happily key on the *suggestion*. Both templates were read out of `ts.Diagnostics`
+ * on 5.4.5, 5.9.3 and 6.0.3 and are identical there:
+ *
+ *     2304  Cannot find name '{0}'.
+ *     2552  Cannot find name '{0}'. Did you mean '{1}'?
+ *
+ * Two guards, playing the role `ProgramFacts.imports` plays for 2307 — confirming
+ * the parse against something other than the message itself:
+ *
+ * 1. the capture must be a plain identifier, so a drifted template yields nothing
+ *    rather than a key made of prose;
+ * 2. the primary span's `snippet` must contain it. `snippet` is the source line as
+ *    captured at ingestion, so this checks the message against the file it came
+ *    from. It is optional on the type (a non-TS-API source may not carry one), and
+ *    absent ⇒ no group: anything unconfirmed stays an isolated root, never a merge.
+ *
+ * Not exported, unlike `unresolvedSpecifier`. That one is public because the 2307
+ * *enricher* must answer the same question and two copies of the parse would
+ * drift; there is no 2304 enricher, so exporting this would be public surface
+ * nothing consumes.
+ */
+function missingName(diagnostic: NormalizedDiagnostic): string | undefined {
+  if (diagnostic.code !== 2304 && diagnostic.code !== 2552) return undefined;
+  const name = /^Cannot find name '([^']+)'/.exec(diagnostic.message)?.[1];
+  if (!name || !IDENTIFIER.test(name)) return undefined;
+  return diagnostic.primary.snippet?.includes(name) ? name : undefined;
 }
 
 /**
@@ -206,6 +269,35 @@ export function detectCausality(
 
     const id = groupId("module", specifier);
     groups.push({ id, cause: { kind: "module", specifier }, members: members.map((m) => m.id) });
+    for (const member of members) {
+      membership.set(member.id, { group: id, root: undefined });
+    }
+  }
+
+  // Third pass — TS2304/TS2552, keyed on `file|name`. Disjoint from both passes
+  // above the same way the 2307 one is: these codes carry no `context`, so they
+  // never anchored on a declaration, and `!membership.has` keeps the "≤ 1 group
+  // per diagnostic" invariant true by construction rather than by argument.
+  // As with a module, the cause is an absence: nothing is declared anywhere, so
+  // no member can sit on its own cause and every member is derived.
+  const nameBuckets = new Map<string, { name: string; members: NormalizedDiagnostic[] }>();
+  for (const diagnostic of diagnostics) {
+    if (membership.has(diagnostic.id)) continue;
+    const name = missingName(diagnostic);
+    if (!name) continue;
+    const key = `${diagnostic.primary.file}|${name}`;
+    const bucket = nameBuckets.get(key);
+    if (bucket) bucket.members.push(diagnostic);
+    else nameBuckets.set(key, { name, members: [diagnostic] });
+  }
+
+  for (const [key, { name, members }] of nameBuckets) {
+    if (members.length < MIN_GROUP_SIZE) continue;
+
+    // `key` is already `file|name`, which is exactly the identity being hashed.
+    const id = groupId("name", key);
+    const file = members[0]?.primary.file ?? "";
+    groups.push({ id, cause: { kind: "name", name, file }, members: members.map((m) => m.id) });
     for (const member of members) {
       membership.set(member.id, { group: id, root: undefined });
     }

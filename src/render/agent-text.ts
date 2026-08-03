@@ -119,6 +119,11 @@ function causeLine(group: DiagnosticGroup): string {
   // A module has no declaration to point at: the header names the specifier and
   // stops. A declaration names its kind, name and site.
   if (cause.kind === "module") return `cause: unresolved module '${cause.specifier}'`;
+  // Nor has an unresolvable name — saying "declared at" would be false, since the
+  // whole failure is that it is declared nowhere. The file is printed because it
+  // is half the group key: two files missing the same name are two groups, and
+  // without it their headers would be identical strings.
+  if (cause.kind === "name") return `cause: unresolved name '${cause.name}' in ${cause.file}`;
   const { symbol } = cause;
   return `cause: ${symbol.kind} '${symbol.name}' declared at ${at(symbol.declaredAt)}`;
 }
@@ -161,12 +166,18 @@ function commonFacts(entry: Extract<Entry, { kind: "group" }>): Fact[] {
 function causeFactLines(entry: Extract<Entry, { kind: "group" }>): string[] {
   const { group } = entry;
 
-  // The module arm carries no `SymbolRef` — there is nothing declared to
-  // describe — so its facts come off the members, which by construction all
-  // name the same unresolved specifier and therefore produce the same facts.
-  // Hoisting them here is what keeps the economics of §5.2 intact: three
-  // importers of `qs` get one statement about `qs`, not three.
-  if (group.cause.kind === "module") {
+  // The `module` and `name` arms carry no `SymbolRef` — there is nothing declared
+  // to describe — so their facts come off the members, which by construction all
+  // name the same unresolved specifier (or identifier) and therefore produce the
+  // same facts. Hoisting them here is what keeps the economics of §5.2 intact:
+  // three importers of `qs` get one statement about `qs`, not three.
+  //
+  // `name` has no enricher today, so the intersection is empty and this returns
+  // nothing — which is the correct amount to say about a name that is declared
+  // nowhere. Note that folding cannot degrade a TS2552's `Did you mean`: every
+  // member of a group shares the missing name, hence the same suggestion, so a
+  // site hidden by the display cap takes no unique information with it.
+  if (group.cause.kind === "module" || group.cause.kind === "name") {
     return commonFacts(entry).map((fact) => `      ${fact.text}`);
   }
 

@@ -174,9 +174,14 @@ export interface EnrichedDiagnostic extends NormalizedDiagnostic {
  * What the members of a group share.
  *
  * A discriminated union. The `declaration` arm is the common case: every member
- * points at the same declaration. The `module` arm is TS2307's — an *unresolved*
- * module specifier, which by definition has no declaration to point at, so it
- * keys on the specifier string itself.
+ * points at the same declaration. The other two arms exist because their cause
+ * is an *absence*, and an absence has no declaration to point at:
+ *
+ * - `module` is TS2307's — an unresolved specifier, keyed on the specifier string.
+ * - `name` is TS2304/TS2552's — an identifier that resolves to nothing, keyed on
+ *   the name **and the file**. Unlike a module specifier, which means the same
+ *   package everywhere, an identifier is scope-local: the same missing name in
+ *   two files is two causes and may take two different fixes (§5.1).
  */
 export type GroupCause =
   | {
@@ -188,12 +193,23 @@ export type GroupCause =
       kind: "module";
       /** The unresolved specifier every member imports, as written. It is the group key. */
       specifier: string;
+    }
+  | {
+      kind: "name";
+      /** The identifier every member fails to resolve, as TypeScript printed it. */
+      name: string;
+      /**
+       * The file the members live in. Part of the key, not decoration: a name is
+       * scope-local, so `name` alone would merge two files' causes into one.
+       */
+      file: string;
     };
 
 export interface DiagnosticGroup {
   /**
    * First 12 hex of a sha256, same discipline as `id`. The key depends on the
-   * cause arm: `declaration` → `kind|file|line|column`, `module` → `module|specifier`.
+   * cause arm: `declaration` → `kind|file|line|column`, `module` → `module|specifier`,
+   * `name` → `name|file|identifier`.
    */
   id: string;
   cause: GroupCause;

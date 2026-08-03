@@ -33,6 +33,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [P2 / 2322 — the last enrichable code, and not for the announced reason (2026-08-02)](#p2--2322--the-last-enrichable-code-and-not-for-the-announced-reason-2026-08-02)
 - [B2 — the model arm re-measured on enriched output (2026-08-03)](#b2--the-model-arm-re-measured-on-enriched-output-2026-08-03)
 - [Real code — `keyzia/data-explorer` (2026-08-03)](#real-code--keyziadata-explorer-2026-08-03)
+- [P1 / 2304 · 2552 — folding by missing name (2026-08-04)](#p1--2304--2552--folding-by-missing-name-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -1597,8 +1598,9 @@ cascade with repetition, and it is what puts the rule on the table. §5.1 classi
 near-certain root on the same footing as 2307, and its rule was the half of that list left unwritten in
 P1.
 
-*The rule is designed from this observation — see `.plans/` for the current plan. What is recorded here
-is the measurement that motivated it, not the rule.*
+*The rule was written the next day on this evidence — see
+[P1 / 2304 · 2552](#p1--2304--2552--folding-by-missing-name-2026-08-04). What is recorded here is the
+measurement that motivated it, not the rule.*
 
 ### A second target, and 2307's honest limit on real code
 
@@ -1633,3 +1635,103 @@ one data point does not answer.
   ratio, nothing more.
 - **It is not a campaign.** One project, one run, private code that cannot be committed. It does not
   enter the totals of any table above, and it does not answer the question B2 left open.
+
+---
+
+## P1 / 2304 · 2552 — folding by missing name (2026-08-04)
+
+A **causality** rule, not an enricher — which is why it is numbered P1 rather than P2. §5.1 has listed
+TS2304 among its near-certain roots since the beginning and its rule was the half of that list left
+unwritten; the section above is what finally made writing it obviously worth doing.
+
+The rule folds TS2304/TS2552 on `(file, missing name)`. Full design, and the §5.1 amendment it
+required, in `.plans/2026-08-04_p1-2304.md` and PROJECT.md §5.1.
+
+### The measurement, at constant scope
+
+Same harness, same targets, the only variable being the third pass in `causality.ts`. The new fixture
+is held out of the comparison so that the two columns describe the same 27 targets.
+
+| | entries | B chars | B/A |
+|---|---:|---:|---:|
+| before the rule | 54 | 19 666 | 59 % |
+| after | **48** | **19 514** | **58 %** |
+| delta | **−6** | **−152** | |
+
+**The −152 characters are, to the character, `cannot-find-name`'s own delta — every other target moved
+by exactly zero.** That is the check that matters here and it was the stated stop condition: a
+name-keyed rule that leaked past 2304/2552 would show up as movement somewhere else in this table, and
+there is none.
+
+| target | before | after | |
+|---|---|---|---|
+| `cannot-find-name` | 7 entries, 571 chars, **116 %** | **1 entry**, 419 chars, **85 %** | −152 |
+| `two-missing-names-one-file` *(new)* | — | 2 entries, 633 chars, 172 % | held out above |
+| the other 26 targets | | | **0** |
+
+### `cannot-find-name` is the second fixture ever to go under 100 %
+
+**116 % → 85 %.** Only `narrowed-union-member` (59 %) had managed it before, and for the same reason
+stated in [What the folding fixtures taught](#what-the-folding-fixtures-taught): folding pays when
+`sites × verbosity` exceeds what the three-site display cap prints. Seven diagnostics is the first
+committed fixture where a *short* diagnostic clears that bar on count alone — four of the seven
+collapse into `+4 more sites`.
+
+This matters beyond one fixture, because every previous single-cause fold this repo has landed
+(2739/2741, 2740, 2322) was **structural and not volumetric**: three-diagnostic fixtures where the
+header is pure added cost. This is the first that is both.
+
+**Single-cause folding: 12 out of 18 → 13 out of 18.** The denominator is unchanged: the corpus goes
+from 21 fixtures to 22, but the new one is a multi-root negative control and is excluded from it, like
+`two-independent-roots` and `two-roots-one-file`. Folding now rests on **three** structural links — an
+identical `declaredAt` (nine fixtures), a shared unresolved specifier (three), and a shared missing
+name (one).
+
+Of the five single-cause cascades still not folding — `nullable-chain` (18047), `misspelled-property`
+(2551), `unconstrained-generic` (2536), `value-used-as-type` (2749), `missing-type-import` (1484) —
+only **18047** is an open §5.2 gap. 2551 is closed by decision, and the other three are outside the
+table.
+
+### On real code, entries halve and characters rise — both, and the second is the honest half
+
+Re-running the private monorepo of the section above:
+
+| | entries | chars | vs tsc |
+|---|---:|---:|---:|
+| before the rule | 10 | 2 416 | 68 % |
+| after | **6** | **3 012** | **84 %** |
+
+**Eight entries become four, and the report grows by 596 characters.** That is not a contradiction, it
+is the small-fixture effect appearing at full size: each of the four groups holds exactly two members,
+so nothing clears the three-site cap, every diagnostic still prints, and four headers plus four count
+lines are added on top. The headers are unusually expensive here because the names are
+OpenAPI-generated — `unresolved name 'GetKeyscoresByUserAndWorkspaceKeyscoreUserUserIdWorkspaceWorkspaceIdGetRequest'
+in app/_api/keyscore/apis/KeyscoreApi.ts` is one line of roughly 140 characters.
+
+So on the very target that motivated the rule, **the rule costs characters**. What it buys is the
+summary line going from `19 errors · 10 files` to `19 errors · 10 files · 5 root causes`, and four
+generated request types named once each instead of eight failures listed flat. Whether that trade is
+worth 596 characters is exactly the kind of question B0 cannot answer and B2 could not settle either —
+it is a claim about what a reader does with a report, and it stays unmeasured.
+
+**The fixture and the real code disagree on the sign, and both are published.** `cannot-find-name`
+gains 15 % because seven sites clear the cap; `data-explorer` loses 25 % because no group has more
+than two. The predictor is the same one this file has repeated since P1 — the number of sites one
+cause explains — and this milestone is the cleanest demonstration of it, precisely because it lands on
+both sides of the line in one change.
+
+### Verification
+
+`typecheck`, **591 tests** (562 before), `check`, and `fixtures:verify` on **22** fixtures under
+5.4.5, 5.9.3 and 6.0.3 — all green. The new fixture emits 3 × TS2304 and 2 × TS2552 identically on all
+three compilers; the TS2552 half was a prediction from the spelling-suggestion threshold and was
+checked rather than assumed.
+
+Snapshot diff: **40 insertions, 14 deletions**. 33 of the insertions are the new fixture. The 14
+deletions are `cannot-find-name`'s `[2]`–`[7]` lines that folding replaces — not lost diagnostics, and
+the rule-2 test asserting `--all` still prints all seven passes untouched.
+
+One test failed in a useful way and is worth recording: `render.test.ts` § "every field of the text
+exists in json" threw a `TypeError` rather than skipping, because its cause switch had no `name` arm.
+It caught the arm reaching the text renderer before it had been checked against `json` — rule 14
+enforced by a test that could not silently ignore a case it did not know about.

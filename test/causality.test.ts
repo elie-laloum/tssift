@@ -199,6 +199,184 @@ describe("causality · two-roots-one-file (the harder negative control)", () => 
   });
 });
 
+/* ------------------------------------------------------------------ */
+/* TS2304 / TS2552 — the name-keyed rule (2026-08-04)                   */
+/* ------------------------------------------------------------------ */
+
+/** Narrows a group's cause to the `name` arm, the way `declSymbolOf` does for declarations. */
+function nameCauseOf(group: DiagnosticGroup | undefined): { name: string; file: string } {
+  if (group?.cause.kind !== "name") {
+    throw new Error(`expected a name cause, got ${group?.cause.kind ?? "no group"}`);
+  }
+  return group.cause;
+}
+
+/** A TS2304 whose snippet contains the name — the shape the guards expect to pass. */
+function missing(
+  name: string,
+  file = "src/a.ts",
+  overrides: Partial<NormalizedDiagnostic> = {},
+): NormalizedDiagnostic {
+  return diagnostic({
+    code: 2304,
+    message: `Cannot find name '${name}'.`,
+    primary: { file, line: 1, column: 1, snippet: `const x: ${name} = 1;` },
+    ...overrides,
+  });
+}
+
+describe("causality · cannot-find-name (the name-keyed rule)", () => {
+  const { report } = analyse("cannot-find-name");
+
+  it("folds seven references to one missing name into a single group", () => {
+    expect(report.diagnostics).toHaveLength(7);
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(7);
+    expect(report.diagnostics.every((d) => d.code === 2304)).toBe(true);
+  });
+
+  it("heads the group with the name and the file, and with no declaration", () => {
+    // The cause is an absence: there is no `declaredAt` anywhere to point at,
+    // which is why this arm exists rather than reusing the declaration one.
+    expect(nameCauseOf(report.groups[0])).toEqual({
+      kind: "name",
+      name: "Cents",
+      file: "src/billing/invoice.ts",
+    });
+  });
+
+  it("marks every member derived — none can sit on a cause that does not exist", () => {
+    expect(report.diagnostics.every((d) => d.role === "derived")).toBe(true);
+    expect(report.diagnostics.every((d) => d.derivedFrom.length === 0)).toBe(true);
+  });
+});
+
+describe("causality · two-missing-names-one-file (the name rule's negative control)", () => {
+  // Two missing names in ONE file, and TypeScript reports them under two codes
+  // only because a close candidate is in scope for one of them. Keying on the
+  // file — or on file + code, which §5.1 excludes — would merge them.
+  const { report } = analyse("two-missing-names-one-file");
+
+  it("splits into two groups on two distinct names, not one merged group", () => {
+    expect(report.diagnostics).toHaveLength(5);
+    expect(report.groups).toHaveLength(2);
+    const causes = report.groups
+      .map((g) => nameCauseOf(g))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    expect(causes.map((c) => c.name)).toEqual(["Cents", "TaxRates"]);
+    expect(causes.every((c) => c.file === "src/pricing.ts")).toBe(true);
+  });
+
+  it("folds TS2552 exactly as it folds TS2304 — the 2724 lesson, for names", () => {
+    // Which code TypeScript emits depends on whether a close name happens to be
+    // in scope, not on the failure. If only 2304 were handled, this cascade would
+    // fold or not according to the analysed author's spelling.
+    const byName = new Map(report.groups.map((g) => [nameCauseOf(g).name, g]));
+    expect(byName.get("Cents")?.members).toHaveLength(3);
+    expect(byName.get("TaxRates")?.members).toHaveLength(2);
+    const codes = new Set(report.diagnostics.filter((d) => d.code === 2552).map((d) => d.group));
+    expect(codes.size).toBe(1);
+    expect(codes.has(byName.get("TaxRates")?.id)).toBe(true);
+  });
+
+  it("does not key on the line: line 23 carries one diagnostic of each group", () => {
+    const online23 = report.diagnostics.filter((d) => d.primary.line === 23);
+    expect(online23).toHaveLength(2);
+    expect(new Set(online23.map((d) => d.group)).size).toBe(2);
+  });
+});
+
+describe("causality · what the name rule must never do", () => {
+  it("does not group the same missing name across two files", () => {
+    // A module specifier means the same package from anywhere; an identifier is
+    // scope-local. Two files missing `Cents` are two causes and may take two
+    // different fixes, so the key is `(file, name)` and never the name alone.
+    const report = detectCausality([missing("Cents", "src/a.ts"), missing("Cents", "src/b.ts")], {
+      ...FACTS,
+      files: ["src/a.ts", "src/b.ts"],
+    });
+    expect(report.groups).toEqual([]);
+    expect(report.diagnostics.every((d) => d.role === "root")).toBe(true);
+  });
+
+  it("never keys on a TS2552 suggestion — the regex is anchored, and here is the proof", () => {
+    // `Cannot find name 'X'. Did you mean 'Y'?` — an unanchored pattern would be
+    // free to key on Y. Two diagnostics that share only the SUGGESTION must not
+    // meet, and two that share the missing name must, whatever the suggestion.
+    const suggest = (name: string, hint: string) =>
+      diagnostic({
+        code: 2552,
+        message: `Cannot find name '${name}'. Did you mean '${hint}'?`,
+        primary: { file: "src/a.ts", line: 1, column: 1, snippet: `const x: ${name} = 1;` },
+      });
+
+    expect(
+      detectCausality([suggest("Aa", "Shared"), suggest("Bb", "Shared")], FACTS).groups,
+    ).toEqual([]);
+
+    const together = detectCausality([suggest("Aa", "One"), suggest("Aa", "Two")], FACTS);
+    expect(together.groups).toHaveLength(1);
+    expect(nameCauseOf(together.groups[0]).name).toBe("Aa");
+  });
+
+  it("does not group when the message template drifted", () => {
+    // The parse is the only thing naming the key, so anything it cannot read as
+    // a plain identifier leaves the diagnostic an isolated root — the same
+    // discipline the 2307 rule applies to a specifier its imports table denies.
+    const drifted = (message: string) =>
+      diagnostic({
+        code: 2304,
+        message,
+        primary: { file: "src/a.ts", line: 1, column: 1, snippet: "const x: Cents = 1;" },
+      });
+    for (const message of [
+      "Could not find name 'Cents'.", // prefix moved
+      "Cannot find name 'a.b'.", // not an identifier
+      "Cannot find name ''.", // empty
+      "The name 'Cents' cannot be found.", // reworded entirely
+    ]) {
+      expect(detectCausality([drifted(message), drifted(message)], FACTS).groups).toEqual([]);
+    }
+  });
+
+  it("does not group when the snippet does not confirm the name", () => {
+    // `snippet` is the source line captured at ingestion, so it is the one thing
+    // available to check the message against the file it came from. Absent or
+    // contradicting ⇒ isolated root, never a merge.
+    const unconfirmed = (snippet?: string) =>
+      diagnostic({
+        code: 2304,
+        message: "Cannot find name 'Cents'.",
+        primary: { file: "src/a.ts", line: 1, column: 1, ...(snippet ? { snippet } : {}) },
+      });
+    expect(detectCausality([unconfirmed(), unconfirmed()], FACTS).groups).toEqual([]);
+    expect(
+      detectCausality(
+        [unconfirmed("const x: Euros = 1;"), unconfirmed("const y: Euros = 2;")],
+        FACTS,
+      ).groups,
+    ).toEqual([]);
+  });
+
+  it("leaves a lone missing name a root — a group of one is noise", () => {
+    expect(detectCausality([missing("Cents")], FACTS).groups).toEqual([]);
+  });
+
+  it("does not reach codes it was not measured on", () => {
+    // TS2503 (Cannot find namespace) and TS2686 (UMD global) are §5.1 roots too
+    // and are deliberately out of scope: no fixture, no real-code witness, and a
+    // different template. This test is what makes that a decision rather than an
+    // oversight someone later "fixes" by widening the code list.
+    const namespace = () =>
+      diagnostic({
+        code: 2503,
+        message: "Cannot find namespace 'NS'.",
+        primary: { file: "src/a.ts", line: 1, column: 1, snippet: "let x: NS.T;" },
+      });
+    expect(detectCausality([namespace(), namespace()], FACTS).groups).toEqual([]);
+  });
+});
+
 describe("causality · partial-interface-rename", () => {
   const { report } = analyse("partial-interface-rename");
 
@@ -448,6 +626,13 @@ describe("causality · what must never happen", () => {
   it("does not group on the same name at a different position", () => {
     // Two distinct bindings that shadow one another carry the same name. §5.1
     // excludes "the same identifier" by name for exactly this reason.
+    //
+    // This is the contrast case for the name-keyed rule above, and the reason
+    // that rule is a narrow carve-out rather than a loosening: here the name IS
+    // bound — twice, to different things — so shadowing is possible and the
+    // exclusion holds. TS2304 is the opposite case, the compiler stating the
+    // name is bound to nothing, where shadowing cannot occur. Default code
+    // 2339, deliberately: the carve-out must not reach this test.
     const report = detectCausality(
       [
         diagnostic({ subject: symbol("src/decl.ts", 3, 1, "T") }),
@@ -460,7 +645,9 @@ describe("causality · what must never happen", () => {
 
   it("does not group on the same file and the same code", () => {
     // Explicitly excluded by §5.1. Without a captured declaration there is no
-    // structural link, so two 2339s in one file stay two roots.
+    // structural link, so two 2339s in one file stay two roots. The name-keyed
+    // rule does not weaken this: it adds the missing *name* to the key, and only
+    // for codes that assert the name resolves to nothing.
     const report = detectCausality(
       [
         diagnostic({ primary: { file: "src/a.ts", line: 1, column: 1 } }),

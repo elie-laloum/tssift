@@ -15,7 +15,7 @@ Ce qui suit ne concerne que l'usage de Claude Code sur ce projet.
 3. `.plans/2026-08-01_p2-enrichment.md` — **le plan courant** : la première tranche de P2, ce que chaque mesure a décidé, et les quatre codes de §5.2 qui restent avec ce qui les débloquerait. Les autres sont **clos** : `_b1.md`, `_0.0.1-release-prep.md`, `_p0-b0.md`, `_p1-causality.md` (son tableau d'avancement dit où le plan s'est trompé), `_prior-art.md` (le verdict du créneau).
 4. `EVAL.md` — les chiffres priment sur les intentions
 
-**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; `pipeline/enrich/` est ouvert depuis le 2026-08-01 et porte **onze codes**, 2307 · 2322 · 2739/2740/2741 compris depuis le 2026-08-02 — §5.2 est résolu sauf 18047/18048. Depuis le 2026-07-28 le corpus de fixtures est à **21** — la cible de §8 lot B, atteinte par T0 de B1 — et la suite passe à **562 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
+**P0, B0 et P1 sont livrés** (2026-07-27). `src/pipeline/` **existe et est complet** — dedupe, causalité, regroupement, budget ; `pipeline/enrich/` est ouvert depuis le 2026-08-01 et porte **onze codes**, 2307 · 2322 · 2739/2740/2741 compris depuis le 2026-08-02 — §5.2 est résolu sauf 18047/18048. Depuis le 2026-07-28 le corpus de fixtures est à **22** — la cible de §8 lot B, dépassée depuis T0 de B1 — et la suite passe à **591 tests**. Détail à jour dans AGENTS.md § « État actuel » — ce paragraphe-ci n'en est qu'un raccourci et c'est l'autre qui fait foi.
 
 En revanche, **le contrat de sortie et le modèle de données sont arrêtés** depuis le 2026-07-27 et vivent dans PROJECT.md. Deux faits qu'il ne faut pas redécouvrir à chaque session :
 
@@ -44,7 +44,9 @@ Le contrat de sortie est désormais **arrêté** (PROJECT.md §6) : il ne relèv
 
 La **détection de causalité** (`pipeline/causality.ts`) reste la chose pour laquelle le plan mode vaut le détour — composant à plus forte valeur, le plus facile à rendre faux, et le seuil de preuve de §5.1 est à respecter à la lettre. Son premier jet est livré (P1), mais la consigne vaut pour **toute règle de dérivation ajoutée après coup**, pas seulement pour la première.
 
-Concrètement, la prochaine à concevoir en plan mode est la **règle 2307** de §5.1, laissée non écrite en P1. Son blocage est levé depuis le 2026-07-28 : `ProgramFacts.imports` porte bien les spécificateurs tels qu'écrits, résolus ou non (le contraire, écrit dans §5.1 et dans `src/types.ts`, était faux et a été corrigé), et trois fixtures la testent enfin — `wrong-tsconfig-paths`, `phantom-dependency-pnpm`, `yarn-pnp-project`. Lire ce qu'elles ont appris (PROJECT.md §5.1, `EVAL.md`) **avant** de dessiner la règle : la clé est le spécificateur et non le fichier, et regrouper tous les 2307 d'un projet serait un sur-regroupement.
+**Les deux règles que §5.1 laissait non écrites en P1 sont livrées** : 2307 le 2026-07-28 (clé = spécificateur), 2304/2552 le 2026-08-04 (clé = `(fichier, nom)`). Les deux sont passées par le plan mode et les deux ont demandé de corriger §5.1 — la première parce que `ProgramFacts.imports` y était décrit à l'envers, la seconde parce que son interdit « même identifiant » était justifié par l'ombrage, impossible sur un nom qui n'est lié à rien. Lire `PROJECT.md` §5.1 et `.plans/2026-08-04_p1-2304.md` **avant** d'en dessiner une troisième.
+
+Ce qui reste et vaudrait le plan mode : **18047/18048**, seul code de §5.2 encore bloqué, et par une analyse de flot de contrôle. **TS2503 et TS2686** sont racines de §5.1 mais **hors périmètre sur décision** — aucune fixture, aucun témoin réel ; un test le grave.
 
 Le reste est mécanique et se fait directement.
 

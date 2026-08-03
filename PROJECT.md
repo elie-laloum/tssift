@@ -173,11 +173,13 @@ interface EnrichedDiagnostic extends NormalizedDiagnostic {
 
 type GroupCause =
   | { kind: 'declaration'; symbol: SymbolRef }   // symbol.declaredAt EST la clé du groupe
-  | { kind: 'module'; specifier: string };       // TS2307 : le spécificateur non résolu EST la clé
+  | { kind: 'module'; specifier: string }        // TS2307 : le spécificateur non résolu EST la clé
+  | { kind: 'name'; name: string; file: string };// TS2304/2552 : le nom introuvable ET le fichier
 
 interface DiagnosticGroup {
   id: string;                    // 12 hex de sha256 ; clé selon la branche :
                                  //   declaration → kind|file|line|column · module → module|specifier
+                                 //   name → name|file|identifiant
   cause: GroupCause;
   members: string[];             // ids des membres, dans l'ordre du rapport — jamais moins de 2
 }
@@ -199,6 +201,7 @@ interface Fact {
 **Notes de champ — chacune a coûté une décision, ne pas les rouvrir sans raison neuve.**
 
 - **`id`.** `sha256(code|file|line|col|message)`, 12 premiers caractères hex. 12 et pas 8 : 32 bits donnent ~1 % de collision interne sur un monorepo à 10 000 diagnostics, ce qui corromprait `derivedFrom` en silence. « Stable entre runs » veut dire **déterministe à entrée identique** — et rien de plus. Un `id` ne survit **ni** à une édition du source (la ligne bouge) **ni** à une montée de version TS (le message est reformulé). Si l'éval a besoin un jour d'une identité qui traverse les éditions, on ajoutera un `fingerprint` distinct, à ce moment-là et avec sa raison.
+- **`GroupCause`, branche `name` — ajoutée le 2026-08-04.** Les deux premières branches se lisent « la cause est ici » ; les deux dernières, « la cause est une absence ». Un module non résolu et un nom introuvable n'ont, par définition, aucune déclaration à désigner. La différence entre les deux tient dans un champ : `module` ne porte que le spécificateur, `name` porte **aussi le fichier**, parce qu'un spécificateur non relatif désigne le même paquet depuis n'importe où alors qu'un identifiant est **scope-local**. Le même nom manquant dans deux fichiers est donc deux causes, qui peuvent demander deux correctifs différents ; `file` est la moitié de la clé, pas une décoration. Détail de la règle en §5.1.
 - **`related`.** Typé `SourceSpan[]`, il perdait le texte du related — c'est-à-dire précisément l'information que ce dépôt s'engage à ne pas perdre. En 2769 c'est là que vit « the last overload gave the following error » ; en 2345, « the expected type comes from property 'x' ». D'où `RelatedInfo`. Le `span` est optionnel parce qu'en TS 7 un related peut n'avoir aucun `fileName`.
 - **`chain`.** Parcours préfixe + `depth` est un encodage **sans perte** d'un arbre ordonné : rien n'est cédé par rapport à un `children[]`, et les snapshots restent lisibles — ce qui compte, puisqu'un diff de snapshot doit se lire. Le `code` par nœud est indispensable : une chaîne 2769 se termine typiquement sur un 2345, et c'est ce code-là qui informe.
   **Précision arrêtée le 2026-07-27 à l'implémentation :** le nœud de tête est **exclu** de `chain`, qui commence donc à `depth: 1`. La tête vit déjà dans `message` et `code` ; l'inclure en `chain[0]` dupliquerait le message dans `json` et obligerait chaque renderer à sauter `depth: 0`. L'encodage reste sans perte, la racine étant connue. Vérifié sur `overload-mismatch` : un 2769 donne la suite de profondeurs `[1,2,1,2,1,2]` — un arbre **branchant**, trois frères 2772 portant chacun une feuille. C'est un témoin plus exigeant qu'une chaîne linéaire, et c'est ce qui rend le parcours préfixe non négociable.
@@ -247,6 +250,18 @@ On ne dérive **que sur un lien structurel présent dans les données capturées
 - ou son `context.subject` est le symbole que la racine a rendu irrésolvable.
 
 Sont exclus : Levenshtein, « même identifiant », « même fichier + même code ». La règle 3 ci-dessus n'est donc **pas** appliquée telle quelle : « même nom dans le même fichier » n'est pas une identité — deux liaisons distinctes qui s'ombrent portent le même nom, et c'est exactement le mode de défaillance que §11 classe *critique*.
+
+**Une exception étroite, ouverte le 2026-08-04 : les codes qui affirment qu'un nom n'est lié à rien.** L'exclusion ci-dessus est écrite en général, mais la raison qu'elle donne est **l'ombrage** — « deux liaisons distinctes qui s'ombrent ». Or l'ombrage demande au moins une liaison, et `Cannot find name 'X'` est le compilateur affirmant qu'il n'y en a aucune d'atteignable à cette position. Le mécanisme invoqué est donc **structurellement impossible** pour TS2304 et TS2552. L'interdit reste entier pour les noms **liés** — c'est-à-dire pour la règle 3 et pour 2339, et deux tests nommés l'y tiennent (`test/causality.test.ts`, « does not group on the same name at a different position » et « … on the same file and the same code », tous deux sur du 2339). Ce n'est pas un desserrage général : c'est le desserrage annoncé deux paragraphes plus bas, « on desserrera plus tard avec des chiffres », et les chiffres sont dans `EVAL.md`.
+
+Trois choses que cette règle fixe, et qui ne sont pas des détails d'implémentation :
+
+- **La clé est le nom *et* le fichier.** C'est là que l'analogie avec 2307 s'arrête : un spécificateur non relatif désigne le même paquet depuis n'importe quel fichier, un identifiant est **scope-local**. Le même nom manquant dans deux fichiers reste donc deux entrées — sous-regroupement assumé, conformément à l'asymétrie ci-dessus.
+- **TS2552 voyage avec TS2304**, pour la raison exacte qui fait voyager 2724 avec 2305 : TypeScript émet 2552 *à la place de* 2304 dès qu'un nom proche est en portée, donc le code qui sort dépend de l'orthographe voisine et non de la panne. Les séparer ferait plier ou non une cascade identique par accident. Rien n'est dégradé au passage (§5.2 sur 2551) : tous les membres d'un groupe partagent le nom manquant, donc la même suggestion, et un site masqué par le plafond n'emporte aucune information qui lui soit propre.
+- **TS2503 et TS2686, également listés en racines quasi certaines ci-dessus, sont hors périmètre** — aucune fixture, aucun témoin sur du vrai code, et un gabarit de message différent. Un test nommé le grave, pour que ce soit une décision et non un oubli que quelqu'un « corrigerait » en élargissant la liste de codes.
+
+Le garde de correction, qui joue ici le rôle que `ProgramFacts.imports` joue pour 2307 — confirmer la lecture du message contre autre chose que le message : le nom capturé doit être un identifiant simple, **et** le `snippet` de la position primaire doit le contenir. `snippet` est la ligne source relevée à l'ingestion, donc c'est le seul élément disponible pour recouper le message avec le fichier dont il vient. Absent ou contredisant ⇒ racine isolée, jamais une fusion.
+
+Les deux gabarits ont été **lus dans `ts.Diagnostics`** des trois compilateurs épinglés (5.4.5, 5.9.3, 6.0.3) et y sont identiques : `Cannot find name '{0}'.` et `Cannot find name '{0}'. Did you mean '{1}'?`. Le motif est **ancré en début de chaîne**, et l'ancre porte : sans elle, un motif libre irait chercher la *suggestion* de 2552 comme clé.
 
 L'asymétrie est assumée : sous-regrouper coûte une part du chiffre de H1, sur-regrouper cache une vraie erreur derrière un compteur et produit l'édition-du-mauvais-fichier que la métrique « faux départ » existe pour détecter. **On desserrera plus tard avec des chiffres ; on ne resserre pas après un raté.** Attendre donc un sous-regroupement systématique sur les premières mesures : c'est le comportement voulu, pas un bug à corriger.
 

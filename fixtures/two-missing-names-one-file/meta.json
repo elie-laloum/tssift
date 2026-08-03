@@ -1,0 +1,20 @@
+{
+  "rootCause": "Two unrelated failures in one file. `Cents` was a shared alias declared in src/money.ts; that module was deleted in a refactor and its import removed from src/pricing.ts, leaving three references to a name that resolves to nothing. `TaxRates`, referenced twice, is a misspelling of `TaxRate` declared in the same file. The two names share nothing but the file they live in, and because a close candidate is in scope for one of them and not the other, TypeScript reports them under two different codes: TS2304 and TS2552.",
+  "expectedFix": "Two independent edits. Restore the `Cents` alias — reintroduce src/money.ts and its import, or declare it locally — which settles all three TS2304. Separately, correct the two `TaxRates` references to `TaxRate`. Neither fix touches the other name.",
+  "tags": [
+    "negative-control",
+    "two-roots",
+    "same-file",
+    "undeclared-name",
+    "single-file",
+    "TS2304",
+    "TS2552",
+    "causality-false-positive-guard"
+  ],
+  "difficulty": "easy",
+  "purpose": "The negative control for the name-keyed rule, sibling to `two-roots-one-file`. That one puts two causes in one file under one code and guards the `declaredAt` key; this one puts two *missing names* in one file and guards the `(file, name)` key added on 2026-08-04. A rule keyed on file alone — or on file + code, which §5.1 excludes — would fold all five diagnostics under a single header and hide one of the two bugs behind a counter. The engine must render 2 entries, never 1. It is also the only committed witness that TS2552 folds at all: `TaxRates` gets 2552 rather than 2304 purely because `TaxRate` is in scope, which is the 2724 lesson applied to names — the emitted code depends on neighbouring spelling, not on the failure, so both codes must share the rule or an identical cascade would fold or not depending on the analysed author's choices. Line 23 carries one diagnostic of each code at two columns, which is what makes it concrete that the key is neither the line nor the code. Verified identical under 5.4.5, 5.9.3 and 6.0.3.",
+  "rootCauseFiles": [
+    "src/pricing.ts",
+    "src/money.ts"
+  ]
+}

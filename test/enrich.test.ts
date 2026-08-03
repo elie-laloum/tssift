@@ -40,6 +40,7 @@ const FIXTURES = [
   "missing-multiple-properties",
   "two-roots-one-file",
   "missing-many-properties",
+  "two-missing-names-one-file",
 ] as const;
 
 interface Built {
