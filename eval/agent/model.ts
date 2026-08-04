@@ -12,9 +12,29 @@
  * is env-driven (`OPENAI_BASE_URL`, `OPENAI_API_KEY`, `AGENT_MODEL`), so the same
  * harness drives a hosted API or a local server without a code change.
  *
- * `temperature: 0` for run-to-run reproducibility. Non-streaming: the tasks are
- * tiny and turns are short.
+ * **Temperature is `AGENT_TEMPERATURE`, default `1`, and that default changed on
+ * 2026-08-04.** B1 and B2 both ran at `0` for run-to-run reproducibility, and B2
+ * recorded what that actually bought: at temperature 0, `n=5` is one sample
+ * repeated five times, not five samples — so the spread it reports is not a
+ * variance and the mean is a mode. Worse, it did not deliver the
+ * reproducibility it was chosen for: the control arm, whose code had not
+ * changed by a line, moved 6 % in tokens between the two campaigns anyway.
+ *
+ * A campaign that wants an error bar has to sample. Set `AGENT_TEMPERATURE=0` to
+ * reproduce the B1/B2 protocol — and read `EVAL.md` § B2 §1 before comparing any
+ * number across the two, because they do not subtract.
+ *
+ * Non-streaming: the tasks are small and turns are short.
  */
+/**
+ * Sampling temperature for every request of a campaign.
+ *
+ * Read once, at module load, on purpose: a campaign that changed temperature
+ * halfway would produce a table whose rows are not comparable, and nothing in
+ * the output would say so.
+ */
+export const TEMPERATURE = Number(process.env.AGENT_TEMPERATURE ?? 1);
+
 export interface ModelEndpoint {
   /** Base URL up to but not including `/chat/completions`, e.g. `https://api.openai.com/v1`. */
   baseUrl: string;
@@ -118,7 +138,7 @@ export async function runAgent(config: AgentConfig): Promise<AgentRun> {
     const response = await post(config.endpoint, {
       model: config.endpoint.model,
       max_tokens: config.maxTokens ?? 4096,
-      temperature: 0,
+      temperature: TEMPERATURE,
       tools,
       tool_choice: "auto",
       messages,

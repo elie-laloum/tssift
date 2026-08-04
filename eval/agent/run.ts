@@ -13,7 +13,9 @@
  * (required unless a custom base URL is set — local servers often need none),
  * AGENT_MODEL (default gpt-4o-mini), AGENT_N (runs per arm, default 5),
  * AGENT_MAX_TURNS (default 12), AGENT_SMOKE=1 (one fixture, n=1 — a cheap loop
- * check before the sweep), AGENT_TARGETS=a,b,c (restrict to named targets).
+ * check before the sweep), AGENT_TARGETS=a,b,c (restrict to named targets),
+ * AGENT_TEMPERATURE (default 1 since 2026-08-04; see model.ts for why it is no
+ * longer 0, and what that costs in comparability with B1/B2).
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -21,7 +23,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { run as tssiftRun } from "../../src/run.js";
 import { aggregate, type RunResult, toTable } from "./metrics.js";
-import { type ModelEndpoint, runAgent } from "./model.js";
+import { type ModelEndpoint, runAgent, TEMPERATURE } from "./model.js";
 import { makeSandbox } from "./sandbox.js";
 import { executeTool, TOOLS, type ToolContext, typecheck } from "./tools.js";
 
@@ -199,8 +201,11 @@ async function main(): Promise<void> {
     targets = targets.filter((t) => t.name === "partial-interface-rename");
   }
 
+  // Temperature travels with the banner because it is no longer a constant, and
+  // a campaign's numbers mean different things at 0 and at 1 (see model.ts).
   process.stderr.write(
-    `Model arm: ${endpoint.model} @ ${endpoint.baseUrl}, ${targets.length} targets × 2 arms × ${n} = ${targets.length * 2 * n} runs\n`,
+    `Model arm: ${endpoint.model} @ ${endpoint.baseUrl}, temperature ${TEMPERATURE}, ` +
+      `${targets.length} targets × 2 arms × ${n} = ${targets.length * 2 * n} runs\n`,
   );
 
   const results: RunResult[] = [];

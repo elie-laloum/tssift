@@ -18,60 +18,10 @@
     "",
     "Entrée retirée le 2026-07-27 : `lekes-broken-barrel-export`. Le barrel features/agents a 11 importateurs mais chacun consomme un symbole DIFFERENT — retirer un export n existe donc aucune cascade. Le cas barrel reste couvert par la fixture broken-barrel-export prevue en 4e (AGENTS.md).",
     "Piege verifie le 2026-07-27 : les ancres doivent viser des fichiers TRACKES au sha epingle. `git archive` ne contient pas les fichiers non suivis, et l arbre de travail de lekes en a plusieurs. Le build echoue explicitement dans ce cas plutot que de muter a cote.",
-    "Entrees publiques ajoutees le 2026-08-04 (hono, zod, date-fns) : depots MIT sans dependance runtime, references par `remote` + sha et jamais vendorees. Elles repondent au reproche de B2 — cinq cascades issues d un seul depot prive. Chacune porte un `write` qui pose son tsconfig.json, parce que les trois vrais fichiers sont soit des tsconfig solution, soit des configs qui etendent un paquet de dev non installe."
+    "Entrees publiques ajoutees le 2026-08-04 (hono, zod, date-fns) : depots MIT sans dependance runtime, references par `remote` + sha et jamais vendorees. Elles repondent au reproche de B2 — cinq cascades issues d un seul depot prive. Chacune porte un `write` qui pose son tsconfig.json, parce que les trois vrais fichiers sont soit des tsconfig solution, soit des configs qui etendent un paquet de dev non installe.",
+    "Les trois entrees `lekes-*` sont retirees le 2026-08-04 : leur depot source prive n existe plus sur la machine de dev, elles sortaient en `incoherent` (bras A ne typecheckait rien) a chaque mesure. C est exactement l instabilite que EVAL.md § Corpus limits annoncait et la raison d etre des entrees publiques qui les remplacent. Leur reference reste dans l historique git si le depot reapparait."
   ],
   "entries": [
-    {
-      "name": "lekes-result-value-renamed",
-      "repo": "~/projects/lekes",
-      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
-      "project": ".",
-      "category": "partial-rename",
-      "rootCauseFile": "src/shared/domain/result.ts",
-      "rootCause": "Le champ `value` de la branche succès de `Result<T, E>` est renommé `data` sur la déclaration seule. `Result` est référencé dans 59 fichiers : c'est la cascade la plus large du corpus, pour une cause unique.",
-      "expectedShape": "1 racine (la déclaration) + N dérivés en TS2339 sur `.value`, plus la fabrique `ok()` qui ne satisfait plus son propre type.",
-      "mutations": [
-        {
-          "file": "src/shared/domain/result.ts",
-          "find": "| { readonly ok: true; readonly value: T }",
-          "replace": "| { readonly ok: true; readonly data: T }"
-        }
-      ]
-    },
-    {
-      "name": "lekes-task-export-renamed",
-      "repo": "~/projects/lekes",
-      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
-      "project": ".",
-      "category": "renamed-export",
-      "rootCauseFile": "src/features/agents/domain/task.entity.ts",
-      "rootCause": "Le type exporte `Task` est renomme `TaskDefinition` sur sa declaration seule. Le module `domain/task.entity` est le plus importe du depot au sha epingle : 14 importateurs.",
-      "expectedShape": "1 racine (la declaration) + N derives en TS2305 « has no exported member » chez les importateurs, puis leurs propres cascades. Famille de codes distincte des deux autres entrees.",
-      "mutations": [
-        {
-          "file": "src/features/agents/domain/task.entity.ts",
-          "find": "export interface Task {",
-          "replace": "export interface TaskDefinition {"
-        }
-      ]
-    },
-    {
-      "name": "lekes-ok-arity-changed",
-      "repo": "~/projects/lekes",
-      "sha": "735974b13a6813ee97ca08adfa6707ff7be1127e",
-      "project": ".",
-      "category": "signature-arity",
-      "rootCauseFile": "src/shared/domain/result.ts",
-      "rootCause": "La fabrique `ok()` gagne un second paramètre obligatoire. Tous ses appels deviennent invalides.",
-      "expectedShape": "1 racine (la signature) + N dérivés en TS2554 « Expected 2 arguments, but got 1 ». Famille de codes distincte des deux autres entrées.",
-      "mutations": [
-        {
-          "file": "src/shared/domain/result.ts",
-          "find": "export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });",
-          "replace": "export const ok = <T>(value: T, origin: string): Result<T, never> => ({ ok: true, value, origin });"
-        }
-      ]
-    },
     {
       "name": "hono-context-req-renamed",
       "remote": "https://github.com/honojs/hono.git",
