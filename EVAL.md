@@ -34,6 +34,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [B2 — the model arm re-measured on enriched output (2026-08-03)](#b2--the-model-arm-re-measured-on-enriched-output-2026-08-03)
 - [Real code — `keyzia/data-explorer` (2026-08-03)](#real-code--keyziadata-explorer-2026-08-03)
 - [P1 / 2304 · 2552 — folding by missing name (2026-08-04)](#p1--2304--2552--folding-by-missing-name-2026-08-04)
+- [Header width — a lever measured, and closed (2026-08-04)](#header-width--a-lever-measured-and-closed-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -1787,3 +1788,75 @@ One test failed in a useful way and is worth recording: `render.test.ts` § "eve
 exists in json" threw a `TypeError` rather than skipping, because its cause switch had no `name` arm.
 It caught the arm reaching the text renderer before it had been checked against `json` — rule 14
 enforced by a test that could not silently ignore a case it did not know about.
+
+---
+
+## Header width — a lever measured, and closed (2026-08-04)
+
+The [2304 · 2552 milestone](#p1--2304--2552--folding-by-missing-name-2026-08-04) cost 596 characters on
+real code, and named the reason: OpenAI-generated type names make headers of roughly 140 characters,
+three of which repeat the same file path. That is a plausible case for shortening the header form — and
+the output contract (PROJECT.md §6) has been frozen since 2026-07-27, so reopening it needs a measured
+reason rather than a preference.
+
+**The measurement was run before touching the renderer, and it does not supply one.**
+
+### Where the characters actually are
+
+`agent-text` rendered over the **28 B0 targets** — 22 fixtures, 5 corpus entries, and the
+`data-explorer` report — decomposed by line kind:
+
+| component | chars | share |
+|---|---:|---:|
+| raw `tsc` diagnostic lines | 11 143 | **52.0 %** |
+| enrichment facts | 5 223 | **24.4 %** |
+| `root:` + summary lines | 1 993 | 9.3 % |
+| `cause:` header lines | 1 916 | **8.9 %** |
+| `N diagnostics` count lines | 800 | 3.7 % |
+| `+N more sites` lines | 325 | 1.5 % |
+| blank separators | 48 | 0.2 % |
+| **total** | **21 448** | 100 % |
+
+Headers are **8.9 % of everything the renderer emits**. Half the output is the verbatim `tsc` text that
+rule 3 forbids touching, and the largest reducible block is not the frame at all — it is P2 enrichment,
+at 24.4 %.
+
+### The specific candidate, priced
+
+The shortening that motivated the question is dropping ` in <file>` from a `name` header when no other
+group in the report carries the same name — the condition that keeps two same-name groups in two files
+from rendering as identical strings, which is why `causeLine` prints the file in the first place.
+
+| target | chars | name headers | recoverable | |
+|---|---:|---:|---:|---:|
+| `cannot-find-name` | 419 | 1 | 26 | 6.2 % |
+| `two-missing-names-one-file` | 633 | 2 | 36 | 5.7 % |
+| `data-explorer` | 3 010 | 4 | 165 | 5.5 % |
+| **all 28 targets** | **21 448** | 7 | **227** | **1.06 %** |
+
+**1.06 % of total output**, and on the one target that raised the question it recovers **165 of the 596
+characters** the rule cost — 28 %. The rest of that regression is not a formatting choice:
+
+| the +596 on `data-explorer` | chars |
+|---|---:|
+| 4 name headers | 480 |
+| — *of which the ` in <file>` suffix* | *165* |
+| — *of which the generated names themselves* | *315* |
+| 4 `N diagnostics` count lines | 120 |
+| ` · 5 root causes` on the summary | 16 |
+| 4 blank separators | 4 |
+
+**315 of the 480 header characters are the missing names.** They are the identifying information — the
+one thing an agent needs to know which generated type vanished — and no header form removes them.
+
+### Verdict
+
+The contract stays as it is. A 1 % gain does not clear the bar PROJECT.md §6 sets for reopening a frozen
+decision, it would trade a small saving for a real ambiguity between same-name groups, and it would
+address a quarter of a regression whose remaining three quarters are load-bearing content.
+
+**What the decomposition does surface, and this repo has not measured, is enrichment at 24.4 %** — the
+second-largest block after the untouchable `tsc` text, and about eleven times the header saving on the
+table. B2 already reports that enrichment shows no gain in the model arm. Whether it earns its 24.4 % is
+a better question than header width, and it is the one worth asking with a model, not with a character
+count.
