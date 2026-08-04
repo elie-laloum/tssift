@@ -38,6 +38,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [T3 — the corpus widens onto public code (2026-08-04)](#t3--the-corpus-widens-onto-public-code-2026-08-04)
 - [P1 / 18047 · 18048 · 18049 — folding by nullable declaration (2026-08-04)](#p1--18047--18048--18049--folding-by-nullable-declaration-2026-08-04)
 - [Private fields: measured at 0.00 %, filtered anyway (2026-08-04)](#private-fields-measured-at-000--filtered-anyway-2026-08-04)
+- [B3 — the repaired metric, sampled, on a widened corpus (2026-08-04)](#b3--the-repaired-metric-sampled-on-a-widened-corpus-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -2045,3 +2046,99 @@ that had gone missing, which is worse than noise.
 TypeScript's own `private` modifier is **deliberately not filtered**: such a member is written in the
 declaration the header points at, so a reader who opens that file sees it. Only `#` names, which no
 file makes reachable, are dropped.
+
+---
+
+## B3 — the repaired metric, sampled, on a widened corpus (2026-08-04)
+
+The first campaign run after all three of [B2's preconditions](#5-what-to-do-before-replaying) were
+met: the false-start metric [repaired](#3-and-the-false-start-metric-is-wrong-on-order-book), the corpus
+[widened onto public code](#t3--the-corpus-widens-onto-public-code-2026-08-04), and both arms in the
+same campaign. Sampling at `temperature: 1` rather than 0, because B2 established that `n=5` at zero is
+one sample repeated.
+
+**It is a negative result for H1, on every metric, and it is the most complete campaign this repo has
+run.**
+
+### Conditions
+
+`cx/gpt-5.6-terra`, temperature 1, n=5, 12-turn cap, 8 corpus targets. The sweep aborted at run 62 of
+80 on a sustained HTTP 524 from the endpoint — the second campaign in a day killed the same way — but
+this one **kept its data**: every run is appended to `eval/results/<stamp>.jsonl` as it completes, so
+what follows is measured, not reconstructed. Six targets are complete; `zod` has 2 runs of one arm and
+`date-fns` never started. Both are excluded.
+
+### The numbers
+
+| target | A ~tok/run | B ~tok/run | B/A | A fixed | B fixed | A turns | B turns | A false-start | B false-start |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `dispatch-arity-changed` | 16 519 | 7 616 | **46 %** | 100 % | 100 % | 5.0 | 4.8 | 0 % | 0 % |
+| `mapper-argtype-changed` | 24 982 | 8 406 | **34 %** | 100 % | 100 % | 5.2 | 5.2 | 0 % | 0 % |
+| `registry-barrel-dropped` | 9 291 | 6 476 | **70 %** | 100 % | 100 % | 5.0 | 4.2 | 0 % | 0 % |
+| `shape-tag-renamed` | 31 578 | 24 263 | **77 %** | 100 % | 100 % | 7.6 | 7.6 | 100 % | 100 % |
+| `order-book-field-renamed` | 23 488 | 24 918 | **106 %** | 100 % | **60 %** | 6.4 | 9.4 | 0 % | 0 % |
+| `hono-context-req-renamed` | 113 977 | 161 210 | **141 %** | 100 % | 100 % | 5.8 | **8.2** | 0 % | **80 %** |
+
+| over 6 targets, 30 runs per arm | A | B |
+|---|---:|---:|
+| tokens | 1 099 188 | **1 164 454** (106 %) |
+| fixed | 30/30 | **28/30** |
+| false starts | 5/30 | **9/30** |
+
+**Arm B costs more tokens, fixes less often, and starts falsely more often.** Not by much, and not
+everywhere — but on no metric is it ahead.
+
+### The mechanism, and it is diagnosable rather than mysterious
+
+The two targets where B loses are the two where B takes **more turns**, and tokens in an agent loop are
+dominated by the loop, not by the first message. This is the distinction the B0 tables cannot see:
+`hono`'s report is [10 % of raw `tsc` in characters](#t3--the-corpus-widens-onto-public-code-2026-08-04)
+and **141 % of arm A in tokens**. A saving on the prompt is wiped out by two and a half extra turns.
+
+Why the extra turns is legible in the stray files. Arm B's false starts on `hono` are exactly:
+
+```
+src/helper/route/index.ts       src/middleware/cors/index.ts
+src/middleware/serve-static/index.ts    src/validator/validator.ts
+```
+
+These are the four files carrying `hono`'s **seven second-order diagnostics** — TS2538, TS7006, TS18046
+downstream of the now-`any` receiver — which tssift correctly renders as isolated roots `[2]`–`[8]`
+below the folded cause. Arm A, reading 118 flat diagnostics that all name `Context`, went straight to
+`context.ts` and stopped: **0 % false start, 5.8 turns.** Arm B read one cause plus a seven-item list
+and worked the list.
+
+**The hypothesis this suggests — and it is a hypothesis, not a result — is that a numbered list of
+isolated roots reads as a to-do list.** Structurally correct output; a reading H1 did not anticipate.
+It is testable and it is not tested here.
+
+### What holds, and what does not
+
+- **H1 holds where the cascade is clean.** Four of six targets, 34–77 % of arm A's tokens, no
+  behavioural cost. These are the anonymised entries: one cause, no second-order debris.
+- **H1 inverts where the cascade has debris.** `hono` is the first target in this repo with genuine
+  second-order diagnostics, and it is the one where B does worst on every metric at once.
+- **`order-book` is B's only fix-rate loss: 60 % against 100 %.** Both arms take the consumer route
+  100 % of the time, so the repaired metric shows what B2 could not: this is not a false start, it is
+  two extra turns spent patching thirty sites and running out of the 12-turn cap.
+- **`shape-tag` is 100 % false start in both arms**, on the same file (`src/geometry/factory.ts`). The
+  metric discriminates; it does not discriminate in B's favour.
+
+### Do not compare this to B1 or B2
+
+Three things changed at once: temperature 0 → 1, the false-start definition, and the corpus. B2 already
+established that [the arms drift between campaigns](#1-b1-and-b2-do-not-subtract--the-control-arm-moved)
+even with none of that. The B1 headline (`order-book` 100 % → 0 % false start) is not refuted here — it
+is unmeasurable here, because the thing it measured was reclassified as the consumer route.
+
+### Honest limits
+
+- **Two of eight targets are missing**, and one of them is the arity family — so no code family outside
+  TS2339/TS2554-on-anonymised-code is covered by the public entries.
+- **`zod` measured nothing, and now says so.** Both of its completed runs rewrote `tsconfig.json` and
+  were scored `fixed`: widening an `exclude` list until the failing files leave the program. The
+  `config edit` column exists because of this campaign, and it fired at 100 %.
+- **n=5 at temperature 1 gives five samples but no confidence interval** — none is computed here, and
+  a 60 % against 100 % on five runs is three runs against five.
+- **The total is dominated by `hono`**, which alone is more tokens than the other five combined. The
+  per-target column is the result; the 106 % is arithmetic.
