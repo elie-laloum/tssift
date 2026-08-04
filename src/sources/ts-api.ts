@@ -22,7 +22,10 @@ import { readResolutionFacts } from "./resolution.js";
  * byte-identical to a `primary`, or causality's identity comparison silently
  * stops matching and the whole of P1 quietly folds nothing.
  */
-type SpanCapture = (file: TS.SourceFile, start: number, length: number) => SourceSpan;
+interface SpanCapture {
+  span: (file: TS.SourceFile, start: number, length: number) => SourceSpan;
+  path: (absolute: string) => string;
+}
 
 /**
  * The range this source can drive. Anything outside it exits 2 rather than
@@ -421,7 +424,14 @@ export class TsApiSource implements DiagnosticSource {
     // and type resolution, never a second program.
     const captureFor = new Set(options.captureFor);
     const checker = captureFor.size > 0 ? program.getTypeChecker() : undefined;
-    const capture: SpanCapture = (file, start, length) => spanOf(file, start, length, root, libDir);
+    // Both members close over the same `root`/`libDir`, which is the point: a
+    // path that reaches a SymbolRef as a *name* must normalise exactly like one
+    // that reaches it as a span, or the header and the diagnostic below it would
+    // spell the same file two different ways.
+    const capture: SpanCapture = {
+      span: (file, start, length) => spanOf(file, start, length, root, libDir),
+      path: (absolute) => normalizeFilePath(absolute, root, libDir),
+    };
 
     const diagnostics = ts.getPreEmitDiagnostics(program).map((diagnostic) => {
       const context =

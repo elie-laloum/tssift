@@ -118,7 +118,27 @@ function displayName(ts: typeof TS, symbol: TS.Symbol, declaration: TS.Declarati
 /** Where a declaration begins. Identity of this span is what causality compares. */
 type SpanOf = (file: TS.SourceFile, start: number, length: number) => SourceSpan;
 
-function declarationSpan(ts: typeof TS, declaration: TS.Declaration, spanOf: SpanOf): SourceSpan {
+/**
+ * The two things a resolver may need from the source's path handling.
+ *
+ * `span` was the whole interface until 2026-08-04. `path` was added because a
+ * path can reach a `SymbolRef` by a route that is not a span: the *name* of a
+ * module symbol is its resolved file, absolute, and `checker.typeToString` of a
+ * module type prints that same absolute path inside `import("…")`. Both were
+ * landing verbatim in the rendered header — `/home/<user>/…` in an output the
+ * data model says is never absolute (AGENTS.md § Modèle de données).
+ *
+ * No fixture could see it: their module causes are named from the *written*
+ * specifier (`'../domain'`), not from the symbol. It took a namespace-import
+ * cascade on real third-party code to reach this path at all.
+ */
+interface Capture {
+  span: SpanOf;
+  /** The same normalisation `span` applies to `SourceSpan.file`. */
+  path: (absolute: string) => string;
+}
+
+function declarationSpan(ts: typeof TS, declaration: TS.Declaration, capture: Capture): SourceSpan {
   const file = declaration.getSourceFile();
   // A whole module is declared at 1:1, not at its first token: `getStart` skips
   // leading trivia and would land past the license header, which reads as a
@@ -128,7 +148,7 @@ function declarationSpan(ts: typeof TS, declaration: TS.Declaration, spanOf: Spa
   // comparison needs, and spanning a 40-line interface would put 40 lines of
   // `endLine`/`endColumn` noise in json for no reader's benefit. The `snippet`
   // still carries the declaration's opening line.
-  return spanOf(file, start, 0);
+  return capture.span(file, start, 0);
 }
 
 /**
@@ -155,6 +175,47 @@ function hasOwnMembers(ts: typeof TS, type: TS.Type): boolean {
 }
 
 /**
+ * A module symbol's name, normalised — or `undefined` when this is not one.
+ *
+ * TypeScript names a module symbol after the file it resolved to, absolute and
+ * in quotes: `"/home/me/proj/src/util"`. That is a real path, not a label, so it
+ * gets the same normalisation as any other path the source emits, and the quotes
+ * go with it — they are TypeScript's way of marking "this name is a path", and
+ * once it reads `src/util` the marking is noise.
+ *
+ * Detected on the declaration being a source file rather than on `SymbolFlags`:
+ * a namespace declared with `module "x" { … }` is also a ValueModule but has a
+ * genuine, writable name, and must keep it.
+ */
+function moduleName(
+  ts: typeof TS,
+  symbol: TS.Symbol,
+  declaration: TS.Declaration,
+  capture: Capture,
+): string | undefined {
+  if (!ts.isSourceFile(declaration)) return undefined;
+  const own = symbol.getName();
+  if (!own.startsWith('"') || !own.endsWith('"')) return undefined;
+  return capture.path(declaration.fileName);
+}
+
+/**
+ * The same normalisation, applied inside a rendered type.
+ *
+ * `typeToString` of a module type prints `typeof import("<absolute>", …)`, and a
+ * union or a mapped type can carry several. Anchored on `import("…")` rather
+ * than run over the whole string: a string *literal* type whose value happens to
+ * look like a path is data, and rewriting it would be altering what the type
+ * says.
+ */
+function normalizePathsIn(signature: string, capture: Capture): string {
+  return signature.replace(
+    /import\("([^"]+)"/g,
+    (_, path: string) => `import("${capture.path(path)}"`,
+  );
+}
+
+/**
  * A type, as a `SymbolRef` anchored on its declaration.
  *
  * Returns `undefined` when the type has no declaration to point at — `{}`,
@@ -166,7 +227,7 @@ function symbolRefOfType(
   ts: typeof TS,
   checker: TS.TypeChecker,
   type: TS.Type,
-  spanOf: SpanOf,
+  capture: Capture,
 ): SymbolRef | undefined {
   // `getSymbol()` first: it names the precise type, where `aliasSymbol` names the
   // alias it was reached through. The precise one is the one whose declaration
@@ -175,7 +236,7 @@ function symbolRefOfType(
   const declaration = symbol?.declarations?.[0];
   if (!symbol || !declaration) return undefined;
 
-  const name = displayName(ts, symbol, declaration);
+  const name = moduleName(ts, symbol, declaration, capture) ?? displayName(ts, symbol, declaration);
 
   const own = hasOwnMembers(ts, type);
 
@@ -191,15 +252,19 @@ function symbolRefOfType(
   // of three object literals in place of `1 property: type`, which is the fact
   // that actually answers "why does `.kind` not exist on Shape". Where the
   // property list carries the information, the shape must stay out of its way.
-  let signature = truncate(checker.typeToString(type));
+  let signature = checker.typeToString(type);
   if (!own && signature === name && type.isUnion()) {
-    signature = truncate(type.types.map((member) => checker.typeToString(member)).join(" | "));
+    signature = type.types.map((member) => checker.typeToString(member)).join(" | ");
   }
+  // Normalise before truncating, not after: an absolute path is long enough that
+  // truncation would otherwise spend the whole 200-character budget on a prefix
+  // the reader cannot use, and cut off the part that identifies the type.
+  signature = truncate(normalizePathsIn(signature, capture));
 
   const ref: SymbolRef = {
     name,
     kind: declarationKind(ts, declaration),
-    declaredAt: declarationSpan(ts, declaration, spanOf),
+    declaredAt: declarationSpan(ts, declaration, capture),
     signature,
   };
 
@@ -263,7 +328,7 @@ function context2339(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const access = node.parent;
   if (!access) return undefined;
@@ -277,7 +342,7 @@ function context2339(
       : undefined;
   if (!receiver) return undefined;
 
-  const subject = symbolRefOfType(ts, checker, checker.getTypeAtLocation(receiver), spanOf);
+  const subject = symbolRefOfType(ts, checker, checker.getTypeAtLocation(receiver), capture);
   return subject ? { subject } : undefined;
 }
 
@@ -294,13 +359,13 @@ function context2353(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   for (let current: TS.Node | undefined = node; current; current = current.parent) {
     if (ts.isObjectLiteralExpression(current)) {
       const contextual = checker.getContextualType(current);
       if (!contextual) return undefined;
-      const expected = symbolRefOfType(ts, checker, contextual, spanOf);
+      const expected = symbolRefOfType(ts, checker, contextual, capture);
       if (!expected) return undefined;
       return {
         expected,
@@ -323,7 +388,7 @@ function context2345(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const call = enclosingCall(ts, node);
   if (!call) return undefined;
@@ -343,7 +408,7 @@ function context2345(
   if (!parameter || !parameterDeclaration) return undefined;
 
   const expectedType = checker.getTypeOfSymbolAtLocation(parameter, parameterDeclaration);
-  const expected = symbolRefOfType(ts, checker, expectedType, spanOf);
+  const expected = symbolRefOfType(ts, checker, expectedType, capture);
   if (!expected) return undefined;
 
   return { expected, actual: truncate(checker.typeToString(checker.getTypeAtLocation(argument))) };
@@ -375,7 +440,7 @@ function context2305(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const specifier = node.parent;
   if (!specifier || !(ts.isImportSpecifier(specifier) || ts.isExportSpecifier(specifier))) {
@@ -392,7 +457,7 @@ function context2305(
     // travels in `declaredAt`, which is resolved and therefore shared.
     name: moduleSpecifier.text,
     kind: "module",
-    declaredAt: declarationSpan(ts, declaration, spanOf),
+    declaredAt: declarationSpan(ts, declaration, capture),
   };
 
   const exports = checker.getExportsOfModule(moduleSymbol).map((symbol) => symbol.getName());
@@ -417,7 +482,7 @@ function context2554(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const call = enclosingCall(ts, node);
   const signature = call ? checker.getResolvedSignature(call) : undefined;
@@ -428,7 +493,7 @@ function context2554(
     subject: {
       name: calleeName(ts, call),
       kind: declarationKind(ts, declaration),
-      declaredAt: declarationSpan(ts, declaration, spanOf),
+      declaredAt: declarationSpan(ts, declaration, capture),
       signature: truncate(checker.signatureToString(signature)),
     },
   };
@@ -473,7 +538,7 @@ function context2739(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   let target: TS.Type | undefined;
   let supplied: TS.Expression | undefined;
@@ -492,7 +557,7 @@ function context2739(
   }
 
   if (!target) return undefined;
-  const expected = symbolRefOfType(ts, checker, target, spanOf);
+  const expected = symbolRefOfType(ts, checker, target, capture);
   if (!expected) return undefined;
 
   const context: DiagnosticContext = { expected };
@@ -542,7 +607,7 @@ function context2322(
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const parent = node.parent;
   let assigned: TS.Expression | undefined;
@@ -560,7 +625,7 @@ function context2322(
   const contextual = assigned ? checker.getContextualType(assigned) : undefined;
   if (!contextual) return undefined;
 
-  const expected = symbolRefOfType(ts, checker, contextual, spanOf);
+  const expected = symbolRefOfType(ts, checker, contextual, capture);
   if (!expected) return undefined;
 
   return {
@@ -573,7 +638,7 @@ type Resolver = (
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
-  spanOf: SpanOf,
+  capture: Capture,
 ) => DiagnosticContext | undefined;
 
 const RESOLVERS: Record<number, Resolver | undefined> = {
@@ -594,7 +659,7 @@ const RESOLVERS: Record<number, Resolver | undefined> = {
 /**
  * Resolve the context for one diagnostic, or `undefined`.
  *
- * `spanOf` is injected rather than imported so that path normalisation stays in
+ * `capture` is injected rather than imported so that path normalisation stays in
  * one place: a `declaredAt` produced here must be byte-identical to a `primary`
  * produced there, or causality's identity comparison silently stops matching.
  */
@@ -602,7 +667,7 @@ export function resolveContext(
   ts: typeof TS,
   checker: TS.TypeChecker,
   diagnostic: TS.Diagnostic,
-  spanOf: SpanOf,
+  capture: Capture,
 ): DiagnosticContext | undefined {
   const resolve = RESOLVERS[diagnostic.code];
   if (!resolve || !diagnostic.file || diagnostic.start === undefined) return undefined;
@@ -611,7 +676,7 @@ export function resolveContext(
   if (!node) return undefined;
 
   try {
-    return resolve(ts, checker, node, spanOf);
+    return resolve(ts, checker, node, capture);
   } catch {
     // A checker call that throws on an exotic node must not take the whole run
     // down: the diagnostic is still reported, just without context (rule 5).
