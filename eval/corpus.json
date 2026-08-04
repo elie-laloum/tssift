@@ -17,7 +17,8 @@
     "échoue plutôt que de muter au hasard.",
     "",
     "Entrée retirée le 2026-07-27 : `lekes-broken-barrel-export`. Le barrel features/agents a 11 importateurs mais chacun consomme un symbole DIFFERENT — retirer un export n existe donc aucune cascade. Le cas barrel reste couvert par la fixture broken-barrel-export prevue en 4e (AGENTS.md).",
-    "Piege verifie le 2026-07-27 : les ancres doivent viser des fichiers TRACKES au sha epingle. `git archive` ne contient pas les fichiers non suivis, et l arbre de travail de lekes en a plusieurs. Le build echoue explicitement dans ce cas plutot que de muter a cote."
+    "Piege verifie le 2026-07-27 : les ancres doivent viser des fichiers TRACKES au sha epingle. `git archive` ne contient pas les fichiers non suivis, et l arbre de travail de lekes en a plusieurs. Le build echoue explicitement dans ce cas plutot que de muter a cote.",
+    "Entrees publiques ajoutees le 2026-08-04 (hono, zod, date-fns) : depots MIT sans dependance runtime, references par `remote` + sha et jamais vendorees. Elles repondent au reproche de B2 — cinq cascades issues d un seul depot prive. Chacune porte un `write` qui pose son tsconfig.json, parce que les trois vrais fichiers sont soit des tsconfig solution, soit des configs qui etendent un paquet de dev non installe."
   ],
   "entries": [
     {
@@ -68,6 +69,134 @@
           "file": "src/shared/domain/result.ts",
           "find": "export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });",
           "replace": "export const ok = <T>(value: T, origin: string): Result<T, never> => ({ ok: true, value, origin });"
+        }
+      ]
+    },
+    {
+      "name": "hono-context-req-renamed",
+      "remote": "https://github.com/honojs/hono.git",
+      "license": "MIT",
+      "sha": "192768fbaf9aa99a45404dc2f171541227c11d20",
+      "project": ".",
+      "category": "renamed-accessor",
+      "rootCauseFile": "src/context.ts",
+      "rootCause": "L'accesseur `req` de la classe `Context` est renommé `request` sur sa déclaration seule. `Context` est le type le plus importé du dépôt et `.req` y est lu partout : c'est la cascade de propriété de classe du corpus public.",
+      "expectedShape": "1 racine (la classe) + 111 dérivés TS2339 sur `.req`, plus 7 diagnostics de second ordre (TS2538, TS7006, TS18046) qui sortent en racines isolées — vérifié : 118 diagnostics sur 28 fichiers, tssift rend 8 entrées, B/A 11 %.",
+      "deviatesFromCanonicalConfig": "tsconfig.json écrit par le harnais : celui du dépôt est un tsconfig solution (`references`), et deux sous-arbres (`src/adapter/**`, `src/middleware/context-storage/**`) exigent @types/node, absent d'une install à zéro dépendance. Le reste — 148 fichiers — compile vert au sha épinglé. `composite` et `declaration` sont remis à false et `noEmit` à true : la base du dépôt active composite, que `--incremental false` du harnais refuse (TS6379).",
+      "write": [
+        {
+          "path": "tsconfig.json",
+          "json": {
+            "extends": "./tsconfig.base.json",
+            "compilerOptions": {
+              "module": "ES2020",
+              "rootDir": "./src/",
+              "noUnusedLocals": true,
+              "noUnusedParameters": true,
+              "skipLibCheck": true,
+              "composite": false,
+              "declaration": false,
+              "noEmit": true
+            },
+            "include": ["src/**/*.ts", "src/**/*.mts"],
+            "exclude": [
+              "src/**/*.test.ts",
+              "src/**/*.test.tsx",
+              "src/adapter/**",
+              "src/middleware/context-storage/**"
+            ]
+          }
+        }
+      ],
+      "mutations": [
+        {
+          "file": "src/context.ts",
+          "find": "  get req(): HonoRequest<P, I['out']> {",
+          "replace": "  get request(): HonoRequest<P, I['out']> {"
+        }
+      ]
+    },
+    {
+      "name": "zod-util-export-renamed",
+      "remote": "https://github.com/colinhacks/zod.git",
+      "license": "MIT",
+      "sha": "912f0f51b0ced654d0069741e7160834dca742ee",
+      "project": "packages/zod",
+      "category": "renamed-export-namespace",
+      "rootCauseFile": "src/v4/core/util.ts",
+      "rootCause": "La fonction exportée `joinValues` est renommée `joinValuesList` sur sa déclaration seule. Ses lecteurs l'atteignent par `import * as util`, donc l'échec porte sur le symbole du module et non sur un import nommé.",
+      "expectedShape": "1 racine (le module) + 99 dérivés TS2339, 50 fichiers, une seule entrée rendue, B/A 6 %. C'est l'entrée qui a fait apparaître la fuite de chemin absolu corrigée le 2026-08-04 ; la fixture `namespace-import-rename` en est le témoin committé.",
+      "deviatesFromCanonicalConfig": "tsconfig.json écrit par le harnais : celui du paquet fixe `rootDir: src` et attrape `vitest.config.ts`, et les bancs d'essai et tests v3 exigent `benchmark`, `vitest` et @types/node.",
+      "write": [
+        {
+          "path": "packages/zod/tsconfig.json",
+          "json": {
+            "extends": "../../.configs/tsconfig.base.json",
+            "compilerOptions": {
+              "noEmit": true,
+              "skipLibCheck": true,
+              "customConditions": ["@zod/source"]
+            },
+            "include": ["src/**/*.ts"],
+            "exclude": [
+              "src/**/*.test.ts",
+              "**/*.bench.ts",
+              "src/v3/benchmarks/**",
+              "src/v3/tests/**"
+            ]
+          }
+        }
+      ],
+      "mutations": [
+        {
+          "file": "packages/zod/src/v4/core/util.ts",
+          "find": "export function joinValues<T extends Primitive[]>(array: T, separator = \"|\"): string {",
+          "replace": "export function joinValuesList<T extends Primitive[]>(array: T, separator = \"|\"): string {"
+        }
+      ]
+    },
+    {
+      "name": "date-fns-todate-arity-changed",
+      "remote": "https://github.com/date-fns/date-fns.git",
+      "license": "MIT",
+      "sha": "4098115cf705e3af7f663d8e5b0686e39a9f478a",
+      "project": "pkgs/core",
+      "category": "signature-arity",
+      "rootCauseFile": "src/toDate/index.ts",
+      "rootCause": "Le second paramètre de `toDate` cesse d'être optionnel. `toDate` est importé par 107 fichiers du paquet : la seule entrée du corpus public dont la cascade n'est pas un TS2339.",
+      "expectedShape": "1 racine (la signature) + 38 dérivés TS2554 « Expected 2 arguments, but got 1 », 24 fichiers, une seule entrée rendue, B/A 28 %. Chaque diagnostic porte un `related` désignant le paramètre, comme sur lekes-ok-arity-changed.",
+      "deviatesFromCanonicalConfig": "tsconfig.json écrit par le harnais : celui du paquet étend `@date-fns/dev/config/tsconfig`, qui n'existe qu'une fois les dépendances de dev installées. Les sous-arbres Temporal (`src/tp/**`, `src/**/*.tp.ts`, `src/_lib/tp/**`) sont exclus — ils exigent un `lib` Temporal qu'aucune version de TS de la plage ne fournit.",
+      "write": [
+        {
+          "path": "pkgs/core/tsconfig.json",
+          "json": {
+            "compilerOptions": {
+              "strict": true,
+              "noEmit": true,
+              "skipLibCheck": true,
+              "target": "ES2022",
+              "lib": ["ES2022"],
+              "module": "ESNext",
+              "moduleResolution": "Bundler",
+              "allowImportingTsExtensions": true
+            },
+            "include": ["src/**/*.ts"],
+            "exclude": [
+              "src/**/*.test.ts",
+              "src/**/test.ts",
+              "src/**/*.tp.ts",
+              "src/_lib/test/**",
+              "src/_lib/tp/**",
+              "src/tp/**"
+            ]
+          }
+        }
+      ],
+      "mutations": [
+        {
+          "file": "pkgs/core/src/toDate/index.ts",
+          "find": "  context?: ContextFn<ResultDate> | undefined,",
+          "replace": "  context: ContextFn<ResultDate> | undefined,"
         }
       ]
     }

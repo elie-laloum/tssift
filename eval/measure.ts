@@ -146,6 +146,11 @@ const TARGETS: Target[] = [
     kind: "fixture",
     project: "fixtures/two-missing-names-one-file/before",
   },
+  {
+    name: "namespace-import-rename",
+    kind: "fixture",
+    project: "fixtures/namespace-import-rename/before",
+  },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

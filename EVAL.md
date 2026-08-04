@@ -35,6 +35,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [Real code — `keyzia/data-explorer` (2026-08-03)](#real-code--keyziadata-explorer-2026-08-03)
 - [P1 / 2304 · 2552 — folding by missing name (2026-08-04)](#p1--2304--2552--folding-by-missing-name-2026-08-04)
 - [Header width — a lever measured, and closed (2026-08-04)](#header-width--a-lever-measured-and-closed-2026-08-04)
+- [T3 — the corpus widens onto public code (2026-08-04)](#t3--the-corpus-widens-onto-public-code-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -1860,3 +1861,83 @@ second-largest block after the untouchable `tsc` text, and about eleven times th
 table. B2 already reports that enrichment shows no gain in the model arm. Whether it earns its 24.4 % is
 a better question than header width, and it is the one worth asking with a model, not with a character
 count.
+
+---
+
+## T3 — the corpus widens onto public code (2026-08-04)
+
+B2's first item before replaying anything was **corpus width**: five cascades, two of them
+[measuring nothing](#3-and-the-false-start-metric-is-wrong-on-order-book), all five derived from a
+single private repository. Three entries are added here from **public, permissively licensed,
+zero-dependency** TypeScript repositories, each frozen at a pinned commit and broken by a one-line
+mutation.
+
+### Method, and why nothing is vendored
+
+The committed `corpus/` entries are anonymised rewrites, 40 kB of source in total. The in-scope source
+of hono alone is **707 kB**, and zod's is **1 023 kB** — vendoring either would multiply this
+repository's corpus by an order of magnitude and put a licensing decision on the critical path.
+
+So these three go in the *other* corpus: `eval/corpus.json` holds a `remote` URL, a sha, and a
+find/replace pair, and `scripts/build-corpus.mjs` mirrors each repository once into `.cache/` —
+blobless, no checkout — then streams a frozen tree out with `git archive`. **No third-party source
+enters this repository**, the network is touched once per entry and never during a measurement, and
+`--offline` skips anything not already mirrored.
+
+Each entry also carries a `write` block that lays down its `tsconfig.json`. All three need it, and the
+reasons are worth recording because they are what a real project looks like:
+
+| repo | why the real config cannot be used as-is |
+|---|---|
+| hono | root config is a **solution tsconfig** (`references`) — `tsc -p .` reports 0 errors over 0 files, the same trap [data-explorer](#real-code--keyziadata-explorer-2026-08-03) sprang. `src/adapter/**` and `src/middleware/context-storage/**` need `@types/node`. Its base sets `composite`, which `--incremental false` refuses (TS6379). |
+| zod | package config pins `rootDir: src` and then catches `vitest.config.ts`; benchmarks and v3 tests need `benchmark`, `vitest` and `@types/node`. |
+| date-fns | package config extends `@date-fns/dev/config/tsconfig`, which exists only once dev dependencies are installed. Temporal subtrees need a `lib` no TypeScript in range ships. |
+
+Everything excluded is named in each entry's `deviatesFromCanonicalConfig`. What remains compiles
+**green** at the pinned sha before the mutation — 148, 107 and 1 232 files respectively.
+
+### The numbers
+
+| entry | repo · sha | family | A diags | B entries | A chars | B chars | B/A |
+|---|---|---|---:|---:|---:|---:|---:|
+| `hono-context-req-renamed` | honojs/hono `192768f` | class property (TS2339) | 118 | 8 | 14 012 | 1 412 | **10 %** |
+| `zod-util-export-renamed` | colinhacks/zod `912f0f5` | module namespace (TS2339) | 99 | **1** | 23 834 | 1 264 | **5 %** |
+| `date-fns-todate-arity-changed` | date-fns/date-fns `4098115` | signature arity (TS2554) | 38 | **1** | 3 291 | 835 | **25 %** |
+
+Three different structural links, deliberately: an identical `declaredAt` on a class, a shared module
+symbol, and a resolved signature. `hono` renders 8 entries rather than 1 because 7 of its 118
+diagnostics are genuine second-order failures (TS2538, TS7006, TS18046) downstream of the now-`any`
+receiver — they come out as isolated roots, which is correct.
+
+**These are the strongest H1 ratios this repository has, and the first on code written by people who
+have never heard of it.** They are still B0: character counts, no model, no fix rate, no false starts.
+
+### What widening immediately caught
+
+Two defects that five entries and twenty-two fixtures could not see, both found within the hour:
+
+- **Absolute paths in the frame.** zod's cascade is the first to make a *module symbol* the cause.
+  TypeScript names such a symbol after its resolved file — absolute — and prints it again inside
+  `typeof import("…")`. Both reached the header verbatim, in an output whose data model says paths are
+  never absolute. Fixed the same day, with `fixtures/namespace-import-rename` committed as the witness;
+  zod's report drops from 1 800 to 1 264 characters as a side effect.
+- **ECMAScript private fields in property lists.** hono's header reads `'Context' has 36 properties:
+  #rawRequest, #req, env, #var, …` — **9 of the 12 displayed names are `#`-private**, unreachable by any
+  reader, and `#req` sits next to the very `req` that is missing. Measured across the 28 pre-existing B0
+  targets the cost is **0.00 % — not one of them contains a single private field.** The character cost on
+  hono is 93. The real cost is not characters: it is **75 % of the display budget** spent on names nobody
+  can use. Recorded, not fixed; the decision is open.
+
+### Honest limits
+
+- **Three entries, three repositories, one measurement each.** No n=5, no model arm, no claim about
+  agent behaviour.
+- **The mutations are ours.** Like every corpus entry since 2026-07-27, and for the reason
+  `eval/corpus.json` records: real repositories commit green, so broken states live in working trees,
+  and a working tree moves underneath a measurement.
+- **The pinned shas are current heads at the time of writing**, not historically interesting commits.
+  They are pins for reproducibility, nothing more.
+- **The three `lekes` entries are now unbuildable** — their private source repository is gone from this
+  machine. The harness reports them as incoherent and excludes them from the totals rather than scoring
+  a target where arm A type-checks nothing. That is the instability
+  [Corpus limits](#corpus-limits) predicted, arriving on schedule.

@@ -26,5 +26,8 @@ pnpm-lock.yaml
 !fixtures/**/yarn.lock
 
 # Corpus réel matérialisé localement depuis eval/corpus.json.
-# Jamais commité : les dépôts sources sont privés, tssift est public.
+# Jamais commité : les dépôts sources sont soit privés, soit tiers — tssift est
+# public et ne vendore le code de personne. Les entrées publiques (hono, zod,
+# date-fns) sont des miroirs git sans copie de travail, clonés une fois.
 .corpus/
+.cache/
