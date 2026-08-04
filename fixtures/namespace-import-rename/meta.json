@@ -1,0 +1,9 @@
+{
+  "rootCause": "src/format.ts renamed the exported function `joinValues` to `joinList`. Its three readers reach it through a namespace import (`import * as format from \"./format\"`) rather than a named import, so TypeScript reports each call as TS2339 on the module's own type — `Property 'joinValues' does not exist on type 'typeof import(\"…/src/format\")'` — and never as TS2305 'has no exported member'. Four call sites across src/report.ts, src/audit.ts and src/export-csv.ts.",
+  "expectedFix": "Rename the export back to `joinValues` in src/format.ts, one declaration, and all four diagnostics go. Renaming the four call sites to `joinList` also compiles and is listed in `consumerFiles`.",
+  "tags": ["namespace-import", "renamed-export", "cross-file", "single-root", "TS2339"],
+  "difficulty": "easy",
+  "purpose": "The only fixture whose cause is a module reached through a NAMESPACE import, and the witness for the 2026-08-04 path-normalisation fix. A module symbol is named by TypeScript after its resolved file, absolute, and `typeToString` prints that path again inside `import(\"…\")`; both used to land verbatim in the header. Every other module-cause fixture (broken-barrel-export) is named from the written specifier `'../domain'` and never reaches that code path — which is why twenty-two fixtures missed it and a public repository found it. It is also the only fixture whose raw messages contain an absolute path at all: TypeScript prints it, rule 3 forbids touching it, and the snapshot scrubs the checkout prefix rather than the product hiding it.",
+  "rootCauseFiles": ["src/format.ts"],
+  "consumerFiles": ["src/report.ts", "src/audit.ts", "src/export-csv.ts"]
+}

@@ -31,6 +31,7 @@ const FIXTURES = [
   "two-roots-one-file",
   "missing-many-properties",
   "two-missing-names-one-file",
+  "namespace-import-rename",
 ] as const;
 
 /**
@@ -60,20 +61,56 @@ function ingested(name: (typeof FIXTURES)[number]) {
 
 const loadedVersion = build("two-independent-roots").facts.typescript.version;
 
+/** The absolute path of this checkout, as TypeScript spells it in a message. */
+const CHECKOUT = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
+
+/**
+ * Make a rendered report snapshot-safe by scrubbing this checkout's path.
+ *
+ * Everything the *frame* prints is relative by construction, and there is a test
+ * below that says so. But rule 3 keeps `message` byte-identical to TypeScript's,
+ * and TypeScript does print absolute paths of its own accord: a namespace import
+ * comes back as `typeof import("/home/<user>/…/src/format")`. That is the
+ * compiler's text, not ours, and normalising it would be exactly the alteration
+ * rule 3 forbids — so the snapshot absorbs it here instead of the product hiding
+ * it there. `namespace-import-rename` is the only fixture that needs this today.
+ */
+function snapshotSafe(text: string): string {
+  return text.replaceAll(CHECKOUT, "<checkout>");
+}
+
 describe.runIf(loadedVersion === SNAPSHOT_VERSION)(
   `agent-text · snapshots @ ts${SNAPSHOT_VERSION}`,
   () => {
     for (const name of FIXTURES) {
       it(`renders ${name}`, () => {
-        expect(renderAgentText(build(name))).toMatchSnapshot();
+        expect(snapshotSafe(renderAgentText(build(name)))).toMatchSnapshot();
       });
 
       it(`renders ${name} with --all`, () => {
-        expect(renderAgentText(build(name, true))).toMatchSnapshot();
+        expect(snapshotSafe(renderAgentText(build(name, true)))).toMatchSnapshot();
       });
     }
   },
 );
+
+describe("the frame never prints an absolute path, whatever TypeScript does", () => {
+  // The guard for the 2026-08-04 fix. A module symbol's name is its resolved
+  // file — absolute — and `typeToString` of a module type prints that path
+  // again inside `import("…")`. Both used to reach the header verbatim. Only
+  // `namespace-import-rename` reaches that code path at all, which is why the
+  // defect survived twenty-two fixtures and was found on third-party code.
+  for (const name of FIXTURES) {
+    it(name, () => {
+      const framing = renderAgentText(build(name, true))
+        .split("\n")
+        // Diagnostic lines carry TypeScript's verbatim message (rule 3); every
+        // other line is ours, and ours must be relative.
+        .filter((line) => !/ error TS\d+: /.test(line));
+      expect(framing.filter((line) => line.includes(CHECKOUT))).toEqual([]);
+    });
+  }
+});
 
 describe("agent-text · invariants (any supported TypeScript)", () => {
   for (const name of FIXTURES) {
@@ -100,10 +137,12 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // node_modules …` line — then 2740 two: `required by:` and the
         // `N more not listed above:` completion — and 2322 one, a union of
         // primitives expanded as `"EUR" | "USD"`, which is the only fact line
-        // that opens on a quoted literal. Widening this to `.*` would retire
-        // the guard rather than update it.
+        // that opens on a quoted literal — and `namespace-import-rename` one
+        // more on 2026-08-04, `typeof import("…")`, the rendered signature of a
+        // module type, which no fixture produced before it. Widening this to
+        // `.*` would retire the guard rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |"[^"]*" \||\d+ more not listed above: |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |"[^"]*" \||\d+ more not listed above: |typeof |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
         );
       }
     });

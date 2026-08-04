@@ -313,6 +313,43 @@ exports[`agent-text · snapshots @ ts5.9.3 > renders monorepo-cross-package with
 "
 `;
 
+exports[`agent-text · snapshots @ ts5.9.3 > renders namespace-import-rename 1`] = `
+"root: fixtures/namespace-import-rename/before
+4 errors · 3 files · 1 root cause
+
+[1] cause: module 'src/format.ts' declared at src/format.ts:1:1
+      typeof import("src/format")
+      'src/format.ts' has 3 exports: joinList, quote, truncate
+    4 diagnostics, all TS2339
+    src/audit.ts:4:33 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    src/export-csv.ts:4:17 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    src/export-csv.ts:8:17 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    +1 more site (--all for every one)
+"
+`;
+
+exports[`agent-text · snapshots @ ts5.9.3 > renders namespace-import-rename with --all 1`] = `
+"root: fixtures/namespace-import-rename/before
+4 errors · 3 files
+
+[1] src/audit.ts:4:33 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    type: module 'src/format.ts' typeof import("src/format") at src/format.ts:1:1
+    'src/format.ts' has 3 exports: joinList, quote, truncate
+
+[2] src/export-csv.ts:4:17 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    type: module 'src/format.ts' typeof import("src/format") at src/format.ts:1:1
+    'src/format.ts' has 3 exports: joinList, quote, truncate
+
+[3] src/export-csv.ts:8:17 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    type: module 'src/format.ts' typeof import("src/format") at src/format.ts:1:1
+    'src/format.ts' has 3 exports: joinList, quote, truncate
+
+[4] src/report.ts:4:17 error TS2339: Property 'joinValues' does not exist on type 'typeof import("<checkout>/fixtures/namespace-import-rename/before/src/format")'.
+    type: module 'src/format.ts' typeof import("src/format") at src/format.ts:1:1
+    'src/format.ts' has 3 exports: joinList, quote, truncate
+"
+`;
+
 exports[`agent-text · snapshots @ ts5.9.3 > renders narrowed-union-member 1`] = `
 "root: fixtures/narrowed-union-member/before
 8 errors · 3 files · 1 root cause
