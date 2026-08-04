@@ -1,8 +1,27 @@
 {
   "rootCause": "src/domain/order.ts renamed the `Order` field `total` to `grandTotal` (now correct and consistent at the declaration). Thirty read sites across five layers still read `order.total` — src/services (order-service, pricing, refund, tax), src/api (order-controller, serializers, validators), src/reporting (summary, csv, ledger, metrics), src/jobs (settlement, reminder, reconcile) and src/ui (order-row, receipt, badge) — each emitting TS2339: Property 'total' does not exist on type 'Order'.",
-  "expectedFix": "One decision at the declaration: either keep `grandTotal` and update the reads, or revert the field name back to `total` in src/domain/order.ts, which settles all thirty diagnostics at once. The tempting site-by-site alternative — patching `order.total` at each of the thirty read sites — is a false start: it is thirty edits to consumers when the single cause lives in one declaration.",
+  "expectedFix": "One decision at the declaration settles all thirty diagnostics at once: revert the field name back to `total` in src/domain/order.ts. The wide alternative — keeping `grandTotal` and patching `order.total` at each of the thirty read sites — also compiles, and is listed in `consumerFiles`: it is thirty edits to consumers when the single cause lives in one declaration, and the harness scores it in its own column rather than as a false start. A false start here is a write to one of the five files no fix involves (src/domain/customer.ts, index.ts, money.ts, order-line.ts, order-status.ts).",
   "tags": ["field-rename", "cross-file", "deep-cascade", "single-root", "TS2339"],
   "difficulty": "medium",
-  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2339 cascade across N files, committed so it never moves and needs no private repo. The fix is one declaration; patching each read site is the tempting false start this entry exists to measure.",
-  "rootCauseFiles": ["src/domain/order.ts"]
+  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2339 cascade across N files, committed so it never moves and needs no private repo. The fix is one declaration; patching each read site is the tempting wide route this entry exists to measure — scored as `consumerFiles`, not as a false start, since this entry's own expectedFix admits it compiles. Repaired 2026-08-04: B1 scored that route as a false start, which contradicted the ground truth stated here.",
+  "rootCauseFiles": ["src/domain/order.ts"],
+  "consumerFiles": [
+    "src/api/order-controller.ts",
+    "src/api/serializers.ts",
+    "src/api/validators.ts",
+    "src/jobs/reconcile.ts",
+    "src/jobs/reminder.ts",
+    "src/jobs/settlement.ts",
+    "src/reporting/csv.ts",
+    "src/reporting/ledger.ts",
+    "src/reporting/metrics.ts",
+    "src/reporting/summary.ts",
+    "src/services/order-service.ts",
+    "src/services/pricing.ts",
+    "src/services/refund.ts",
+    "src/services/tax.ts",
+    "src/ui/badge.ts",
+    "src/ui/order-row.ts",
+    "src/ui/receipt.ts"
+  ]
 }

@@ -41,6 +41,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 |---|---|---|
 | P2 totals `16 861 → 17 538`, B/A `54 % → 56 %` (2026-08-01) | [P2 volume cost](#the-volume-cost-measured-against-the-p1-baseline) | **do not reproduce** — `rootLabel` bug, corrected 2026-08-02. Deltas remain valid; absolute values and ratios do not. See [P2/2307](#first-the-correction-the-harness-was-measuring-a-product-nobody-ships). |
 | B1 false-start rates (2026-07-29) | [B1 corpus results](#results-on-the-frozen-corpus--the-real-test-of-h1-2026-07-29) | **not comparable to B2** — the control arm drifted 6 %. And the `order-book` metric is defective. See [B2 §1](#1-b1-and-b2-do-not-subtract--the-control-arm-moved) and [B2 §3](#3-and-the-false-start-metric-is-wrong-on-order-book). |
+| "errors are the developer's own" on `data-explorer` (2026-08-03) | [Real code](#real-code--keyziadata-explorer-2026-08-03) | **wrong claim, corrected 2026-08-04** — the 19 diagnostics come from 38 uncommitted deletions across four files. The **numbers reproduce exactly**; only the provenance was misstated. |
 
 ---
 
@@ -1483,6 +1484,36 @@ consumers without understanding" from "deliberately chose the *update the reads*
 defect to fix before replaying anything: either `rootCauseFiles` admits both sets, or the fixture settles
 on a single strategy in its `expectedFix`.
 
+> **Repaired 2026-08-04, and by neither of those two routes.** Both were costed and both destroy
+> something. Widening `rootCauseFiles` is not the one-file-to-two it sounds like: the consumer route
+> spans **17 of `order-book`'s 23 files** and 19 of `shape-tag`'s 25, so it leaves the false start with
+> 5 discriminating files out of 23 — and the wide rename cascade, the shape where H1 has the most to
+> say, stops being measured at all. Narrowing `expectedFix` keeps the metric sharp but decrees invalid
+> a fix that genuinely compiles, which makes the ground truth our judgement rather than a fact.
+>
+> So the categories were split instead. `meta.json` may now declare **`consumerFiles`**, the sites its
+> own prose accepts as the wide alternative. A write there is scored in its own column; a false start
+> goes back to being what PROJECT.md §7 always said — a write to a file **no** fix involves, which on
+> `order-book` is the five untouched `src/domain/` modules. Nothing is decreed invalid and nothing
+> stops being counted.
+>
+> | | `order-book` | `shape-tag` |
+> |---|---:|---:|
+> | files in project | 23 | 25 |
+> | `rootCauseFiles` (declaration) | 1 | 1 |
+> | `consumerFiles` (wide route) | 17 | 19 |
+> | false-start territory | **5** | **5** |
+>
+> The two entries were found by audit, not assumption: of the five corpus entries, exactly these two
+> both concede a second compiling route *and* call it a false start. `dispatch`, `mapper` and
+> `registry` declare a single fix and are untouched. `test/ground-truth.test.ts` pins all of it — path
+> existence, the two categories being disjoint, and the prose pattern that produced the defect in the
+> first place.
+>
+> **This does not retroactively fix B1 or B2.** Their published false-start rates were produced by the
+> old scoring and are not recomputable without re-running; they stay in the table above as recorded.
+> What the repair buys is that the *next* campaign measures something.
+
 The report handed to the model, for its part, has not regressed — it is better than in B1:
 
 ```
@@ -1509,8 +1540,9 @@ cannot answer it** — which puts corpus width ([Corpus limits](#corpus-limits))
 
 ### 5. What to do before replaying
 
-1. **Fix the metric**: `rootCauseFiles` must describe the set of files a *valid* fix may touch, or the
-   fixture must admit only one strategy. As it stands, two of the five targets measure nothing.
+1. ~~**Fix the metric**~~ — **done 2026-08-04.** The two strategies are now scored in two columns
+   rather than folded into one, via `consumerFiles`. See the box in §3 for why neither of the two
+   routes suggested here was taken.
 2. **Widen the corpus** — five cascades of which two are unusable leaves three measurement points.
 3. **Replay both arms in the same campaign**, always, and publish the control arm's drift as part of the
    result.
@@ -1526,7 +1558,27 @@ project, one run, no n=5, no model arm. It is recorded because it produced two t
 not: a confirmation on code nobody wrote for us, and a folding gap that only real code made visible.
 
 **Target:** `apps/data-explorer/tsconfig.json` in a private Next/Nx monorepo, **TypeScript 5.8.3**, 919
-files checked. Errors are the developer's own, not authored for this measurement.
+files checked.
+
+> **Correction (2026-08-04).** This section originally read *"errors are the developer's own, not
+> authored for this measurement"*. **That is wrong**, and re-running the measurement is what exposed it.
+> The target's working tree carries **38 uncommitted deletions across four files**, and they account for
+> all 19 diagnostics with nothing left over:
+>
+> | mutated file | deletion | emits |
+> |---|---|---|
+> | `app/_helpers/notification.ts` | class body of `NotificationHelpers` emptied | 10 × TS2339 |
+> | `app/_api/keyscore/apis/KeyscoreApi.ts` | 3 request interfaces removed | 6 × TS2304 |
+> | `app/_api/geo-service/apis/BlocksApi.ts` | 1 request interface removed | 2 × TS2552 |
+> | `app/_helpers/i18n.ts` | `export default i18next` removed | 1 × TS1192 |
+>
+> This is **corpus methodology** — deliberate mutation of a pinned tree — not breakage found in the
+> wild. Every number below is unaffected and reproduces to the character (verified 2026-08-04, same
+> commit `da0b5d47`, working tree byte-identical before and after both arms). What changes is what the
+> section may be *quoted for*: it is real code, at real scale, with real generated files, but the
+> failures were authored. The claim "a P2 enricher fires on code nobody wrote for us" survives — the
+> enricher had no knowledge of the mutation — the claim "these are errors a developer actually hit"
+> does not.
 
 *Reproduction, and a trap worth knowing:* the repository root holds a **solution tsconfig** (`"files":
 []`, `"include": []`, four `references`) — the same configuration that made this target exit 2 in the

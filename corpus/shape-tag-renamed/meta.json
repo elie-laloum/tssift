@@ -1,6 +1,6 @@
 {
   "rootCause": "The discriminated union `Shape = Circle | Square | Triangle` is declared in src/geometry/shape.ts, where the discriminant tag was renamed from `kind` to `variant` on every member. About two dozen consumer sites across four layers (src/geometry/: area, perimeter, bounds, transform, clone, equality; src/render/: svg, canvas, label, color; src/export/: json, summary, csv, markdown; src/analysis/: classify, stats, histogram, validate, group) still `switch (s.kind)` or read `s.kind`, each raising TS2339 'Property kind does not exist on type Shape'. Because the tag no longer narrows, several sites cascade a second TS2339 when they read a branch-only member (radius/side/base/height) off the still-unnarrowed union.",
-  "expectedFix": "Rename the tag back to `kind` on the three members of the union in src/geometry/shape.ts (one declaration), or equivalently update every consumer to read `variant`; both settle the whole cascade.",
+  "expectedFix": "Rename the tag back to `kind` on the three members of the union in src/geometry/shape.ts — one declaration, and the whole cascade settles. Updating every consumer to read `variant` settles it too and is listed in `consumerFiles`: the harness scores that wide route in its own column rather than as a false start. A false start here is a write to one of the five files no fix involves (src/geometry/factory.ts, src/geometry/registry.ts, src/index.ts, src/render/theme.ts, src/util/format.ts).",
   "tags": [
     "discriminated-union",
     "tag-rename",
@@ -10,6 +10,27 @@
     "TS2339"
   ],
   "difficulty": "medium",
-  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2339 cascade across 25 files on a renamed union tag, committed so it never moves and needs no private repo. The fix is one declaration; updating each consumer is the tempting false start this entry exists to measure.",
-  "rootCauseFiles": ["src/geometry/shape.ts"]
+  "purpose": "Frozen anonymized corpus entry (T3): a deep single-cause TS2339 cascade across 25 files on a renamed union tag, committed so it never moves and needs no private repo. The fix is one declaration; updating each consumer is the tempting wide route this entry exists to measure — scored as `consumerFiles`, not as a false start, since this entry's own expectedFix admits it settles the cascade. Repaired 2026-08-04, same defect as order-book-field-renamed.",
+  "rootCauseFiles": ["src/geometry/shape.ts"],
+  "consumerFiles": [
+    "src/analysis/classify.ts",
+    "src/analysis/group.ts",
+    "src/analysis/histogram.ts",
+    "src/analysis/stats.ts",
+    "src/analysis/validate.ts",
+    "src/export/csv.ts",
+    "src/export/json.ts",
+    "src/export/markdown.ts",
+    "src/export/summary.ts",
+    "src/geometry/area.ts",
+    "src/geometry/bounds.ts",
+    "src/geometry/clone.ts",
+    "src/geometry/equality.ts",
+    "src/geometry/perimeter.ts",
+    "src/geometry/transform.ts",
+    "src/render/canvas.ts",
+    "src/render/color.ts",
+    "src/render/label.ts",
+    "src/render/svg.ts"
+  ]
 }

@@ -524,7 +524,10 @@ Pour chaque fixture, deux bras : **A** = `tsc --noEmit` brut, **B** = sortie enr
 | Taux de correction au 1er essai | H2 | B1+ |
 | Nombre de tours avant `tsc` vert | H1 + H2 | B1+ |
 | Taux de « faux départ » (édition d'un fichier non impliqué) | H1, le cœur | B1+ |
+| Taux de « route consommateurs » (correctif large, quand la fixture en déclare un) | H1, lecture fine | B1+ |
 | Régressions (fix qui casse autre chose) | garde-fou | B1+ |
+
+**« Fichier non impliqué » se lit à la lettre, et c'est une précision datée du 2026-08-04.** Sur une cascade de renommage, deux correctifs compilent : la déclaration, ou tous ses consommateurs. Le second est plus coûteux mais il n'est pas *faux* — le compter comme un faux départ revenait à noter comme une erreur une stratégie que la fixture déclarait valide, ce qui a rendu deux cibles de corpus non mesurantes sur toute la campagne B1/B2. Une fixture qui concède les deux routes nomme donc la seconde dans `consumerFiles`, et le harnais la compte **à part**. Le faux départ reste la seule chose qu'il désigne : une écriture dans un fichier qu'**aucun** des deux correctifs n'implique. Détail et chiffres : `EVAL.md` § B2 §3.
 
 ### Porte de décision
 

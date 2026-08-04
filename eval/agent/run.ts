@@ -52,8 +52,30 @@ function findRepoRoot(from: string): string {
 interface Target {
   name: string;
   before: string;
-  /** Paths a correct fix may touch; a write outside this set is a false start. */
+  /** Paths the declaration-side fix touches. */
   rootCauseFiles: string[];
+  /**
+   * Sites the fixture's own `expectedFix` accepts as an alternative, wider
+   * route — patch every consumer instead of the one declaration. Writing here
+   * is scored in its own column, never as a false start (metrics.ts). Absent or
+   * empty means the fixture declares no such route, and every write outside
+   * `rootCauseFiles` is a false start, as before.
+   */
+  consumerFiles: string[];
+}
+
+/** Shared shape of the ground truth both target sets read out of `meta.json`. */
+interface GroundTruth {
+  rootCauseFiles?: string[];
+  consumerFiles?: string[];
+}
+
+function readConsumerFiles(meta: GroundTruth, where: string): string[] {
+  if (meta.consumerFiles === undefined) return [];
+  if (!Array.isArray(meta.consumerFiles)) {
+    throw new Error(`${where}/meta.json has a non-array consumerFiles`);
+  }
+  return meta.consumerFiles;
 }
 
 function fixtureTargets(repoRoot: string): Target[] {
@@ -62,15 +84,18 @@ function fixtureTargets(repoRoot: string): Target[] {
     .filter((name) => existsSync(join(root, name, "before", "tsconfig.json")))
     .sort()
     .map((name) => {
-      const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as {
-        rootCauseFiles?: string[];
-      };
+      const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as GroundTruth;
       // An empty array is valid — yarn-pnp-project has no bug, so any write is a
       // false start. Only a genuinely absent field is the T4 prerequisite error.
       if (!Array.isArray(meta.rootCauseFiles)) {
         throw new Error(`fixtures/${name}/meta.json is missing rootCauseFiles (T4 prerequisite)`);
       }
-      return { name, before: join(root, name, "before"), rootCauseFiles: meta.rootCauseFiles };
+      return {
+        name,
+        before: join(root, name, "before"),
+        rootCauseFiles: meta.rootCauseFiles,
+        consumerFiles: readConsumerFiles(meta, `fixtures/${name}`),
+      };
     });
 }
 
@@ -82,9 +107,7 @@ function committedCorpusTargets(repoRoot: string): Target[] {
     .filter((name) => existsSync(join(root, name, "before", "tsconfig.json")))
     .sort()
     .map((name) => {
-      const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as {
-        rootCauseFiles?: string[];
-      };
+      const meta = JSON.parse(readFileSync(join(root, name, "meta.json"), "utf8")) as GroundTruth;
       if (!Array.isArray(meta.rootCauseFiles)) {
         throw new Error(`corpus/${name}/meta.json is missing rootCauseFiles`);
       }
@@ -92,6 +115,7 @@ function committedCorpusTargets(repoRoot: string): Target[] {
         name: `corpus/${name}`,
         before: join(root, name, "before"),
         rootCauseFiles: meta.rootCauseFiles,
+        consumerFiles: readConsumerFiles(meta, `corpus/${name}`),
       };
     });
 }
@@ -107,6 +131,9 @@ function corpusTargets(repoRoot: string): Target[] {
       name: `corpus/${entry.name}`,
       before: join(repoRoot, ".corpus", entry.name, entry.project ?? "."),
       rootCauseFiles: [entry.rootCauseFile],
+      // The private manifest predates the consumer-route split and names one
+      // cause file per entry; it declares no alternative route.
+      consumerFiles: [],
     }))
     .filter((target) => existsSync(target.before));
 }
@@ -179,6 +206,7 @@ async function main(): Promise<void> {
   const results: RunResult[] = [];
   for (const target of targets) {
     const allowed = new Set(target.rootCauseFiles);
+    const consumers = new Set(target.consumerFiles);
     for (const arm of ["A", "B"] as const) {
       for (let i = 0; i < n; i += 1) {
         const sandbox = makeSandbox(target.before, typescriptDir);
@@ -194,7 +222,9 @@ async function main(): Promise<void> {
             executeTool: (name, input) => executeTool(name, input, ctx),
             maxTurns,
           });
-          const strayFiles = [...new Set(ctx.writes.filter((p) => !allowed.has(p)))];
+          const written = [...new Set(ctx.writes)];
+          const consumerWrites = written.filter((p) => consumers.has(p));
+          const strayFiles = written.filter((p) => !allowed.has(p) && !consumers.has(p));
           const result: RunResult = {
             target: target.name,
             arm,
@@ -202,11 +232,14 @@ async function main(): Promise<void> {
             turns: runInfo.turns,
             falseStart: strayFiles.length > 0,
             strayFiles,
+            consumerRoute: consumerWrites.length > 0,
+            consumerWrites,
+            consumerRouteDeclared: consumers.size > 0,
             tokens: runInfo.tokens,
           };
           results.push(result);
           process.stderr.write(
-            `  ${target.name} ${arm} #${i + 1}: ${result.fixed ? "fixed" : "unfixed"}, ${runInfo.turns} turns${strayFiles.length ? `, stray: ${strayFiles.join(", ")}` : ""}\n`,
+            `  ${target.name} ${arm} #${i + 1}: ${result.fixed ? "fixed" : "unfixed"}, ${runInfo.turns} turns${strayFiles.length ? `, stray: ${strayFiles.join(", ")}` : ""}${consumerWrites.length ? `, consumer route: ${consumerWrites.length} site(s)` : ""}\n`,
           );
         } finally {
           sandbox.cleanup();
