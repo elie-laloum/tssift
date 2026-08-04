@@ -31,3 +31,8 @@ pnpm-lock.yaml
 # date-fns) sont des miroirs git sans copie de travail, clonés une fois.
 .corpus/
 .cache/
+
+# Enregistrements bruts du bras modele, un JSONL par campagne. Non commites :
+# ils portent des chiffres de campagne, pas du code, et EVAL.md est ou vivent
+# ceux qui comptent.
+eval/results/

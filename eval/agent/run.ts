@@ -17,7 +17,7 @@
  * AGENT_TEMPERATURE (default 1 since 2026-08-04; see model.ts for why it is no
  * longer 0, and what that costs in comparability with B1/B2).
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -208,52 +208,110 @@ async function main(): Promise<void> {
       `${targets.length} targets × 2 arms × ${n} = ${targets.length * 2 * n} runs\n`,
   );
 
+  // Every result is appended the moment it exists, before anything else can
+  // fail. A campaign on 2026-08-04 lost 72 completed runs to one sustained 524
+  // from the endpoint, because the table was only assembled at the end — the
+  // retry loop in model.ts had already done its seven attempts. Tokens in
+  // particular are unrecoverable from the progress lines, which is the metric
+  // H1 actually rests on.
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const resultsDir = join(repoRoot, "eval", "results");
+  mkdirSync(resultsDir, { recursive: true });
+  const resultsFile = join(resultsDir, `agent-${stamp}.jsonl`);
+  const record = (result: RunResult): void => {
+    appendFileSync(resultsFile, `${JSON.stringify(result)}\n`);
+  };
+  process.stderr.write(`Appending each run to ${resultsFile}\n`);
+
   const results: RunResult[] = [];
-  for (const target of targets) {
-    const allowed = new Set(target.rootCauseFiles);
-    const consumers = new Set(target.consumerFiles);
-    for (const arm of ["A", "B"] as const) {
-      for (let i = 0; i < n; i += 1) {
-        const sandbox = makeSandbox(target.before, typescriptDir);
-        try {
-          const diagnostics =
-            arm === "A" ? typecheck(tscPath, sandbox.dir).output : tssiftText(sandbox.dir);
-          const ctx: ToolContext = { root: sandbox.dir, tscPath, writes: [] };
-          const runInfo = await runAgent({
-            endpoint,
-            system: SYSTEM,
-            initialUser: initialUser(diagnostics),
-            tools: TOOLS,
-            executeTool: (name, input) => executeTool(name, input, ctx),
-            maxTurns,
-          });
-          const written = [...new Set(ctx.writes)];
-          const consumerWrites = written.filter((p) => consumers.has(p));
-          const strayFiles = written.filter((p) => !allowed.has(p) && !consumers.has(p));
-          const result: RunResult = {
-            target: target.name,
-            arm,
-            fixed: typecheck(tscPath, sandbox.dir).diagnostics === 0,
-            turns: runInfo.turns,
-            falseStart: strayFiles.length > 0,
-            strayFiles,
-            consumerRoute: consumerWrites.length > 0,
-            consumerWrites,
-            consumerRouteDeclared: consumers.size > 0,
-            tokens: runInfo.tokens,
-          };
-          results.push(result);
-          process.stderr.write(
-            `  ${target.name} ${arm} #${i + 1}: ${result.fixed ? "fixed" : "unfixed"}, ${runInfo.turns} turns${strayFiles.length ? `, stray: ${strayFiles.join(", ")}` : ""}${consumerWrites.length ? `, consumer route: ${consumerWrites.length} site(s)` : ""}\n`,
-          );
-        } finally {
-          sandbox.cleanup();
+  try {
+    for (const target of targets) {
+      const allowed = new Set(target.rootCauseFiles);
+      const consumers = new Set(target.consumerFiles);
+      for (const arm of ["A", "B"] as const) {
+        for (let i = 0; i < n; i += 1) {
+          const sandbox = makeSandbox(target.before, typescriptDir);
+          try {
+            const diagnostics =
+              arm === "A" ? typecheck(tscPath, sandbox.dir).output : tssiftText(sandbox.dir);
+            const ctx: ToolContext = { root: sandbox.dir, tscPath, writes: [] };
+            const runInfo = await runAgent({
+              endpoint,
+              system: SYSTEM,
+              initialUser: initialUser(diagnostics),
+              tools: TOOLS,
+              executeTool: (name, input) => executeTool(name, input, ctx),
+              maxTurns,
+            });
+            const written = [...new Set(ctx.writes)];
+            const consumerWrites = written.filter((p) => consumers.has(p));
+            const strayFiles = written.filter((p) => !allowed.has(p) && !consumers.has(p));
+            const result: RunResult = {
+              target: target.name,
+              arm,
+              fixed: typecheck(tscPath, sandbox.dir).diagnostics === 0,
+              turns: runInfo.turns,
+              falseStart: strayFiles.length > 0,
+              strayFiles,
+              consumerRoute: consumerWrites.length > 0,
+              consumerWrites,
+              consumerRouteDeclared: consumers.size > 0,
+              configEdit: written.some(
+                (p) => p === "tsconfig.json" || p.endsWith("/tsconfig.json"),
+              ),
+              tokens: runInfo.tokens,
+            };
+            results.push(result);
+            record(result);
+            process.stderr.write(
+              `  ${target.name} ${arm} #${i + 1}: ${result.fixed ? "fixed" : "unfixed"}, ${runInfo.turns} turns${strayFiles.length ? `, stray: ${strayFiles.join(", ")}` : ""}${consumerWrites.length ? `, consumer route: ${consumerWrites.length} site(s)` : ""}${result.configEdit ? ", CONFIG EDIT" : ""}\n`,
+            );
+          } finally {
+            sandbox.cleanup();
+          }
         }
       }
     }
+  } catch (error) {
+    // The sweep stops, but everything already measured is still printed. An
+    // endpoint outage must cost the remaining runs, not the finished ones.
+    process.stderr.write(
+      `\nSweep aborted after ${results.length} run(s): ${(error as Error).message}\n`,
+    );
+    process.exitCode = 1;
   }
 
+  report(results, resultsFile);
+}
+
+/**
+ * Print whatever was measured, and say plainly when that is not everything.
+ *
+ * Called on the normal path and from the failure path, so a sweep that dies
+ * halfway still yields a usable table instead of a stack trace and nothing.
+ */
+function report(results: readonly RunResult[], resultsFile: string): void {
+  if (results.length === 0) {
+    process.stderr.write("No run completed; nothing to aggregate.\n");
+    return;
+  }
   process.stdout.write(`\n${toTable(aggregate(results))}\n`);
+
+  // A row built from fewer runs than its neighbours is not comparable to them,
+  // and nothing else in the table would say so.
+  const counts = new Map<string, number>();
+  for (const r of results)
+    counts.set(`${r.target} ${r.arm}`, (counts.get(`${r.target} ${r.arm}`) ?? 0) + 1);
+  const expected = Math.max(...counts.values());
+  const partial = [...counts.entries()].filter(([, n]) => n < expected);
+  if (partial.length > 0) {
+    process.stdout.write(
+      `\n⚠ INCOMPLETE — these rows have fewer than ${expected} runs and must not be compared with the rest:\n` +
+        partial.map(([key, n]) => `    ${key}: ${n}/${expected}`).join("\n") +
+        "\n",
+    );
+  }
+  process.stdout.write(`\nPer-run records: ${resultsFile}\n`);
 }
 
 main().catch((error) => {

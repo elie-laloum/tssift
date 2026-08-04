@@ -42,6 +42,21 @@ export interface RunResult {
   consumerWrites: string[];
   /** The target declares a `consumerFiles` route at all — distinguishes "not taken" from "not offered". */
   consumerRouteDeclared: boolean;
+  /**
+   * The run wrote the project's `tsconfig.json`.
+   *
+   * Added 2026-08-04, after a campaign in which **all ten zod runs did it, in
+   * both arms, and all ten were scored `fixed`**. Widening an `exclude` list
+   * until the failing files leave the program produces `0 errors` without
+   * touching the bug: the harness sees a green typecheck and reports a fix.
+   *
+   * It stays counted as a false start — it is a write to a file no fix involves,
+   * exactly what §7 says — but it also gets its own flag, because "edited the
+   * wrong source file" and "changed what was being measured" are different
+   * failures and a single rate hides the second behind the first. A target whose
+   * runs light this up is not measuring a fix rate at all.
+   */
+  configEdit: boolean;
   tokens: number;
 }
 
@@ -59,6 +74,8 @@ export interface Aggregate {
    * this column would conflate them.
    */
   consumerRouteRate: number | null;
+  /** Share of runs that rewrote the project's tsconfig.json — see `RunResult.configEdit`. */
+  configEditRate: number;
   meanTokens: number;
 }
 
@@ -87,6 +104,7 @@ export function aggregate(results: readonly RunResult[]): Aggregate[] {
       consumerRouteRate: first.consumerRouteDeclared
         ? mean(runs.map((r) => (r.consumerRoute ? 1 : 0)))
         : null,
+      configEditRate: mean(runs.map((r) => (r.configEdit ? 1 : 0))),
       meanTokens: mean(runs.map((r) => r.tokens)),
     });
   }
@@ -96,8 +114,8 @@ export function aggregate(results: readonly RunResult[]): Aggregate[] {
 /** A GitHub-flavoured markdown table, ready to paste into EVAL.md. */
 export function toTable(rows: readonly Aggregate[]): string {
   const header =
-    "| target | arm | runs | fixed | turns | false-start | consumer route | ~tokens |\n" +
-    "|---|---|---:|---:|---:|---:|---:|---:|";
+    "| target | arm | runs | fixed | turns | false-start | consumer route | config edit | ~tokens |\n" +
+    "|---|---|---:|---:|---:|---:|---:|---:|---:|";
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   // "—" and "0%" are different findings: the first says the fixture offers no
   // consumer route, the second that it offers one and the model declined it.
@@ -105,7 +123,10 @@ export function toTable(rows: readonly Aggregate[]): string {
     (r) =>
       `| ${r.target} | ${r.arm} | ${r.runs} | ${pct(r.fixedRate)} | ${r.meanTurns.toFixed(1)} | ${pct(
         r.falseStartRate,
-      )} | ${r.consumerRouteRate === null ? "—" : pct(r.consumerRouteRate)} | ${Math.round(r.meanTokens)} |`,
+      )} | ${r.consumerRouteRate === null ? "—" : pct(r.consumerRouteRate)} | ${
+        // Loud on purpose: any non-zero here means this row's fix rate is suspect.
+        r.configEditRate > 0 ? `⚠ ${pct(r.configEditRate)}` : "0%"
+      } | ${Math.round(r.meanTokens)} |`,
   );
   return [header, ...body].join("\n");
 }
