@@ -39,6 +39,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [P1 / 18047 · 18048 · 18049 — folding by nullable declaration (2026-08-04)](#p1--18047--18048--18049--folding-by-nullable-declaration-2026-08-04)
 - [Private fields: measured at 0.00 %, filtered anyway (2026-08-04)](#private-fields-measured-at-000--filtered-anyway-2026-08-04)
 - [B3 — the repaired metric, sampled, on a widened corpus (2026-08-04)](#b3--the-repaired-metric-sampled-on-a-widened-corpus-2026-08-04)
+- [The to-do-list hypothesis, tested and refuted (2026-08-04)](#the-to-do-list-hypothesis-tested-and-refuted-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -2142,3 +2143,68 @@ is unmeasurable here, because the thing it measured was reclassified as the cons
   a 60 % against 100 % on five runs is three runs against five.
 - **The total is dominated by `hono`**, which alone is more tokens than the other five combined. The
   per-target column is the result; the 106 % is arithmetic.
+
+---
+
+## The to-do-list hypothesis, tested and refuted (2026-08-04)
+
+[B3](#b3--the-repaired-metric-sampled-on-a-widened-corpus-2026-08-04) produced one specific, falsifiable
+claim, and it was worth more than the campaign's headline: *a numbered entry beside a numbered cause
+reads as a peer, and a column of them reads as a to-do list.* On `hono`, arm B edited the wrong file in
+80 % of runs against arm A's 0 %, and its stray files were exactly the four carrying the seven
+second-order diagnostics rendered as `[2]`–`[8]` beneath the one folded cause.
+
+PROJECT.md §6 requires a **measured** reason to reopen the output contract. This was one, so it was
+reopened — under a stop condition stated before the run.
+
+### What was changed
+
+When a report has at least one cause, the diagnostics causality could not explain stopped being
+numbered alongside it:
+
+```
+7 diagnostics with no cause established:
+    src/helper/route/index.ts:111:20 error TS2538: Type 'undefined' cannot be used as an index type.
+    src/middleware/cors/index.ts:132:52 error TS7006: Parameter 'h' implicitly has an 'any' type.
+```
+
+The heading claimed only what the pipeline knows — not "consequences", which nothing established, but
+"no shared cause found", which is exactly `role: 'root'` with no group. Rule 2 untouched: all still
+printed, in full, in source order. A report with **no** cause kept its numbered list, there being
+nothing for an entry to be mistaken for a peer of. Two fixtures moved, both of which have a group and a
+lone diagnostic; everything else was byte-identical.
+
+### The result
+
+| `hono`, n=5 per arm | A turns | B turns | A false-start | B false-start | A ~tok | B ~tok | B/A |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| B3, numbered | 5.8 | 8.2 | 0 % | **80 %** | 113 977 | 161 210 | 141 % |
+| sectioned | 5.4 | 7.0 | 0 % | **80 %** | 92 262 | 192 325 | **208 %** |
+
+**The false-start rate does not move — 4 runs in 5, and the same four files both times.** Turns fall
+from 8.2 to 7.0, but arm A fell from 5.8 to 5.4 in the same direction, so the *gap* goes 2.4 → 1.6,
+inside the drift B2 documented. Tokens get worse.
+
+**The hypothesis is refuted, and the change was reverted.** §6 is frozen again, and the reason that
+justified reopening it evaporated with the result.
+
+### What it means instead, and this is the more useful finding
+
+The affordance was never the numbering. The model edits those four files because it **can see them**,
+and folding is what made them visible: 111 of 118 diagnostics collapse into one line, so seven that
+were 6 % of arm A's text become roughly half of arm B's. **Compression raises the relative salience of
+whatever does not compress.**
+
+That is not a formatting problem and no heading fixes it. It is a property of the thing this tool does.
+Two consequences worth stating plainly:
+
+- **On a cascade with second-order debris, folding trades noise for misdirection.** Arm A's 118 flat
+  lines all naming `Context` are *why* arm A ignores the seven — they are buried, and burying them is
+  the behaviour H1 set out to eliminate.
+- **The seven are real diagnostics and editing them is still a false start**, because they vanish the
+  moment `context.ts` is fixed. Nothing in the captured data says so — establishing "this diagnostic
+  disappears once that one is fixed" is a claim §5.1's threshold does not license from a structural
+  link, and inventing it is exactly what rule 1 forbids.
+
+So the honest position is that this is an **open problem**, not a bug with a known fix. The one thing
+measured here is what it is *not*: it is not the shape of the list.
