@@ -83,20 +83,36 @@ entries; a root is never dropped.
 - **Project references:** solution-style `tsconfig` files with project references
   are rejected rather than silently checking nothing; point tssift at a concrete
   referenced project.
-- **TypeScript 6 and 7:** not supported; tssift exits with code 2 rather than
-  attempting a degraded run.
-
 ## Evaluation evidence
 
-The result is bounded, not a universal savings claim. In the frozen-corpus run
-with **`cx/gpt-5.6-terra` only**, five deep cascades and 25 runs per arm,
-the structured arm used **approximately 59% fewer tokens**: **115,052 →
-47,284**. In that same run, false starts were **10/25 → 5/25**. The result has a
-material counterexample: `shape-tag-renamed` still produced false starts in
-**100%** of runs in both arms.
+Two claims, and only the first of them holds.
 
-See [EVAL.md](./EVAL.md) for the method, raw tables, model-specific results, and
-limitations.
+**Fewer characters: confirmed, and large.** Grouping a cascade under its cause is
+a mechanical saving that anyone can reproduce without a model. On real
+third-party code broken by a one-line change, `agent-text` is **5–25%** of what
+`tsc --noEmit` prints: 99 diagnostics across 50 files of `zod` render as one
+entry, 118 across 28 files of `hono` as eight.
+
+**Fewer tokens and fewer wrong edits in an agent loop: not confirmed.** The most
+complete campaign to date — 6 cascades, 30 runs per arm, sampled rather than
+repeated — puts the structured arm at **106% of raw `tsc`'s tokens**, fixing
+**28/30 against 30/30**, with **9 false starts against 5**. It is ahead on no
+behavioural metric.
+
+The split is legible. On cascades with a single cause and no debris, the
+structured arm runs at **34–77%** of the tokens with no behavioural cost. On the
+one target carrying genuine *second-order* diagnostics, it inverts: **141%** of
+the tokens, 8.2 turns against 5.8, and false starts in **80%** of runs against
+0%. A report that is 10% of `tsc` by character can still cost more, because in an
+agent loop the tokens are in the turns, not in the first message.
+
+An earlier version of this section cited **59% fewer tokens** and false starts
+halved, from a smaller campaign. **Those numbers do not reproduce** and the
+reasons are documented rather than quietly dropped.
+
+See [EVAL.md](./EVAL.md) for the method, the raw tables, the per-campaign drift,
+and every limitation — including the two targets this campaign failed to
+measure.
 
 ## Development
 
