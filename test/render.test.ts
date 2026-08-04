@@ -32,6 +32,7 @@ const FIXTURES = [
   "missing-many-properties",
   "two-missing-names-one-file",
   "namespace-import-rename",
+  "private-fields-and-anonymous-nullish",
 ] as const;
 
 /**
@@ -139,10 +140,13 @@ describe("agent-text · invariants (any supported TypeScript)", () => {
         // primitives expanded as `"EUR" | "USD"`, which is the only fact line
         // that opens on a quoted literal — and `namespace-import-rename` one
         // more on 2026-08-04, `typeof import("…")`, the rendered signature of a
-        // module type, which no fixture produced before it. Widening this to
-        // `.*` would retire the guard rather than update it.
+        // module type, which no fixture produced before it — and the 18047
+        // family a last one the same day, `ProxyConfig | null`: a *named* type
+        // in a union, where every union rendered until then opened on a quoted
+        // literal or a brace. Widening this to `.*` would retire the guard
+        // rather than update it.
         expect(line).toMatch(
-          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |"[^"]*" \||\d+ more not listed above: |typeof |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
+          /^(\d+ |\[\d+\] | {2,}(TS\d+: |related|cause: |\d+ diagnostics?, |\+\d+ more site|\S+:\d+:\d+ |\d+ (propert(y|ies)|exports?): |'[^']+' (has \d+ |is (not )?declared |matches )|'\.pnp\.cjs' |no node_modules |"[^"]*" \||[A-Za-z_$][\w$]* \| |\d+ more not listed above: |typeof |(type|expected type|parameter type|callee|module|installer|lockfiles|required by): |[({]))/,
         );
       }
     });

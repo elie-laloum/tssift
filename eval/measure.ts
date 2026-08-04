@@ -151,6 +151,11 @@ const TARGETS: Target[] = [
     kind: "fixture",
     project: "fixtures/namespace-import-rename/before",
   },
+  {
+    name: "private-fields-and-anonymous-nullish",
+    kind: "fixture",
+    project: "fixtures/private-fields-and-anonymous-nullish/before",
+  },
   // Real repositories. Paths are machine-specific by nature; a missing one is
   // reported as such rather than silently dropped.
   { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },

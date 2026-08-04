@@ -277,6 +277,25 @@ function symbolRefOfType(
         // names anyone can look up, and the id would make a snapshot differ from
         // one run to the next — the same reason `displayName` refuses `__type`.
         .filter((name) => !name.startsWith("__@"))
+        // `#rawRequest`, `#req`: ECMAScript private fields. Same test as above —
+        // is this a name a reader can use? — and the same answer, more sharply:
+        // `#x` is not merely obscure, it is not a legal property reference from
+        // anywhere outside the class body.
+        //
+        // Measured 2026-08-04 before filtering. Across the 28 B0 targets the
+        // saving is **0.00 %** — not one fixture or corpus entry contains a
+        // single private field. It was found on hono, where `Context` renders
+        // `has 36 properties: #rawRequest, #req, env, #var, …`: **9 of the 12
+        // names the display cap allows are `#`-private**, so three quarters of
+        // the budget went to names nobody can type — and `#req` sat directly
+        // beside the `req` that had gone missing, which is worse than noise.
+        //
+        // The cost is therefore not characters (93 on hono) but the display
+        // budget, and that is why the fix is a filter and not a wider cap.
+        // TypeScript's own `private` modifier is deliberately NOT filtered: such
+        // a member is written in the declaration the header points at, so a
+        // reader who opens that file sees it.
+        .filter((name) => !name.startsWith("#"))
     : [];
   if (members.length > 0) ref.memberNames = members;
   return ref;
@@ -634,11 +653,105 @@ function context2322(
   };
 }
 
+/**
+ * TS18047 — `'x' is possibly 'null'.`
+ * TS18048 — `… 'undefined'.`
+ * TS18049 — `… 'null' or 'undefined'.`
+ *
+ * **The block here was never where the repo said it was.** AGENTS.md, CLAUDE.md
+ * and `src/codes.ts` all recorded 18047 as blocked on control-flow analysis, and
+ * `codes.ts` added that it "has nothing to resolve". That is true of the payload
+ * §5.2 asked for — *where* the value became nullable, *which* branch guards it —
+ * and false of the causality link. The thing that is possibly null is a declared
+ * symbol, and its declaration is the ordinary structural link §5.1 rule 2
+ * already allows. Measured on `nullable-chain`: 4 of 4 resolve to `proxy` at
+ * `settings.ts:13:3`, the line `meta.json` calls the root cause. Same shape as
+ * 2322 — the demanded path stays underivable, another link is worth more.
+ *
+ * **The anchor is the expression the message quotes, and getting this wrong is a
+ * critical false positive rather than a miss.** Walking up property accesses
+ * from the diagnostic's node lands on `settings.proxy.host` and resolves `host`
+ * — a property that is not nullable and is not the cause. A rule keyed there
+ * would split one cascade into two groups (`host`, `port`) and head each with a
+ * perfectly healthy declaration, which is the failure PROJECT.md §11 classes as
+ * critical. So the widened node must match `{0}` exactly, or nothing is
+ * returned.
+ *
+ * **§5.1 needs no amendment, unlike the 2304 rule, and that was checked rather
+ * than assumed.** The quoted text is only how the node is found; the key is the
+ * `declaredAt` the checker resolves from it. Probed on a throwaway project:
+ * `box.item` appears with identical text in two files and resolves to two
+ * different declarations, so a text-keyed rule would have merged two
+ * independent bugs and this one yields two groups.
+ *
+ * The honest limit is structural: an expression with **no printable name** does
+ * not produce these codes at all. TypeScript emits TS2531/2532/2533 (`Object is
+ * possibly 'null'`) instead, which carry no `{0}` and therefore no anchor —
+ * which is why those three can never join `CONTEXT_CAPTURE_CODES`. The mirror of
+ * the 2305/2724 lesson, with the opposite conclusion.
+ */
+const POSSIBLY_NULLISH = /^'(.+?)' is possibly '(?:null|undefined)'(?: or 'undefined')?\.$/;
+
+/** Whitespace-insensitive, because `a . b` in source is `a.b` in the message. */
+const compact = (text: string): string => text.replace(/\s+/g, "");
+
+function context18047(
+  ts: typeof TS,
+  checker: TS.TypeChecker,
+  node: TS.Node,
+  capture: Capture,
+  message: string,
+): DiagnosticContext | undefined {
+  const quoted = POSSIBLY_NULLISH.exec(message)?.[1];
+  if (!quoted) return undefined;
+
+  const file = node.getSourceFile();
+  const start = node.getStart(file);
+  const wanted = compact(quoted);
+
+  // Widen only while the ancestor still begins where the diagnostic does, and
+  // keep the first one whose text *is* the quoted expression. Both conditions
+  // matter: the first bounds the walk, the second is what refuses `…​.host`.
+  let target: TS.Node | undefined;
+  for (let current: TS.Node | undefined = node; current; current = current.parent) {
+    if (current.getStart(file) !== start) break;
+    if (compact(current.getText(file)) === wanted) {
+      target = current;
+      break;
+    }
+    if (ts.isSourceFile(current)) break;
+  }
+  if (!target) return undefined;
+
+  const symbol = checker.getSymbolAtLocation(target);
+  const declaration = symbol?.declarations?.[0];
+  if (!symbol || !declaration) return undefined;
+
+  const subject: SymbolRef = {
+    name: symbol.getName(),
+    kind: declarationKind(ts, declaration),
+    declaredAt: declarationSpan(ts, declaration, capture),
+    // The declared type is the fact that explains every site at once: it is what
+    // says the null is in the declaration and not at any of the reads. Taken at
+    // the declaration, so narrowing at the use site cannot mask it.
+    signature: truncate(
+      normalizePathsIn(
+        checker.typeToString(checker.getTypeOfSymbolAtLocation(symbol, declaration)),
+        capture,
+      ),
+    ),
+  };
+
+  return { subject };
+}
+
 type Resolver = (
   ts: typeof TS,
   checker: TS.TypeChecker,
   node: TS.Node,
   capture: Capture,
+  /** The flattened message. Only the codes that cross-check it against the program read this. */
+  message: string,
 ) => DiagnosticContext | undefined;
 
 const RESOLVERS: Record<number, Resolver | undefined> = {
@@ -654,6 +767,11 @@ const RESOLVERS: Record<number, Resolver | undefined> = {
   // Same resolver, same failure — see the comment on `context2739`.
   2740: context2739,
   2741: context2739,
+  18047: context18047,
+  // One failure spelled three ways: which code fires depends on whether the
+  // declared type admits null, undefined, or both — not on what went wrong.
+  18048: context18047,
+  18049: context18047,
 };
 
 /**
@@ -676,7 +794,16 @@ export function resolveContext(
   if (!node) return undefined;
 
   try {
-    return resolve(ts, checker, node, capture);
+    // Flattened with a space, matching how `normalize` renders `message`: the
+    // 18047 family cross-checks its anchor against the verbatim text, so the two
+    // must be the same string.
+    return resolve(
+      ts,
+      checker,
+      node,
+      capture,
+      ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
+    );
   } catch {
     // A checker call that throws on an exotic node must not take the whole run
     // down: the diagnostic is still reported, just without context (rule 5).

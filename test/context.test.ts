@@ -168,3 +168,70 @@ describe("context capture · the report stays a projection (rule 14)", () => {
     expect(text).not.toContain("declaredAt");
   });
 });
+
+describe("context capture · the 18047 family (2026-08-04)", () => {
+  const diagnostics = load("nullable-chain").diagnostics;
+
+  it("resolves all four onto the one declaration that is nullable", () => {
+    // The claim that reopened this code: the causality link needs no
+    // control-flow analysis. `proxy` at settings.ts:13:3 is the line
+    // `meta.json` names as the root cause, and it is where every read lands.
+    expect(diagnostics).toHaveLength(4);
+    const sites = diagnostics.map((d) => siteOf(requireAnchor(d).declaredAt));
+    expect(new Set(sites).size).toBe(1);
+    expect(sites[0]).toBe("src/config/settings.ts:13:3");
+  });
+
+  it("names the property, not the member read through it", () => {
+    // The false positive this rule exists to avoid. Widening the node past the
+    // quoted expression reaches `settings.proxy.host` and resolves `host` — a
+    // property that is not nullable and is not the cause. Keying there would
+    // split one cascade into two groups (host, port) and head each with a
+    // healthy declaration: PROJECT.md §11's critical failure.
+    for (const diagnostic of diagnostics) {
+      const anchor = requireAnchor(diagnostic);
+      expect(anchor.name).toBe("proxy");
+      expect(anchor.name).not.toBe("host");
+      expect(anchor.name).not.toBe("port");
+    }
+  });
+
+  it("carries the declared type, which is the fact that explains every site", () => {
+    expect(requireAnchor(diagnostics[0]).signature).toBe("ProxyConfig | null");
+  });
+});
+
+describe("context capture · what the 18047 anchor cannot reach", () => {
+  const diagnostics = load("private-fields-and-anonymous-nullish").diagnostics;
+
+  it("leaves TS2531 without context, because it has no quoted expression", () => {
+    // `Object is possibly 'null'` is the anonymous half of the family: no {0},
+    // so no anchor, so nothing for the resolver to check itself against. This
+    // is structural, not a gap — 2531/2532/2533 can never be added to
+    // CONTEXT_CAPTURE_CODES, and this test is what stops that being "fixed".
+    const anonymous = diagnostics.filter((d) => d.code === 2531);
+    expect(anonymous).toHaveLength(1);
+    expect(anonymous[0]?.context).toBeUndefined();
+  });
+
+  it("keeps the three anonymous codes out of the capture list", () => {
+    for (const code of [2531, 2532, 2533]) {
+      expect(CONTEXT_CAPTURE_CODES).not.toContain(code);
+    }
+  });
+});
+
+describe("context capture · ECMAScript private fields are not names a reader can use", () => {
+  const diagnostics = load("private-fields-and-anonymous-nullish").diagnostics;
+
+  it("filters #private out of a member list, and keeps the public ones", () => {
+    // Found on hono: 9 of the 12 names the display cap allows were #-private,
+    // and `#req` sat beside the very `req` that had gone missing. Across the 28
+    // pre-existing B0 targets the saving is 0.00 % — no fixture had one at all,
+    // which is why this one exists.
+    const members = requireAnchor(diagnostics.find((d) => d.code === 2339))?.memberNames ?? [];
+    expect(members.filter((name) => name.startsWith("#"))).toEqual([]);
+    expect(members).toContain("accessToken");
+    expect(members).toContain("userId");
+  });
+});

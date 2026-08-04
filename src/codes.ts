@@ -21,6 +21,7 @@
  * | 2554 | `Expected N arguments, but got M`. `getResolvedSignature().declaration` is an ordinary structural link, so the corpus's largest cascade folds without amending §5.1. | 152/152 on `lekes-ok-arity-changed` |
  * | 2322 | `Type 'A' is not assignable to type 'B'`. `B` is the shared cause, resolved as the **contextual type** of the expression that was checked. The fixture written to forbid keying on a `related` span folds correctly on this instead. Added 2026-08-02. | 3/3 on `assignability-mismatch`, all on `type Currency` |
  * | 2739 · 2740 · 2741 | `… is missing the following properties from type 'T'` / `Property 'x' is missing … but required in type 'T'`. `T` is the shared declaration: N construction sites of one interface break together the day it gains a required member. Added 2026-08-02. | 6/6 on the two fixtures, 3 per interface |
+ * | 18047 · 18048 · 18049 | `'x' is possibly 'null'` / `'undefined'` / `'null' or 'undefined'`. The symbol that is possibly nullish is declared somewhere, and that declaration is the shared cause — N readers of one optional field break together the day it gains `| null`. Added 2026-08-04, against three files that said it was impossible. | 4/4 on `nullable-chain`, all on `proxy` at settings.ts:13:3 |
  *
  * **2739 and 2741 are one failure counted twice, and the pair is captured for
  * the 2305/2724 reason.** TypeScript emits 2741 at exactly one missing property
@@ -56,17 +57,26 @@
  * - **2307** (`Cannot find module`) has nothing to resolve: the module did not
  *   resolve, so there is no declaration to point at. Its derivation rule in
  *   §5.1 runs on `ProgramFacts.imports`, which P0 already captures.
- * - **2769 · 18047/18048 · 2551** are §5.2 enrichment codes whose payload is a
- *   *fact for a reader*, not a link for causality. 2769's is already in `chain`,
- *   2551's is already in the message, and 18047 has nothing here to resolve.
- *   (2739/2741 and then 2322 were on this list until 2026-08-02, when measuring
- *   showed each carries a shared declaration and therefore a causality link, not
- *   merely a fact. The list shrank because it was checked, not because it was
- *   relaxed.)
+ * - **2769 and 2551** are §5.2 enrichment codes whose payload is a *fact for a
+ *   reader*, not a link for causality: 2769's is already in `chain`, 2551's is
+ *   already in the message.
+ *   (2739/2741 and then 2322 left this list on 2026-08-02, and **18047/18048 on
+ *   2026-08-04**, when measuring showed each carries a shared declaration and
+ *   therefore a causality link, not merely a fact. The list shrinks because it
+ *   is checked, not because it is relaxed — three times now, and never once in
+ *   the other direction.)
+ * - **2531 · 2532 · 2533** — `Object is possibly 'null'` and its two siblings —
+ *   are the *anonymous* half of the 18047 family and can never be added. They
+ *   carry no `{0}`, so there is no quoted expression to anchor on, and the
+ *   resolver's whole correctness argument rests on that anchor. TypeScript picks
+ *   between the two halves on whether the expression has a printable name, which
+ *   makes this the mirror image of the 2305/2724 pair: there, both spellings of
+ *   one failure had to be captured together; here, one of them is structurally
+ *   out of reach. A test pins the exclusion so it is not read as an oversight.
  *
  * The list this will grow into is PROJECT.md §5.2 — the same table that drives
  * the enrichers, which is why it lives in one declarative place.
  */
 export const CONTEXT_CAPTURE_CODES: readonly number[] = [
-  2305, 2322, 2339, 2345, 2353, 2554, 2724, 2739, 2740, 2741,
+  2305, 2322, 2339, 2345, 2353, 2554, 2724, 2739, 2740, 2741, 18047, 18048, 18049,
 ];

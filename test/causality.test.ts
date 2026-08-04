@@ -497,21 +497,47 @@ describe("causality · the cascades the §5.1 threshold declines to fold", () =>
   // that the day capture was extended, the change would surface as a failure
   // here rather than as a silent improvement nobody measured.
   //
-  // It worked. `missing-required-property` folded on 2026-08-02 when 2739/2741
-  // joined CONTEXT_CAPTURE_CODES, and its test below records that instead of
-  // asserting it away. `nullable-chain` is still unfolded, and its reason is
-  // unchanged: nothing is captured, because nothing capturable answers a
-  // control-flow question.
+  // It worked, twice. `missing-required-property` folded on 2026-08-02 when
+  // 2739/2741 joined CONTEXT_CAPTURE_CODES, and `nullable-chain` on 2026-08-04
+  // when 18047/18048/18049 did. Both tests below record what happened instead
+  // of asserting it away, and this comment is the reason to keep writing them.
 
-  it("nullable-chain · four dereferences of one nullable property stay four roots", () => {
+  it("nullable-chain · folds since 2026-08-04, and the reason it could not before was wrong", () => {
+    // This test used to assert `groups: []` and `context === undefined`, on a
+    // stated reason: "nothing capturable answers a control-flow question."
+    // AGENTS.md, CLAUDE.md and codes.ts all said the same. It was half true.
+    //
+    // Control flow is what the §5.2 *payload* needs — where the value became
+    // nullable, which branch guards it — and that is still underivable. The
+    // causality link never needed it: the thing that is possibly null is a
+    // declared symbol, and its declaration is the ordinary structural link
+    // §5.1 rule 2 already allowed. Same shape as the 2322 milestone.
     const { report } = analyse("nullable-chain");
     expect(report.diagnostics).toHaveLength(4);
     expect(new Set(report.diagnostics.map((d) => d.code))).toEqual(new Set([18047]));
-    expect(report.groups).toEqual([]);
-    expect(report.diagnostics.every((d) => d.role === "root")).toBe(true);
-    // Nothing was captured, so there is nothing to key on. 18047 is in the §5.2
-    // table of ten; this is a known gap, not an oversight.
-    expect(report.diagnostics.every((d) => d.context === undefined)).toBe(true);
+    expect(report.groups).toHaveLength(1);
+    expect(report.groups[0]?.members).toHaveLength(4);
+
+    // The line meta.json calls the root cause — and NOT `host`/`port`, which a
+    // resolver that widened past the quoted expression would have reached.
+    const symbol = declSymbolOf(report.groups[0]);
+    expect(symbol.name).toBe("proxy");
+    expect(symbol.declaredAt.file).toBe("src/config/settings.ts");
+    expect(symbol.declaredAt.line).toBe(13);
+  });
+
+  it("private-fields-and-anonymous-nullish · the anonymous variant still does not fold", () => {
+    // The other half of the same milestone, and the reason the family is
+    // captured rather than the whole nullability space. An expression with no
+    // printable name produces TS2531, which carries no quoted expression, so
+    // the anchor the resolver checks itself against does not exist. One root,
+    // no group, no context — permanently.
+    const { report } = analyse("private-fields-and-anonymous-nullish");
+    const anonymous = report.diagnostics.filter((d) => d.code === 2531);
+    expect(anonymous).toHaveLength(1);
+    expect(anonymous[0]?.role).toBe("root");
+    expect(anonymous[0]?.context).toBeUndefined();
+    expect(anonymous[0]?.group).toBeUndefined();
   });
 
   it("missing-required-property · folds since 2026-08-02, and NOT on the related span", () => {
