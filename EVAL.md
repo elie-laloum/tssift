@@ -36,6 +36,8 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [P1 / 2304 · 2552 — folding by missing name (2026-08-04)](#p1--2304--2552--folding-by-missing-name-2026-08-04)
 - [Header width — a lever measured, and closed (2026-08-04)](#header-width--a-lever-measured-and-closed-2026-08-04)
 - [T3 — the corpus widens onto public code (2026-08-04)](#t3--the-corpus-widens-onto-public-code-2026-08-04)
+- [P1 / 18047 · 18048 · 18049 — folding by nullable declaration (2026-08-04)](#p1--18047--18048--18049--folding-by-nullable-declaration-2026-08-04)
+- [Private fields: measured at 0.00 %, filtered anyway (2026-08-04)](#private-fields-measured-at-000--filtered-anyway-2026-08-04)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -1941,3 +1943,105 @@ Two defects that five entries and twenty-two fixtures could not see, both found 
   machine. The harness reports them as incoherent and excludes them from the totals rather than scoring
   a target where arm A type-checks nothing. That is the instability
   [Corpus limits](#corpus-limits) predicted, arriving on schedule.
+
+---
+
+## P1 / 18047 · 18048 · 18049 — folding by nullable declaration (2026-08-04)
+
+**Three documents said this was impossible, and they were all wrong in the same way.**
+`AGENTS.md`, `CLAUDE.md` and `src/codes.ts` recorded 18047/18048 as blocked on control-flow analysis;
+`codes.ts` added that the code "has nothing here to resolve". None of them had separated two questions.
+
+Control flow is what §5.2's **payload** asks for — *where* the value became nullable, *which* branch
+guards it — and it remains out of reach. The **causality link** never needed it. What is possibly null
+is a *declared symbol*, and its declaration is the ordinary structural link PROJECT.md §5.1 rule 2 has
+allowed since the beginning. Probed before writing a line of engine code: **4 of 4** diagnostics on
+`nullable-chain` resolve to `proxy` at `src/config/settings.ts:13:3`, the exact line its `meta.json`
+names as the root cause.
+
+This is the [2322](#the-cost-of-2322) shape repeating: the payload the table demanded stays
+underivable, a different link is worth more, and it folds.
+
+### The measurement
+
+| target | before | after | |
+|---|---|---|---|
+| `nullable-chain` | 4 entries, 402 chars, **120 %** | **1 entry**, 492 chars, **147 %** | +90 |
+| every other target | | | **0** |
+
+**The entry count divides by four and the character count goes up.** That was predicted in the plan
+before it was measured, and by the predictor this file has used since P1: four short diagnostics do not
+clear the three-site display cap, so all four still print and the cause header is added on top. Same
+sign as `partial-interface-rename` and `data-explorer`, opposite sign to `cannot-find-name`. Anyone
+quoting a single fixture's ratio as evidence for or against folding is quoting the cap, not the rule.
+
+Single-cause folding: **14 of 19 → 16 of 20**, and **§5.2 now has no open gap.**
+
+### 18049 was added to the table, and leaving it out was not the neutral option
+
+`'{0}' is possibly 'null' or 'undefined'.` exists, fires, and was outside §5.2's list — the same
+position TS2740 was in on 2026-08-02, and it took the same human decision. Same family, same template
+across 5.4.5 / 5.9.3 / 6.0.3, same anchor, same resolver, so it costs almost nothing once 18047 is
+written. The cost of *omitting* it is not nothing: three nullable properties declared side by side in
+one interface would fold two of their cascades and strand the third as an isolated root, for one and
+the same cause. The table is twelve codes.
+
+### The anchor, and the false positive it exists to prevent
+
+The naive implementation is wrong in a way that matters more than a miss. Taking the node at the
+diagnostic's span and walking up property accesses lands on `settings.proxy.host` and resolves
+**`host`** — a property that is not nullable and is not the cause. A rule keyed there would split one
+cascade into **two** groups (`host`, `port`) and head each with a perfectly healthy declaration: the
+"real error hidden behind a counter" that PROJECT.md §11 classes as the critical failure.
+
+So the anchor is the expression the **message quotes**, and the widened node must equal it exactly or
+nothing is returned. Templates were read out of `ts.Diagnostics` in all three compilers rather than
+assumed, as the 2304 rule established.
+
+**§5.1 needed no amendment this time, and that was checked rather than hoped.** The quoted text is only
+how the node is found; the key is the `declaredAt` the checker resolves from it. Probed on a throwaway
+project: `box.item` appears with **identical text** in two files and resolves to **two different**
+declarations. A text-keyed rule would have merged two independent bugs; this one yields two groups.
+
+### The honest limit is structural, and it is committed
+
+An expression with **no printable name** does not produce these codes at all. TypeScript emits
+TS2531/2532/2533 (`Object is possibly 'null'`) instead — no `{0}`, therefore no quoted expression,
+therefore no anchor, and the resolver's entire correctness argument rests on that anchor.
+
+**TS2531/2532/2533 can never enter `CONTEXT_CAPTURE_CODES`.** This is the mirror image of the
+[2305/2724 lesson](#what-the-folding-fixtures-taught): there, two spellings of one failure had to be
+captured *together*; here, one of the two is structurally out of reach. TypeScript picks between them
+on whether the expression has a name — a property of how the code is written, not of what went wrong.
+`fixtures/private-fields-and-anonymous-nullish` carries the witness and two tests pin the exclusion, so
+it reads as a decision rather than an oversight.
+
+---
+
+## Private fields: measured at 0.00 %, filtered anyway (2026-08-04)
+
+Found by [widening the corpus](#t3--the-corpus-widens-onto-public-code-2026-08-04), not by a fixture.
+hono's header rendered:
+
+```
+'Context' has 36 properties: #rawRequest, #req, env, #var, finalized, error, #status,
+#executionCtx, #res, #layout, #renderer, #notFoundHandler, … +24 more
+```
+
+**Nine of the twelve names the display cap allows are `#`-private** — not merely obscure, but not legal
+property references from anywhere outside the class body — and `#req` sits directly beside the `req`
+that had gone missing, which is worse than noise.
+
+| measured across | private-field cost |
+|---|---:|
+| the 28 pre-existing B0 targets | **0.00 %** — not one contains a single private field |
+| hono, in characters | 93 |
+| hono, in display budget | **75 %** (9 of 12 slots) |
+
+**The cost is not characters, and that is why the fix is a filter and not a wider cap.** After it,
+`Session` in the new fixture renders `3 properties: accessToken, userId, renew` instead of eight — and
+`accessToken`, the name that explains why `.token` does not exist, is now the first thing read.
+
+TypeScript's own `private` modifier is **deliberately not filtered**: such a member is written in the
+declaration the header points at, so a reader who opens that file sees it. Only `#` names, which no
+file makes reachable, are dropped.
