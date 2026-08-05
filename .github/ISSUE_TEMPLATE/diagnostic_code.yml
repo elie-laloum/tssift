@@ -1,0 +1,83 @@
+name: Support for a diagnostic code
+description: Ask for a TypeScript error code to be grouped or enriched.
+labels: ["enhancement", "diagnostic-code"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The set of enriched codes is deliberately small and closed — covering a
+        dozen completely beats covering sixty halfway. Adding one is a decision,
+        so please open this issue **before** writing any code.
+
+        Two things worth knowing before you fill this in:
+
+        - **TypeScript picks between neighbouring codes based on your names, not
+          on the kind of failure.** A near-miss identifier turns TS2305 into
+          TS2724 and TS2339 into TS2551. Check on a real project which code
+          actually fires.
+        - **Some codes are deliberately left alone.** TS2551 already carries a
+          good native suggestion, and degrading it would be a regression.
+
+  - type: input
+    id: code
+    attributes:
+      label: The code
+      placeholder: "TS2589"
+    validations:
+      required: true
+
+  - type: textarea
+    id: message
+    attributes:
+      label: The message TypeScript prints
+      description: Verbatim, from a real project.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: cascade
+    attributes:
+      label: Does it cascade, and what links the members?
+      description: >
+        Grouping needs a **structural** link — a shared declaration site, a
+        shared unresolved module specifier, a shared missing name. Proximity is
+        not a link, and neither is a diagnostic's `related` span, which points
+        where the compiler chose to explain that one diagnostic rather than at a
+        cause. If you know of no structural link, say so; that is still useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fact
+    attributes:
+      label: What fact would be attached, and where does it come from?
+      description: >
+        It must be verifiable and non-prescriptive — a declaration and its
+        position, a member list, an edit distance. `interface 'User' is declared
+        at src/types.ts:4:1 and has 2 properties: id, email`, never "add the
+        missing property". And it must be derivable from what is already
+        captured, or say what capture is missing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: already
+    attributes:
+      label: Does TypeScript already print this?
+      description: >
+        The rule an enricher has to pass: the fact is already captured, and
+        TypeScript does not already say it. An enricher that repeats the message
+        costs characters and adds nothing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: A project that produces it
+      description: >
+        A fixture has to be written before the enricher, so a real example is
+        the first thing needed. Public code is ideal.
+    validations:
+      required: false

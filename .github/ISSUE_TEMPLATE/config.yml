@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/elielaloum/tssift/blob/main/SECURITY.md
+    about: Do not open a public issue. Report privately — SECURITY.md says how.
+  - name: What tssift will not do
+    url: https://github.com/elielaloum/tssift/blob/main/CONTRIBUTING.md#the-rules-that-are-not-negotiable
+    about: Autofixing, rewording TypeScript's messages, and telling you which fix to make are stated non-goals.
+  - name: The measurements
+    url: https://github.com/elielaloum/tssift/blob/main/EVAL.md
+    about: Before opening an issue about performance or token cost, the published numbers and their limits.

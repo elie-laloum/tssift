@@ -1,0 +1,95 @@
+name: Bug report
+description: Something tssift got wrong, or refused to do.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two kinds of report are especially valuable, because we cannot generate
+        them ourselves:
+
+        - **A wrong grouping** — two independent failures folded under one
+          cause. That is the most serious defect this tool can have.
+        - **A refusal that should not have happened** — exit 2 on a project that
+          ought to work.
+
+        Reports that tssift did not tell you how to fix something are not bugs:
+        it never does that, on purpose.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, and what tssift produced.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: The JSON report
+      description: >
+        Output of `tssift --format json`, trimmed to the relevant part. This is
+        the complete report; the text renderer is a lossy projection of it, so
+        the JSON is what makes a grouping bug diagnosable.
+      render: json
+    validations:
+      required: false
+
+  - type: input
+    id: typescript
+    attributes:
+      label: TypeScript version
+      description: The one resolved from the analyzed project, not from tssift.
+      placeholder: "5.9.3"
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      placeholder: "20.20.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installer
+    attributes:
+      label: Package manager
+      options:
+        - npm
+        - pnpm
+        - yarn (node-modules)
+        - yarn (Plug'n'Play)
+        - bun
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >
+        A small project that reproduces, or a link to one. Not required, but it
+        is usually the difference between a fix and a long conversation.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before submitting
+      options:
+        - label: I confirmed `tsc --noEmit` reports the same diagnostics tssift is working from.
+          required: false
+        - label: My project's `tsconfig.json` is a concrete one, not a solution-style file with only `references`.
+          required: false

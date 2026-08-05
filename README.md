@@ -8,8 +8,16 @@ explanatory causes first, and can fit the `agent-text` report to a token budget.
 It preserves native TypeScript messages verbatim and never prescribes a fix:
 it reports localized facts so the caller decides what to change.
 
-This is a `0.0.1` preview release preparation. The npm package and GitHub URL
-below are intended future public locations; do not assume they are live yet.
+> [!IMPORTANT]
+> **Not published to npm.** The version is `0.0.1`, the packaging gates are in
+> place, and no release has been made — so `npx tssift` will not find anything
+> yet. The commands below describe the intended invocation; to try it today,
+> clone this repository and build it. See [Development](#development).
+>
+> Read [Evaluation evidence](#evaluation-evidence) before adopting it. The
+> character-count saving is measured and large. The claim that it makes an agent
+> work better is **not** demonstrated, and the most complete campaign to date is
+> a negative result.
 
 ## Use
 
@@ -117,10 +125,21 @@ measure.
 ## Development
 
 The package has zero runtime dependencies. The repository uses Bun to manage
-development dependencies, but its CLI and tests run on Node. Useful checks:
+development dependencies, but its CLI and tests run on Node.
+
+Until there is a release, this is how to try it:
 
 ```sh
+git clone https://github.com/elielaloum/tssift.git
+cd tssift
 bun install --frozen-lockfile
+bun run build
+node dist/cli.js --project /path/to/your/tsconfig.json
+```
+
+Useful checks:
+
+```sh
 bun run typecheck
 bun run build
 bun run test
@@ -133,11 +152,25 @@ npm pack --dry-run
 runs typecheck, tests, fixture verification, and Biome's non-writing CI check
 through `prepublishOnly`.
 
-## Planned public locations
+The toolchain is pinned with [mise](https://mise.jdx.dev); CI deliberately does
+not read that pin, because its job is to sweep a matrix a single version would
+contradict. [CONTRIBUTING.md](./CONTRIBUTING.md) has the full setup and the rules
+a change must not break.
 
-- Repository: <https://github.com/elielaloum/tssift>
-- Issues: <https://github.com/elielaloum/tssift/issues>
-- Package: `tssift` on npm
+## Project documents
+
+| | |
+|---|---|
+| [EVAL.md](./EVAL.md) | the method, the raw tables, every campaign including the ones that failed |
+| [CHANGELOG.md](./CHANGELOG.md) | what a release would contain, and the known limitations |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | how to set up, and the rules a change must not break |
+| [SECURITY.md](./SECURITY.md) | how to report a vulnerability, and what the tool actually does to your machine |
+| [MAINTAINERS.md](./MAINTAINERS.md) | who decides, and what to expect |
+| [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+
+`PROJECT.md` and `AGENTS.md` are the internal specification and working rules.
+They are in **French** — they were written for the author. Everything you need in
+order to contribute is in `CONTRIBUTING.md`, in English.
 
 ## License
 
