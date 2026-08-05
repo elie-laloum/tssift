@@ -50,8 +50,34 @@ export interface ToolContext {
   root: string;
   /** Absolute path to the repo's `tsc.js`, spawned for `run_typecheck`. */
   tscPath: string;
-  /** Every project-relative path `write_file` was asked to write, in order. */
+  /** Every project-relative path `write_file` actually wrote, in order. */
   writes: string[];
+  /**
+   * Every project-relative path `write_file` **refused** — a TypeScript
+   * configuration file, see `isCompilerConfig`. Kept apart from `writes`
+   * because the false-start metric counts edits that happened; this counts
+   * edits that were attempted and denied.
+   */
+  refusedWrites: string[];
+}
+
+/**
+ * Does this path name a TypeScript configuration file?
+ *
+ * Measured on B3 (2026-08-04): both of `zod`'s completed runs reached green by
+ * excluding the mutated file from `tsconfig.json` rather than by fixing the
+ * rename. That run is scored `fixed`, edits no file outside the root cause, and
+ * measures nothing about H1 — the cascade never gets read. A prompt sentence
+ * would be a suggestion; this is a constraint, it is identical in both arms, and
+ * it adds no text for the model to read before it acts.
+ *
+ * Deliberately wider than `tsconfig.json`: `hono`'s config extends
+ * `tsconfig.base.json`, so narrowing the base would be the same escape one file
+ * up.
+ */
+export function isCompilerConfig(relPath: string): boolean {
+  const base = relPath.replaceAll("\\", "/").split("/").pop() ?? "";
+  return /^tsconfig(\..+)?\.json$/.test(base);
 }
 
 /** Resolve a model-supplied path inside the sandbox, refusing anything that escapes it. */
@@ -94,6 +120,13 @@ export function executeTool(name: string, input: unknown, ctx: ToolContext): Too
       case "write_file": {
         const rel = args.path ?? "";
         const abs = resolveInside(ctx.root, rel);
+        if (isCompilerConfig(rel)) {
+          ctx.refusedWrites.push(rel.replaceAll("\\", "/"));
+          return {
+            text: `refused: ${rel} is the project's TypeScript configuration and is fixed for this task. Excluding a file from compilation is not a fix — change the source instead.`,
+            isError: true,
+          };
+        }
         ctx.writes.push(rel.replaceAll("\\", "/"));
         mkdirSync(dirname(abs), { recursive: true });
         writeFileSync(abs, args.content ?? "", "utf8");

@@ -43,18 +43,20 @@ export interface RunResult {
   /** The target declares a `consumerFiles` route at all — distinguishes "not taken" from "not offered". */
   consumerRouteDeclared: boolean;
   /**
-   * The run wrote the project's `tsconfig.json`.
+   * The run **tried** to write a TypeScript configuration file and was refused.
    *
-   * Added 2026-08-04, after a campaign in which **all ten zod runs did it, in
-   * both arms, and all ten were scored `fixed`**. Widening an `exclude` list
-   * until the failing files leave the program produces `0 errors` without
-   * touching the bug: the harness sees a green typecheck and reports a fix.
+   * Added 2026-08-04, after a campaign in which zod's two completed runs did it
+   * and both were scored `fixed`. Widening an `exclude` list until the failing
+   * files leave the program produces `0 errors` without touching the bug: the
+   * harness saw a green typecheck and reported a fix.
    *
-   * It stays counted as a false start — it is a write to a file no fix involves,
-   * exactly what §7 says — but it also gets its own flag, because "edited the
-   * wrong source file" and "changed what was being measured" are different
-   * failures and a single rate hides the second behind the first. A target whose
-   * runs light this up is not measuring a fix rate at all.
+   * Flagging it was not enough — a flagged run still measures nothing, because
+   * the cascade is never read. Since 2026-08-05 `write_file` refuses the write
+   * outright (`isCompilerConfig`, tools.ts) and this flag records the attempt.
+   * It is deliberately **not** a false start: nothing was written, and the
+   * attempt is a behaviour worth its own column rather than a file edit worth
+   * counting. A target whose runs light this up is telling you the model looked
+   * for the exit, not that it took it.
    */
   configEdit: boolean;
   tokens: number;
@@ -74,7 +76,7 @@ export interface Aggregate {
    * this column would conflate them.
    */
   consumerRouteRate: number | null;
-  /** Share of runs that rewrote the project's tsconfig.json — see `RunResult.configEdit`. */
+  /** Share of runs that attempted a refused config write — see `RunResult.configEdit`. */
   configEditRate: number;
   meanTokens: number;
 }
@@ -114,7 +116,7 @@ export function aggregate(results: readonly RunResult[]): Aggregate[] {
 /** A GitHub-flavoured markdown table, ready to paste into EVAL.md. */
 export function toTable(rows: readonly Aggregate[]): string {
   const header =
-    "| target | arm | runs | fixed | turns | false-start | consumer route | config edit | ~tokens |\n" +
+    "| target | arm | runs | fixed | turns | false-start | consumer route | config attempt | ~tokens |\n" +
     "|---|---|---:|---:|---:|---:|---:|---:|---:|";
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   // "—" and "0%" are different findings: the first says the fixture offers no
@@ -124,7 +126,8 @@ export function toTable(rows: readonly Aggregate[]): string {
       `| ${r.target} | ${r.arm} | ${r.runs} | ${pct(r.fixedRate)} | ${r.meanTurns.toFixed(1)} | ${pct(
         r.falseStartRate,
       )} | ${r.consumerRouteRate === null ? "—" : pct(r.consumerRouteRate)} | ${
-        // Loud on purpose: any non-zero here means this row's fix rate is suspect.
+        // Loud on purpose: non-zero means the model went looking for the exit on
+        // this row, which is worth knowing even though the exit is now closed.
         r.configEditRate > 0 ? `⚠ ${pct(r.configEditRate)}` : "0%"
       } | ${Math.round(r.meanTokens)} |`,
   );

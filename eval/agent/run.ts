@@ -234,7 +234,7 @@ async function main(): Promise<void> {
           try {
             const diagnostics =
               arm === "A" ? typecheck(tscPath, sandbox.dir).output : tssiftText(sandbox.dir);
-            const ctx: ToolContext = { root: sandbox.dir, tscPath, writes: [] };
+            const ctx: ToolContext = { root: sandbox.dir, tscPath, writes: [], refusedWrites: [] };
             const runInfo = await runAgent({
               endpoint,
               system: SYSTEM,
@@ -256,9 +256,7 @@ async function main(): Promise<void> {
               consumerRoute: consumerWrites.length > 0,
               consumerWrites,
               consumerRouteDeclared: consumers.size > 0,
-              configEdit: written.some(
-                (p) => p === "tsconfig.json" || p.endsWith("/tsconfig.json"),
-              ),
+              configEdit: ctx.refusedWrites.length > 0,
               tokens: runInfo.tokens,
             };
             results.push(result);

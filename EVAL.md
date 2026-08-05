@@ -40,6 +40,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [Private fields: measured at 0.00 %, filtered anyway (2026-08-04)](#private-fields-measured-at-000--filtered-anyway-2026-08-04)
 - [B3 — the repaired metric, sampled, on a widened corpus (2026-08-04)](#b3--the-repaired-metric-sampled-on-a-widened-corpus-2026-08-04)
 - [The to-do-list hypothesis, tested and refuted (2026-08-04)](#the-to-do-list-hypothesis-tested-and-refuted-2026-08-04)
+- [The config escape is closed (2026-08-05)](#the-config-escape-is-closed-2026-08-05)
 
 **Numbers that are known not to reproduce, and where their correction lives:**
 
@@ -2138,7 +2139,8 @@ is unmeasurable here, because the thing it measured was reclassified as the cons
   TS2339/TS2554-on-anonymised-code is covered by the public entries.
 - **`zod` measured nothing, and now says so.** Both of its completed runs rewrote `tsconfig.json` and
   were scored `fixed`: widening an `exclude` list until the failing files leave the program. The
-  `config edit` column exists because of this campaign, and it fired at 100 %.
+  `config edit` column exists because of this campaign, and it fired at 100 %. **Closed on
+  2026-08-05, and it changes the conditions** — see [the harness guard](#the-config-escape-is-closed-2026-08-05).
 - **n=5 at temperature 1 gives five samples but no confidence interval** — none is computed here, and
   a 60 % against 100 % on five runs is three runs against five.
 - **The total is dominated by `hono`**, which alone is more tokens than the other five combined. The
@@ -2208,3 +2210,33 @@ Two consequences worth stating plainly:
 
 So the honest position is that this is an **open problem**, not a bug with a known fix. The one thing
 measured here is what it is *not*: it is not the shape of the list.
+
+---
+
+## The config escape is closed (2026-08-05)
+
+A harness change, made after measurement stopped, so that the next campaign — whenever it happens —
+measures something. No runs were executed for it.
+
+[B3](#honest-limits) left `zod` scoring `fixed` on runs that never read the cascade: the model widened
+`exclude` in `tsconfig.json` until the failing files left the program, and the harness, which defines
+"fixed" as `tsc --noEmit` returning zero, agreed. Flagging it was not enough. A flagged run still
+produces no measurement, and `zod` is the corpus's only namespace-import cascade.
+
+`write_file` now refuses any path whose basename matches `tsconfig(\..+)?\.json` and returns the
+refusal to the model as a tool error (`isCompilerConfig`, `eval/agent/tools.ts`). The pattern is wider
+than `tsconfig.json` on purpose: `hono`'s config extends `tsconfig.base.json`, so narrowing the base is
+the same escape one file up.
+
+Why a tool refusal rather than a sentence in the system prompt: it is a constraint rather than a
+suggestion, it is byte-identical in both arms, and it adds nothing for the model to read before it
+acts. A prompt sentence would be a third variable in a comparison that already drifts.
+
+**It is not scored as a false start.** Nothing was written, so no file was edited; the attempt is
+recorded in its own column, now headed `config attempt`. A non-zero value there says the model went
+looking for the exit, not that it took it.
+
+**The consequence to know before citing any future number: this changes the conditions.** The six
+complete B3 targets ran without the guard. Per [B2 §1](#1-b1-and-b2-do-not-subtract--the-control-arm-moved),
+campaigns under different conditions do not subtract. Runs made under this guard are a new campaign,
+not an extension of B3 — whether or not the guard ever fires on them.
