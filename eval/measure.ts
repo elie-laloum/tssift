@@ -18,7 +18,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTEXT_CAPTURE_CODES } from "../src/codes.js";
@@ -156,21 +156,39 @@ const TARGETS: Target[] = [
     kind: "fixture",
     project: "fixtures/private-fields-and-anonymous-nullish/before",
   },
-  // Real repositories. Paths are machine-specific by nature; a missing one is
-  // reported as such rather than silently dropped.
-  { name: "lekes", kind: "repo", project: `${homedir()}/projects/lekes` },
-  { name: "tccp", kind: "repo", project: `${homedir()}/projects/tccp` },
-  {
-    name: "keyzia/data-explorer",
-    kind: "repo",
-    project: `${homedir()}/projects/nextp/keyzia/frontends/data-explorer`,
-  },
-  {
-    name: "nextp/cursor-rules-hooks",
-    kind: "repo",
-    project: `${homedir()}/projects/nextp/dev-tools/cursor-rules/hooks`,
-  },
 ];
+
+/**
+ * Real repositories to measure alongside the fixtures, read from an optional,
+ * git-ignored `eval/local-repos.json`:
+ *
+ *     [{ "name": "some-app", "project": "/absolute/path/to/some-app" }]
+ *
+ * They used to be a hardcoded list of absolute paths under one developer's home
+ * directory. That was wrong twice over: the paths exist on exactly one machine,
+ * so every other clone measured four targets it could never find; and the names
+ * were private ones this repository has no business publishing.
+ *
+ * Absent file means fixtures and corpus only, which is what a fresh clone
+ * should measure — those are the reproducible targets. Nothing here is required
+ * for any published number: every figure in EVAL.md that a reader can check
+ * comes from the fixtures or from the pinned public corpus.
+ */
+function localRepoTargets(): Target[] {
+  const path = join(repoRoot, "eval", "local-repos.json");
+  if (!existsSync(path)) return [];
+  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (!Array.isArray(parsed)) throw new Error(`${path} must contain a JSON array`);
+  return parsed.map((entry, i) => {
+    const { name, project } = (entry ?? {}) as { name?: unknown; project?: unknown };
+    if (typeof name !== "string" || typeof project !== "string") {
+      throw new Error(`${path}[${i}] needs a string \`name\` and a string \`project\``);
+    }
+    // Resolved against the repo root so a relative path is usable, and so a
+    // `~/…` string fails loudly rather than becoming a literal directory name.
+    return { name, kind: "repo", project: resolve(repoRoot, project) };
+  });
+}
 
 /** A tracked working tree must come out of the measurement byte-identical. */
 function gitState(dir: string): string | undefined {
@@ -324,7 +342,9 @@ if (corpus.length === 0) {
   );
 }
 
-const rows = [...TARGETS, ...committedCorpusTargets(), ...corpus].map(measure);
+const rows = [...TARGETS, ...localRepoTargets(), ...committedCorpusTargets(), ...corpus].map(
+  measure,
+);
 
 const lines: string[] = [];
 lines.push(

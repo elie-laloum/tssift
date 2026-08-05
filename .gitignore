@@ -32,6 +32,11 @@ pnpm-lock.yaml
 .corpus/
 .cache/
 
+# Local, machine-specific repositories for the B0 measurement (eval/measure.ts).
+# Absolute paths and, in practice, private project names: they belong to one
+# machine, never to the repository.
+eval/local-repos.json
+
 # Enregistrements bruts du bras modele, un JSONL par campagne. Non commites :
 # ils portent des chiffres de campagne, pas du code, et EVAL.md est ou vivent
 # ceux qui comptent.
