@@ -4,12 +4,11 @@
 **Stages reported here:** **B0** (deterministic, no model call) · **B1** and **B2** (model arm)
 **Reproduction:** `mise exec -- bun run eval` (B0) · `mise exec -- bun run eval:agent` (B1/B2, endpoint in `.env`)
 
-> **This file is in English; the rest of the project documentation is in French.** The
-> convention was changed on 2026-08-03, deliberately and for one reason: every number here
-> is meant to be reproducible and citable by someone who did not write it, and the renderer
-> output quoted throughout is English (rule 13). A French frame around English samples made
-> this the one document where the reader had to switch languages mid-table. `PROJECT.md` and
-> `AGENTS.md` stay in French — see AGENTS.md § "Conventions de code".
+> **Historical note.** This file was written in French until 2026-08-03 and switched to
+> English deliberately, for one reason: every number here is meant to be reproducible and
+> citable by someone who did not write it, and the renderer output quoted throughout is
+> English (rule 13). A French frame around English samples made this the one document where
+> the reader had to switch languages mid-table.
 
 **The rule this file obeys:** report the measurement obtained, not the measurement hoped
 for. Several sections below weaken a hypothesis this project is built on. They stay.
@@ -28,11 +27,11 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 - [B1 — the model arm](#b1--the-model-arm)
 - [P2 — enrichment: what it adds and what it costs (2026-08-01)](#p2--enrichment-what-it-adds-and-what-it-costs-2026-08-01)
 - [P2 / 2307 — the module enricher, and a published number that did not reproduce (2026-08-02)](#p2--2307--the-module-enricher-and-a-published-number-that-did-not-reproduce-2026-08-02)
-- [P2 / 2739 · 2741 — the measurement that corrected §5.2 (2026-08-02)](#p2--2739--2741--the-measurement-that-corrected-52-2026-08-02)
-- [P2 / 2740 — the code §5.2 described without naming (2026-08-02)](#p2--2740--the-code-52-described-without-naming-2026-08-02)
+- [P2 / 2739 · 2741 — the measurement that corrected the enriched-code table (2026-08-02)](#p2--2739--2741--the-measurement-that-corrected-the-enriched-code-table-2026-08-02)
+- [P2 / 2740 — the code the enriched-code table described without naming (2026-08-02)](#p2--2740--the-code-the-enriched-code-table-described-without-naming-2026-08-02)
 - [P2 / 2322 — the last enrichable code, and not for the announced reason (2026-08-02)](#p2--2322--the-last-enrichable-code-and-not-for-the-announced-reason-2026-08-02)
 - [B2 — the model arm re-measured on enriched output (2026-08-03)](#b2--the-model-arm-re-measured-on-enriched-output-2026-08-03)
-- [Real code — `keyzia/data-explorer` (2026-08-03)](#real-code--keyziadata-explorer-2026-08-03)
+- [Real code — `private-monorepo` (2026-08-03)](#real-code--private-monorepo-2026-08-03)
 - [P1 / 2304 · 2552 — folding by missing name (2026-08-04)](#p1--2304--2552--folding-by-missing-name-2026-08-04)
 - [Header width — a lever measured, and closed (2026-08-04)](#header-width--a-lever-measured-and-closed-2026-08-04)
 - [T3 — the corpus widens onto public code (2026-08-04)](#t3--the-corpus-widens-onto-public-code-2026-08-04)
@@ -48,7 +47,7 @@ for. Several sections below weaken a hypothesis this project is built on. They s
 |---|---|---|
 | P2 totals `16 861 → 17 538`, B/A `54 % → 56 %` (2026-08-01) | [P2 volume cost](#the-volume-cost-measured-against-the-p1-baseline) | **do not reproduce** — `rootLabel` bug, corrected 2026-08-02. Deltas remain valid; absolute values and ratios do not. See [P2/2307](#first-the-correction-the-harness-was-measuring-a-product-nobody-ships). |
 | B1 false-start rates (2026-07-29) | [B1 corpus results](#results-on-the-frozen-corpus--the-real-test-of-h1-2026-07-29) | **not comparable to B2** — the control arm drifted 6 %. And the `order-book` metric is defective. See [B2 §1](#1-b1-and-b2-do-not-subtract--the-control-arm-moved) and [B2 §3](#3-and-the-false-start-metric-is-wrong-on-order-book). |
-| "errors are the developer's own" on `data-explorer` (2026-08-03) | [Real code](#real-code--keyziadata-explorer-2026-08-03) | **wrong claim, corrected 2026-08-04** — the 19 diagnostics come from 38 uncommitted deletions across four files. The **numbers reproduce exactly**; only the provenance was misstated. |
+| "errors are the developer's own" on `private-monorepo` (2026-08-03) | [Real code](#real-code--private-monorepo-2026-08-03) | **wrong claim, corrected 2026-08-04** — the 19 diagnostics come from 38 uncommitted deletions across four files. The **numbers reproduce exactly**; only the provenance was misstated. |
 
 ---
 
@@ -100,35 +99,35 @@ tree warning.
 | partial-interface-rename | fixture | 5.9.3 | 3 | 3 | 523 | 697 | **133 %** | 131 | 174 |
 | two-independent-roots | fixture | 5.9.3 | 2 | 2 | 223 | 319 | **143 %** | 56 | 80 |
 | overload-mismatch | fixture | 5.9.3 | 1 | 1 | 571 | 1176 | **206 %** | 143 | 294 |
-| lekes | real repo | 5.9.3 | 8 | 8 | 1475 | 1877 | **127 %** | 369 | 469 |
-| tccp | real repo | 5.9.3 | 0 | 0 | 0 | 40 | n/a | 0 | 10 |
-| keyzia/data-explorer | real repo | — | — | — | — | — | **refused, exit 2** ¹ | — | — |
-| nextp/cursor-rules-hooks | real repo | 6.0.3 | — | — | — | — | **refused, exit 2** | — | — |
-| corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 112 | 18 548 | 19 102 | **103 %** | 4 637 | 4 776 |
-| corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 12 | 1 677 | 1 804 | **108 %** | 419 | 451 |
-| corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 153 | 17 602 | 32 025 | **182 %** | 4 401 | 8 006 |
+| private-app | real repo | 5.9.3 | 8 | 8 | 1475 | 1877 | **127 %** | 369 | 469 |
+| private-app-2 | real repo | 5.9.3 | 0 | 0 | 0 | 40 | n/a | 0 | 10 |
+| private-monorepo | real repo | — | — | — | — | — | **refused, exit 2** ¹ | — | — |
+| private-ts6-repo | real repo | 6.0.3 | — | — | — | — | **refused, exit 2** | — | — |
+| corpus/private-app-result-value-renamed | corpus | 5.9.3 | 112 | 112 | 18 548 | 19 102 | **103 %** | 4 637 | 4 776 |
+| corpus/private-app-task-export-renamed | corpus | 5.9.3 | 12 | 12 | 1 677 | 1 804 | **108 %** | 419 | 451 |
+| corpus/private-app-ok-arity-changed | corpus | 5.9.3 | 153 | 153 | 17 602 | 32 025 | **182 %** | 4 401 | 8 006 |
 
 **Totals over the 8 measured targets: diagnostics A = 283, B = 283. Characters A = 39 144,
 B = 55 243, i.e. B/A = 141 %.**
 
 *This is the baseline P1 measures itself against (T7 of the plan).*
 
-¹ **`keyzia/data-explorer` changed status on 2026-07-27, and not through drift: through a
+¹ **`private-monorepo` changed status on 2026-07-27, and not through drift: through a
 bug fix.** Its root holds a *solution* tsconfig (`"files": []`, `"include": []`,
 `"references": [4]`). `tsc -p` typechecked **nothing** there and exited 0; both arms agreed
 on `0 diagnostics`, and that `0` was **false** — the monorepo's errors exist, lodged in the
 referenced projects. An agent read an imaginary "clean" there, exactly the silent fallback
 rule 15 forbids. The target now exits **2**, naming the tsconfig, the counts and the four
-referenced paths. Decision and measurement in PROJECT.md §9. *(Confirmed again on
+referenced paths. *(Confirmed again on
 2026-08-03 by targeting a referenced sub-project directly — see
-[Real code](#real-code--keyziadata-explorer-2026-08-03).)*
+[Real code](#real-code--private-monorepo-2026-08-03).)*
 
 Effect on the totals: one fewer measured target (9 → 8) and **33 fewer characters** on the
 B side — arm A was worth 0 characters there, so the B/A ratio stays at **141 %**. The
 diagnostic count does not move by one unit.
 
 **Two other discrepancies not to mistake for noise** if the measurement is replayed today.
-First, **live** `lekes` has dropped back to `0 / 0`: this is the instability already
+First, **live** `private-app` has dropped back to `0 / 0`: this is the instability already
 documented under [Corpus limits](#corpus-limits), and the very reason for freezing a
 corpus. Second, a clean run now prints `0 errors · N files checked` instead of `0 errors` —
 the file count travels with the zero to make it verifiable, which adds about twenty
@@ -136,7 +135,7 @@ characters to the targets with no diagnostics.
 
 ### Real code confirms the fixed-cost hypothesis
 
-The three `corpus/` entries are **real code** (`lekes`, 169 TS files), frozen at a pinned
+The three `corpus/` entries are **real code** (`private-app`, 169 TS files), frozen at a pinned
 commit, broken by a one-line mutation. Detail and method: `eval/corpus.json`.
 
 On the two wide single-cause cascades, the overhead **collapses**: **103 %** and **108 %**.
@@ -145,7 +144,7 @@ This directly confirms what the fixture trend suggested — most of P0's overhea
 resemble the real use case, `agent-text` currently costs **3 to 8 % more** than raw `tsc`,
 not 106 %.
 
-**The 182 % exception (`lekes-ok-arity-changed`) is instructive and was verified.** 152 of
+**The 182 % exception (`private-app-ok-arity-changed`) is instructive and was verified.** 152 of
 its 153 diagnostics carry a `relatedInformation` — *"An argument for 'origin' was not
 provided."* pointing at `src/shared/domain/result.ts:15:33` — that `tsc --pretty false` does
 **not print at all**. The overhead is therefore, 100 %, added information, repeated 152
@@ -153,12 +152,12 @@ times.
 
 And that information is not decorative: **each of those 152 related entries designates the
 declaration that is the root cause.** It is a structural link, present in the captured data,
-exactly the kind PROJECT.md §5.1 allows exploiting — and it is P1 that will have to decide
+exactly the kind the causality threshold allows exploiting — and it is P1 that will have to decide
 whether to derive from it, then fold those 152 lines into one root plus a counter.
 
 ⚠️ **Do not quote the total alone.** It is dominated by the largest target, so it moves with
 it while saying nothing about the product: during the same session, with a more broken
-`lekes`, that same total was 124 %. **The per-target ratios and their trend with size are the
+`private-app`, that same total was 124 %. **The per-target ratios and their trend with size are the
 only readable numbers here.**
 
 ---
@@ -171,7 +170,7 @@ version of this sentence said "14 against 14": that was the total from before th
 existed, left in place after the table was redone. Corrected 2026-07-27.)*
 
 This is not underperformance, it is the expected and announced result
-(`.plans/2026-07-27_p0-b0.md` § T9, PROJECT.md §6): **in P0 there is neither causality nor
+(the P0 plan, and the output contract): **in P0 there is neither causality nor
 enrichment.** Arm B contains exactly the same diagnostics as arm A, only reformatted and
 annotated. Cascade folding — the mechanism that carries H1 — arrives in **P1**, and the
 "after P1" table below is what it produced.
@@ -254,9 +253,9 @@ entirely in `json`, and `--all` restores it line by line.
 | cannot-find-name | fixture | 5.9.3 | 7 | **7** | **0 %** | 493 | 598 | 121 % | 123 | 150 |
 | missing-multiple-properties | fixture | 5.9.3 | 3 | **3** | **0 %** | 429 | 533 | 124 % | 107 | 133 |
 | **two-roots-one-file** | fixture | 5.9.3 | 4 | **2** | **50 %** | 356 | 654 | 184 % | 89 | 164 |
-| corpus/lekes-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
-| corpus/lekes-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
-| corpus/lekes-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
+| corpus/private-app-result-value-renamed | corpus | 5.9.3 | 112 | 22 | **80 %** | 18 548 | 3 742 | **20 %** | 4 637 | 936 |
+| corpus/private-app-task-export-renamed | corpus | 5.9.3 | 12 | 1 | **92 %** | 1 677 | 711 | **42 %** | 419 | 178 |
+| corpus/private-app-ok-arity-changed | corpus | 5.9.3 | 153 | 2 | **99 %** | 17 602 | 1 061 | **6 %** | 4 401 | 265 |
 
 **Totals over the 25 measured targets: diagnostics A = 349 → entries B = 72 (79 % fold).
 Characters A = 46 766, B = 18 149, i.e. B/A = 39 %.**
@@ -286,8 +285,8 @@ That leaves **seventeen single-cause cascades**. Before T1 the threshold folded 
 
 `wrong-tsconfig-paths` folds **4 → 2** and not 4 → 1: its two specifiers (`@domain/order` ×3,
 `@domain/customer` ×1) are two distinct modules, and the second, alone, stays below the
-two-member minimum. Grouping two aliases under one header would be the over-grouping §11
-classifies as critical — so the rule emits two entries, by design.
+two-member minimum. Grouping two aliases under one header would be the over-grouping
+classed as critical — so the rule emits two entries, by design.
 
 **This is the most useful measurement produced since the H1 number.** Until T1 it said that
 folding did not rest on a general property of cascades but on **the six-code list in
@@ -307,9 +306,9 @@ five `declaredAt` folds are unchanged to the character.
 
 Note that this is not a design ceiling:
 
-- 18047 · 2741 · 2739 · 2322 · 2551 are in the §5.2 table of ten and await the numbers (rule
+- 18047 · 2741 · 2739 · 2322 · 2551 are in the enriched-code table of ten and await the numbers (rule
   8); 2749 and 1484 are outside the table (native format assumed), and 2304 is the second half
-  of the §5.1 root list, the unwritten sister of the 2307 rule;
+  of the causality root list, the unwritten sister of the 2307 rule;
 - **2307 is now an acquired fold, not a gap.** Its derivation rule (T1) works only on
   `ProgramFacts.imports` and the message, with no context capture; it was not deferred for
   lack of data but for lack of a fixture, and that gap was filled in the preceding T0. Detail
@@ -333,7 +332,7 @@ Its cause is `type Currency = "EUR" | "USD"` at `src/pricing/currency.ts:6` — 
 
 A rule indexed on the `related` would therefore group two diagnostics out of three, **headed
 by a declaration that does not need changing**, and leave the third outside. Sending the
-reader to the wrong line is the failure mode §11 classifies as critical; it is simply more
+reader to the wrong line is the failure mode classed as critical; it is simply more
 discreet than merging two independent bugs. **A `related` points where the compiler judged it
 useful to explain *that* diagnostic, which is not the same thing as the cause.**
 
@@ -347,12 +346,12 @@ Four diagnostics, one cause, and **nothing to capture**: no `related`, no resolv
 declaration. `OrderStatus` really does exist — it is a `const` object — it simply makes no
 sense in type position. The compiler therefore has no structural link to offer. Any rule
 folding this cascade would have to work on the identifier and `ProgramFacts.imports`, that is,
-derive on "the same name" — precisely what §5.1 forbids. This is not a capture gap, it is the
+derive on "the same name" — precisely what the causality threshold forbids. This is not a capture gap, it is the
 limit of what the structural threshold can reach, and it is useful to have committed it.
 
 ### The 2307 rule, written in T1 — what the three fixtures forced on it
 
-§5.1 left the 2307 rule — "everything importing the unresolved module is derived" — unwritten.
+The causality threshold left the 2307 rule — "everything importing the unresolved module is derived" — unwritten.
 **It has existed since T1 (2026-07-28)**, and it folds TS2307 by specifier:
 `phantom-dependency-pnpm` and `yarn-pnp-project` 3 → 1, `wrong-tsconfig-paths` 4 → 2, the
 lone 2307 of `two-independent-roots` unchanged. Three things those fixtures forced on its
@@ -383,7 +382,7 @@ itself.
 
 ### `monorepo-cross-package` exercises the guard rather than repeating it
 
-Guard 1 of §5.1 refuses as a cause any declaration outside the program's files —
+The first causality guard refuses as a cause any declaration outside the program's files —
 `<ts-lib>/…`, `node_modules/…` — and it was born from a corpus TS2345 that resolved to
 `interface Map`. Until now every folding fixture had its cause in the same package, so the
 guard was never put under tension. This one has its four diagnostics in `packages/api` and
@@ -416,26 +415,26 @@ error. The guard lives in the **CLI layer**, not in the source: the library and 
 folding `yarn-pnp-project` 3 → 1 (which is what makes the fold measurable above), only the CLI
 refuses. Pure predicate `isPnpMisread`, tested.
 
-### The four T0 fixtures — the last §7 category, and the hard negative control
+### The four T0 fixtures — the last fixture category, and the hard negative control
 
-The fourth batch brings the corpus to twenty and **closes the §7 category list**. None of the
+The fourth batch brings the corpus to twenty and **closes the fixture category list**. None of the
 four folds, and for three of them that is the intended behaviour.
 
-- **`missing-type-import` (TS1484)** covers the last §7 category without a witness, "missing
+- **`missing-type-import` (TS1484)** covers the last fixture category without a witness, "missing
   type import". `verbatimModuleSyntax` is on and two files import types with a value import:
   three TS1484, with the module resolving perfectly — so it is not a TS2307, the fix is a
   keyword and not a dependency. It is the complement of `value-used-as-type` (a value in type
   position, 2749): here a type in value position. Outside the table of ten, it renders in
   native format, and it incidentally witnesses that three diagnostics of the same code across
   two files stay three isolated roots for want of a derivation link.
-- **`cannot-find-name` (TS2304)** is the first fixture to produce 2304, which §5.1 classifies
+- **`cannot-find-name` (TS2304)** is the first fixture to produce 2304, which the causality threshold classifies
   as a **near-certain root** on the same footing as 2307 and which no fixture exercised — the
   threshold had only ever seen half of its own root list. Seven references to a single missing
   name in one file: a genuine single-cause cascade whose structure mirrors 2307's (the name
   gives an error at each use, nothing cascades beyond). It does not fold — 2304 is neither
   captured nor derived — so it quantifies the gap a future rule indexed on the missing name
   would fill, sister to the unwritten 2307 rule. *(That rule is designed on 2026-08-03, driven
-  by real code — see [Real code](#real-code--keyziadata-explorer-2026-08-03).)*
+  by real code — see [Real code](#real-code--private-monorepo-2026-08-03).)*
 - **`missing-multiple-properties` (TS2739)** is the multi-member twin of
   `missing-required-property` (2741): three construction sites, two required members missing
   instead of one, all pointing at the declaration of `Rect`. Like its twin it does not fold —
@@ -444,7 +443,7 @@ four folds, and for three of them that is the intended behaviour.
 - **`two-roots-one-file` (TS2339)** is the hard negative control, sister to
   `two-independent-roots`. Where that one separates two causes in two files under two codes,
   this one puts **two causes in one file under a single code** — the case where over-grouping
-  is most tempting and, per §11, most destructive. Rule 3 of §5.1 ("same 2339 in the same file
+  is most tempting and, and most destructive. The file-and-code rule ("same 2339 in the same file
   ⇒ one root") is deliberately **not** applied, and this is where that is verified: each
   interface is misread twice, so a rule indexed on file + code would fold all four under one
   header and hide one of the two bugs behind a counter. The engine indexes on `declaredAt` and
@@ -459,7 +458,7 @@ twenty (T0), 39 % after T1: every small fixture enters with a ratio above 100 % 
 average up, and T1's 2307 fold even adds a little — on a tiny target, folding adds a header
 without removing anything (every line fits under the cap). **At constant scope the published
 numbers are unchanged to the character** — removing the thirteen lines added after the fact
-gives back exactly 283 → 29, 39 144 against 7 960, i.e. 20 %. This is why §7 publishes a
+gives back exactly 283 → 29, 39 144 against 7 960, i.e. 20 %. This is why the protocol publishes a
 per-target ratio: **this total mostly measures the composition of the list.**
 
 ### What the folding fixtures taught
@@ -471,7 +470,7 @@ the three-site cap really does remove volume. Folding pays as soon as the unit d
 large, not only when the cascade is long.
 
 **2. `arity-changed` comes out at 232 %, the worst ratio in the table — and it is the same code
-as the best line in the table.** TS2554 gives **6 %** on `corpus/lekes-ok-arity-changed` (153
+as the best line in the table.** TS2554 gives **6 %** on `corpus/private-app-ok-arity-changed` (153
 diagnostics) and **232 %** here (4 diagnostics). Same family, same causality rule, same
 renderer; only cascade size differs. The cause of the overhead is identical in both cases — the
 `relatedInformation` that `tsc --pretty false` does not print at all, repeated three times here
@@ -481,8 +480,8 @@ number of sites one cause explains.**
 
 **3. Two fixtures do not fold at all, and that is their reason for existing.** `nullable-chain`
 (4 × TS18047) and `missing-required-property` (3 × TS2741) are single-cause cascades a human
-groups at a glance; the §5.1 threshold leaves them as isolated roots, because neither 18047 nor
-2741 is in `CONTEXT_CAPTURE_CODES`. Both codes are in the §5.2 table of ten, so this is a known
+groups at a glance; the causality threshold leaves them as isolated roots, because neither 18047 nor
+2741 is in `CONTEXT_CAPTURE_CODES`. Both codes are in the enriched-code table of ten, so this is a known
 gap awaiting numbers (rule 8), not an oversight. They are committed precisely so that the gap is
 **measurable** rather than anecdotal: 128 % and 169 % are the going price of what the threshold
 refuses.
@@ -501,7 +500,7 @@ seven** depending on scope.
 ### What this table says, and what it does not
 
 **It says H1 holds on real code.** On the three corpus entries, the only targets resembling the
-real use case, the ratio goes from 103–182 % to **6–42 %**. `lekes-ok-arity-changed` is the
+real use case, the ratio goes from 103–182 % to **6–42 %**. `private-app-ok-arity-changed` is the
 textbook case: 153 diagnostics spread over 31 files become 2 entries, one of which names
 `src/shared/domain/result.ts:15:19` — the line to read — plus a counter for the remaining 149
 sites.
@@ -525,17 +524,17 @@ mechanically has nothing to save.
 
 **The negative control holds: `two-independent-roots` stays at 2 entries for 2 diagnostics, 0 %
 fold.** This is the most important measurement in the table after the three corpus entries. Two
-unrelated failures stay two failures, and the Definition of Done criterion (§12) is verified by
+unrelated failures stay two failures, and the Definition of Done criterion is verified by
 a named test, not merely observed here.
 
 **It still says nothing about H2**, nor about fix rate, nor about false starts. Those metrics
 require a model and arrive in B1/B2. What B0 measures here is a volume and a count, not a
 behaviour.
 
-**Under-grouping is visible and deliberate.** `lekes-result-value-renamed` folds 80 %, not 99 %:
+**Under-grouping is visible and deliberate.** `private-app-result-value-renamed` folds 80 %, not 99 %:
 21 of its 112 diagnostics stay isolated — 10 TS7006 (implicit `any` parameter, no declaration to
 aim at), 8 TS2339 whose receiver is `{}` or `unknown`, 2 TS2353 and 1 TS2345. None carries a
-structural link to the cause. Grouping them would require deriving on a resemblance, which §5.1
+structural link to the cause. Grouping them would require deriving on a resemblance, which the causality threshold
 forbids. This is the intended behaviour.
 
 ---
@@ -562,9 +561,9 @@ The resolution rate is the share of that code's diagnostics that come back with 
 | partial-interface-rename | 2353 · 2339 · 2345 | 3/3 (100 %) | **one and the same position**, `src/types/user.ts:7:1` |
 | two-independent-roots | 2339 | 1/1 | `src/billing/invoice.ts:3:1` — and the 2307 has **no** context |
 | broken-barrel-export | 2724 | 3/3 (**100 %**) | 3 on `src/domain/index.ts:1:1`, the barrel — not `order.ts`, which still exports |
-| corpus/lekes-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 on `src/shared/domain/result.ts:12:4` |
-| corpus/lekes-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 on `…/domain/task.entity.ts:1:1` |
-| corpus/lekes-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 on `src/shared/domain/result.ts:15:19` |
+| corpus/private-app-result-value-renamed | 2339 | 91/99 (**92 %**) | 91 on `src/shared/domain/result.ts:12:4` |
+| corpus/private-app-task-export-renamed | 2305 | 12/12 (**100 %**) | 12 on `…/domain/task.entity.ts:1:1` |
+| corpus/private-app-ok-arity-changed | 2554 | 152/152 (**100 %**) | 152 on `src/shared/domain/result.ts:15:19` |
 
 **This is H1's seam, seen for the first time as a structural link** rather than an intuition: 152
 diagnostics on one declaration, 91 on another, 12 on a third. Nothing is folded yet — T3 and T4
@@ -580,9 +579,9 @@ Best of 3 runs, capture disabled then enabled:
 | two-independent-roots | 157 ms | 152 ms | −3 % |
 | overload-mismatch | 175 ms | 183 ms | **+5 %** |
 | broken-barrel-export | 182 ms | 176 ms | −4 % |
-| corpus/lekes-result-value-renamed | 3 947 ms | 3 738 ms | −5 % |
-| corpus/lekes-task-export-renamed | 4 426 ms | 4 006 ms | −10 % |
-| corpus/lekes-ok-arity-changed | 3 781 ms | 4 342 ms | **+15 %** |
+| corpus/private-app-result-value-renamed | 3 947 ms | 3 738 ms | −5 % |
+| corpus/private-app-task-export-renamed | 4 426 ms | 4 006 ms | −10 % |
+| corpus/private-app-ok-arity-changed | 3 781 ms | 4 342 ms | **+15 %** |
 
 *Table replayed on 2026-07-27 at the end of T6, with 2724 in the list. The values move by several
 points from one run to the next — `overload-mismatch` was at −3 % on the first pass and comes out
@@ -594,7 +593,7 @@ The negative deltas prove the measurement is dominated by variance: capture cann
 loading. `createProgram` and `getPreEmitDiagnostics` cost four seconds on 169 files; the per-
 diagnostic tree descent and type resolution get lost inside that. **Below the ~20 % threshold of
 decision 28, so lazy capture need not be discussed — but the worst case,
-`lekes-ok-arity-changed` with its 152 signature resolutions, rose to +15 % on this second run and
+`private-app-ok-arity-changed` with its 152 signature resolutions, rose to +15 % on this second run and
 is no longer "well below".** That is the target to re-measure if one more code enters the list.
 
 ### The volume cost is real
@@ -604,9 +603,9 @@ is no longer "well below".** That is the target to re-measure if one more code e
 | partial-interface-rename | 2 767 | 5 205 | +88 % |
 | two-independent-roots | 1 711 | 2 217 | +30 % |
 | broken-barrel-export | 2 646 | 4 893 | +85 % |
-| corpus/lekes-result-value-renamed | 104 154 | 160 225 | +54 % |
-| corpus/lekes-task-export-renamed | 44 437 | 52 536 | +18 % |
-| corpus/lekes-ok-arity-changed | 183 926 | 276 037 | +50 % |
+| corpus/private-app-result-value-renamed | 104 154 | 160 225 | +54 % |
+| corpus/private-app-task-export-renamed | 44 437 | 52 536 | +18 % |
+| corpus/private-app-ok-arity-changed | 183 926 | 276 037 | +50 % |
 | overload-mismatch | 3 378 | 3 378 | 0 % |
 
 *Both columns have grown since the first measurement (`partial-interface-rename`: 2 410 → 2 767
@@ -627,12 +626,12 @@ never removing capture.
 
 ### A warning for T3, out of the measurement
 
-On `corpus/lekes-result-value-renamed`, the single TS2345 resolves its `expected` to
+On `corpus/private-app-result-value-renamed`, the single TS2345 resolves its `expected` to
 **`<ts-lib>/lib.es2015.collection.d.ts:19:1 (interface Map)`**.
 
 That is correct as capture, and it would be a **disaster as a causality criterion**: two
 perfectly independent bugs each passing a bad argument to a `Map` method would share that
-`declaredAt` and be grouped. This is exactly the over-grouping §11 classifies as *critical*.
+`declaredAt` and be grouped. This is exactly the over-grouping classed as *critical*.
 
 Consequence to hold for T3: **a declaration outside the program's files — `<ts-lib>/…`,
 `node_modules/…` — cannot serve as a root cause.** The capture stays, because it is true and a
@@ -640,7 +639,7 @@ P2 enricher will want it; it is derivation that must refuse it.
 
 Second observation of the same family: on this entry, the 2339s point at the *type literal*
 (`result.ts:12:4`) and the 2353 points at the *alias* (`result.ts:11:1`). Two distinct positions,
-hence two groups where a human would see one. That is **under-grouping**, the asymmetry §5.1
+hence two groups where a human would see one. That is **under-grouping**, the asymmetry the causality threshold
 explicitly accepts: we loosen with numbers, we do not tighten after a miss.
 
 ---
@@ -654,7 +653,7 @@ puts corpus width back at the top of the list.*
 Three problems, all observed on the very day of the first measurement. None invalidates the
 baseline; all three make the live real-repository corpus unusable as it stands for B1.
 
-**1. `lekes` is a live working tree.** Measured three times in one hour, it gave **23, then 29,
+**1. `private-app` is a live working tree.** Measured three times in one hour, it gave **23, then 29,
 then 8 diagnostics** (6 668, 8 141, then 1 475 characters in arm A). Something modifies it
 continuously. The `git status` guard did flag a before/after discrepancy on one of the runs;
 on inspection, **our measurement wrote nothing** — no file in any of the three repositories was
@@ -667,15 +666,15 @@ message rather than letting the reader conclude the worst.
 
 A measurable consolation: across those three very different states, the B/A **ratio** stayed in a
 narrow band — 114 %, 113 %, 127 % — while the absolute values varied by a factor of 5. That is
-exactly the argument for which §7 publishes a ratio and not a value.
+exactly the argument for which the protocol publishes a ratio and not a value.
 
-**2. Live real repositories are clean — RESOLVED 2026-07-27 by `eval/corpus.json`.** `tccp` and
-`keyzia/data-explorer` have zero diagnostics, and `lekes` oscillates around zero. Valid
+**2. Live real repositories are clean — RESOLVED 2026-07-27 by `eval/corpus.json`.** `private-app-2` and
+`private-monorepo` have zero diagnostics, and `private-app` oscillates around zero. Valid
 measurement points but **without information**.
 
 The obvious lead — "take snapshots of repositories at moments when they were broken" — **does not
-work**, and that is a result in itself. Scan of 2026-07-27: **14/14 `lekes` commits and 24 of 240
-sampled `data-explorer` commits compile cleanly.** People commit green; CI sees to it. **Broken
+work**, and that is a result in itself. Scan of 2026-07-27: **14/14 `private-app` commits and 24 of 240
+sampled `private-monorepo` commits compile cleanly.** People commit green; CI sees to it. **Broken
 states live in working trees, not in history** — and a working tree moves under the measurement
 (problem 1).
 
@@ -685,7 +684,7 @@ a real `sha` plus a one-line `find`/`replace`, materialised by `bun run corpus:b
 option had together:
 
 - **frozen** — a `sha` does not move, so the numbers are comparable from month to month;
-- **open source** — the public repository contains only references and mutations, never `lekes`'s
+- **open source** — the public repository contains only references and mutations, never `private-app`'s
   private code; `.corpus/` is git-ignored;
 - **ground truth** — we know **by construction** which file is the cause. That is precisely what
   B1's false-start metric requires, and what a randomly found broken commit does not provide.
@@ -696,14 +695,14 @@ ultimately breaks nothing.
 
 Two traps hit while building it, both encoded in the script:
 - an anchor must target a file **tracked at the pinned `sha`** — `git archive` ignores untracked
-  files, and `lekes`'s tree contains several;
+  files, and `private-app`'s tree contains several;
 - a mutation can apply without breaking anything. Removing an export from the `features/agents`
   barrel produced **no** diagnostic: its 11 importers each consume a different symbol. That entry
   was removed rather than dressed up; the barrel case stays covered by the `broken-barrel-export`
   fixture, the fourth one planned.
 
-**3. Version coverage is narrower than announced.** `.plans/2026-07-27_p0-b0.md` gave `lekes` as
-TS 5.7 and `tccp` as TS 5.5; both are in fact on **5.9.3** as of 2026-07-27. Both stay in range,
+**3. Version coverage is narrower than announced.** The P0 plan gave `private-app` as
+TS 5.7 and `private-app-2` as TS 5.5; both are in fact on **5.9.3** as of 2026-07-27. Both stay in range,
 but in practice the measurement only covers **5.9.3 and 5.8.3**. The CI matrix remains the only
 place where 5.4 → 5.7 is exercised.
 
@@ -711,14 +710,14 @@ place where 5.4 → 5.7 is exercised.
 
 ## An unplanned witness for rule 15
 
-`nextp/dev-tools/cursor-rules/hooks` carries **TypeScript 6.0.3**. It was not in the protocol, and
+`private-ts6-repo` carries **TypeScript 6.0.3**. It was not in the protocol, and
 it performs on real code the service the CI guard job is meant to perform in the lab: `tssift`
 **exits 2** there with a message naming the resolved version, its path and the supported range. No
 degraded mode, no stderr warning followed by a wobbly run.
 
 This is the first out-of-lab confirmation that the refusal works, and it is worth noting: a TS 6
 repository was already lying around on the development machine before the first line of the
-project was written. The PROJECT.md §3 constraint is not a theoretical precaution.
+project was written. The version-range constraint is not a theoretical precaution.
 
 *(Since 2026-08-02 the range is 5.4 → 6.x and this repository would now be accepted; the witness
 is kept because what it demonstrates — a refusal that names what it looked for and where — is
@@ -787,7 +786,7 @@ needed for "reaching green" to separate the two arms.
 
 **H1, tokens — holds on real code, as in B0.** On the **three corpus entries**, the only realistic
 targets, arm B consumes **34 % fewer tokens in total** (95 613 against 144 601):
-`lekes-ok-arity-changed` **33 089 → 11 191** (the 153 → 2 fold of the initial framing is paid for in
+`private-app-ok-arity-changed` **33 089 → 11 191** (the 153 → 2 fold of the initial framing is paid for in
 context re-emitted every turn), `result-value-renamed` 42 403 → 30 770, `task-export-renamed`
 69 109 → 53 652. On the small fixtures it is mixed, exactly like B0's character ratio: the gain is
 volumetric when the cascade is large, nil or negative when it is short.
@@ -803,7 +802,7 @@ They concentrate in one precise family:
   exit-2 refusal** deters it: on `yarn-pnp-project`, where arm B is given *only* the "run through
   yarn" message, the agent stubs anyway and declares the project "green" — hence **false, on a
   project with no bug**. The T2 guard protects a human reader; a determined agent walks past it.
-- **`corpus/lekes-result-value-renamed`: arm B *worse* than A** (80 % against 40 %), on an edit to an
+- **`corpus/private-app-result-value-renamed`: arm B *worse* than A** (80 % against 40 %), on an edit to an
   uninvolved file (`mcp-tool-executor.adapter.ts`). A clear counter-signal to H1 on a real entry.
 
 **What this sweep establishes, honestly.** A capable model, on this narrow corpus: (1) fixes
@@ -858,12 +857,12 @@ verdict, but it is the number obtained, and it tempers H1 rather than confirming
 | **phantom-dependency-pnpm** | B | 5 | 100 % | 5.4 | **100 %** | 6 275 |
 | **yarn-pnp-project** | A | 5 | 100 % | 4.8 | **100 %** | 5 099 |
 | **yarn-pnp-project** | B | 5 | 100 % | 7.2 | **100 %** | 10 761 |
-| **corpus/lekes-result-value-renamed** | A | 5 | 100 % | 4.8 | **40 %** | 42 403 |
-| **corpus/lekes-result-value-renamed** | B | 5 | 100 % | 4.8 | **80 %** | 30 770 |
-| corpus/lekes-task-export-renamed | A | 5 | 100 % | 4.6 | 0 % | 69 109 |
-| corpus/lekes-task-export-renamed | B | 5 | 100 % | 5.8 | 0 % | 53 652 |
-| corpus/lekes-ok-arity-changed | A | 5 | 100 % | 4.2 | 0 % | 33 089 |
-| corpus/lekes-ok-arity-changed | B | 5 | 100 % | 4.2 | 0 % | 11 191 |
+| **corpus/private-app-result-value-renamed** | A | 5 | 100 % | 4.8 | **40 %** | 42 403 |
+| **corpus/private-app-result-value-renamed** | B | 5 | 100 % | 4.8 | **80 %** | 30 770 |
+| corpus/private-app-task-export-renamed | A | 5 | 100 % | 4.6 | 0 % | 69 109 |
+| corpus/private-app-task-export-renamed | B | 5 | 100 % | 5.8 | 0 % | 53 652 |
+| corpus/private-app-ok-arity-changed | A | 5 | 100 % | 4.2 | 0 % | 33 089 |
+| corpus/private-app-ok-arity-changed | B | 5 | 100 % | 4.2 | 0 % | 11 191 |
 
 *`~tokens` = `usage.total_tokens` summed over the loop, dominated by the initial framing re-emitted
 each turn. Reproducible: `mise exec -- bun run eval:agent`, endpoint in `.env`.*
@@ -987,7 +986,7 @@ is where enrichment is expensive, and one should know that before measuring it b
 
 ### Near-match does not exist, and that is a measurement
 
-§5.2 asked for a "close candidate (Levenshtein)" on 2339. It is not implemented, and the reason is
+The enriched-code table asked for a "close candidate (Levenshtein)" on 2339. It is not implemented, and the reason is
 not difficulty.
 
 **TypeScript emits TS2551 / TS2724 *instead of* TS2339 / TS2305 as soon as its own spell-checker
@@ -1009,9 +1008,9 @@ precisely the cascade that **resists at 100 % in both arms in B1**: a fact namin
 send the model to the wrong declaration, which is exactly the failure rule 1 exists to prevent. No
 `Fact` of type `near-match` is produced, on any code, and a test guards it.
 
-### Two things §5.2 and §6 assumed that the fixtures disproved
+### Two things the enriched-code table and the output contract assumed that the fixtures disproved
 
-1. **`checker.typeToString` of a named type returns its name, not its shape.** The §6 example showed
+1. **`checker.typeToString` of a named type returns its name, not its shape.** The worked example showed
    `interface 'CreateUserInput'` followed by `{ id: string; email: string; name?: string }`; that
    rendering does not exist for a named type — you get `CreateUserInput`, and the line would read
    `type 'CreateUserInput' CreateUserInput`. **It is therefore the property list, not the shape, that
@@ -1022,11 +1021,11 @@ send the model to the wrong declaration, which is exactly the failure rule 1 exi
    read "one property is accessible on it". The fixture that revealed it is called
    `narrowed-union-member`. The output says **`property`** for a type and **`export`** for a module.
 
-### Four §5.2 codes do not ship, each for a named reason
+### Four enriched-code entries do not ship, each for a named reason
 
-- **2769** — §5.2 ranks it first, the measurement demotes it. Its whole payload is **already in
+- **2769** — the enriched-code table ranks it first, the measurement demotes it. Its whole payload is **already in
   `chain`**: TypeScript nests a TS2772 per candidate, carrying the signature *and* the error that
-  killed it, and the renderer has printed that tree since P0. What §5.2 wanted to add — "which one
+  killed it, and the renderer has printed that tree since P0. What the enriched-code table wanted to add — "which one
   fails latest, and on which argument" — **is not derivable from what is captured**: on
   `overload-mismatch`, the only branched-chain fixture, all three branches have the same depth and one
   leaf each. No structural signal separates them; ranking them would mean reading the messages
@@ -1042,9 +1041,9 @@ send the model to the wrong declaration, which is exactly the failure rule 1 exi
   to the word, which is the only reason to leave it written; see
   [P2/2307](#p2--2307--the-module-enricher-and-a-published-number-that-did-not-reproduce-2026-08-02).
 - **18047 / 18048** — the origin of nullability is a control-flow question; nothing captured answers
-  it. **Still open — the only §5.2 code that remains so.**
+  it. **Still open — the only enriched code that remains so.**
 
-And **2551 ships as a deliberate no-op**: it is already good natively and §5.2 forbids degrading it.
+And **2551 ships as a deliberate no-op**: it is already good natively and the enriched-code table forbids degrading it.
 It is absent from the table, so it renders exactly as TypeScript wrote it.
 
 ### A guard added to the harness, because an absurd total was nearly published
@@ -1064,7 +1063,7 @@ which is exactly why it was committed.
 ## P2 / 2307 — the module enricher, and a published number that did not reproduce (2026-08-02)
 
 Seventh enricher, and the only one that reads **no** `context`: its facts come from the
-`ProgramFacts.resolution` channel that the source fills at ingestion (PROJECT.md §4). The blocker
+`ProgramFacts.resolution` channel that the source fills at ingestion. The blocker
 announced on 2026-08-01 — "a channel is missing, not code" — proved exact to the letter: the channel
 is 148 lines, the enricher 60.
 
@@ -1109,14 +1108,14 @@ cascade — they are type cascades. 2307 is paid for only where it speaks, which
 wants from a selective enricher, and **it is also this milestone's honest limit**: its value is
 measured on no real code, only on three installer fixtures. The frozen corpus contains none, and
 manufacturing one would be another fixture, not a measurement. *(Partly addressed on 2026-08-03 —
-see [Real code](#real-code--keyziadata-explorer-2026-08-03), where 2307 fires on a real monorepo and
+see [Real code](#real-code--private-monorepo-2026-08-03), where 2307 fires on a real monorepo and
 where its weakest observation shows.)*
 
 **Folding still pays the bill, and this time it can be quantified exactly.** On
 `phantom-dependency-pnpm`, the two fact lines weigh 160 characters and the measured delta is +161:
 they are rendered **once** for three importers. Ungrouped — that is, under `--all` — the same two
 lines would cost 480. The 3:1 ratio is facts being lifted to the group header, and its condition is
-intersection over *all* members (PROJECT.md §6).
+intersection over *all* members.
 
 `two-independent-roots` is the case with no amortisation: its TS2307 is alone, so its single fact
 (`no node_modules directory at the project root`) is paid at full price, +50 characters on a 423
@@ -1158,7 +1157,7 @@ unresolved.
    observation that no `node_modules` is there. `ResolutionFacts.dependencies` is **absent** rather
    than empty precisely to make that distinction representable (rule 5). *(Seen on real code
    2026-08-03: in a monorepo whose tsconfig sits in a directory with no manifest, this fallback is all
-   2307 has left to say — see [Real code](#real-code--keyziadata-explorer-2026-08-03).)*
+   2307 has left to say — see [Real code](#real-code--private-monorepo-2026-08-03).)*
 
 ### Verification
 
@@ -1168,15 +1167,15 @@ only the four targets carrying a TS2307. Both negative controls keep their entry
 
 ---
 
-## P2 / 2739 · 2741 — the measurement that corrected §5.2 (2026-08-02)
+## P2 / 2739 · 2741 — the measurement that corrected the enriched-code table (2026-08-02)
 
 Eighth and ninth enriched codes. But the substance of this milestone is not in the enrichment: it is
 an **entry into `CONTEXT_CAPTURE_CODES`**, hence a **causality** gain, and it was a measurement made
-before writing a line that revealed §5.2 had the wrong code.
+before writing a line that revealed the enriched-code table had the wrong code.
 
 ### TS2739 does not truncate. TS2740 does, and it is not in the table of ten
 
-§5.2 asks 2739/2741 for "the exact list of what is missing, without the rest of the type", on the
+The enriched-code table asks 2739/2741 for "the exact list of what is missing, without the rest of the type", on the
 explicit grounds that TypeScript truncates its own. Probed on 5.9.3 with an interface missing 1 to 8
 properties:
 
@@ -1191,20 +1190,20 @@ properties:
 | 7 | **TS2740** | `p0, p1, p2, p3, and 3 more.` |
 | 8 | **TS2740** | `p0, p1, p2, p3, and 4 more.` |
 
-**The truncation §5.2 describes belongs to TS2740, which is not in its table of ten.** For 2739 and
+**The truncation the enriched-code table describes belongs to TS2740, which is not in its table of ten.** For 2739 and
 2741 the list is already complete on screen, and repeating it would be exactly what `facts.ts`
-forbids: a fact that restates the message. The payload §5.2 assigned them therefore does not exist
+forbids: a fact that restates the message. The payload the enriched-code table assigned them therefore does not exist
 for them.
 
 This is the third case where a table designated the wrong code (after 2724 found by the fixture, and
-2769 demoted by `chain`), and the third where the AGENTS.md rule paid off: **before adding a code to a
+2769 demoted by `chain`), and the third where the standing rule paid off: **before adding a code to a
 table, check on a real fixture which one actually comes out.**
 
 ### What these two codes really bring: a shared cause
 
 The target type (`Rect`, `Profile`) is named in each of those messages and **never located**. Yet it
 is a shared cause: N construction sites of an interface break together the day it gains a required
-member. Both codes therefore enter `CONTEXT_CAPTURE_CODES`, and the gain is a §5.1 gain.
+member. Both codes therefore enter `CONTEXT_CAPTURE_CODES`, and the gain is a causality gain.
 
 Two node shapes reach the resolver, measured before implementation:
 
@@ -1255,9 +1254,9 @@ from 3 entries to 1, and under `--all` each diagnostic carries its `required by:
 
 ---
 
-## P2 / 2740 — the code §5.2 described without naming (2026-08-02)
+## P2 / 2740 — the code the enriched-code table described without naming (2026-08-02)
 
-Added to the §5.2 table **by human decision**, the AGENTS.md rule forbidding a code from entering it
+Added to the enriched-code table **by human decision**, the rule forbidding a code from entering it
 without asking. The previous section's measurement had shown that the truncation attributed to
 2739/2741 belongs to 2740; it is therefore the only place where "the exact list of what is missing"
 is information the reader does not already have.
@@ -1326,7 +1325,7 @@ new fixture emits 3 × TS2740 under 5.4.5 as under 5.9.3, truncation threshold i
 
 ## P2 / 2322 — the last enrichable code, and not for the announced reason (2026-08-02)
 
-§5.2 asks 2322 for "the divergence path (`a.b[0].c`)". It remains underivable: it would require both
+The enriched-code table asks 2322 for "the divergence path (`a.b[0].c`)". It remains underivable: it would require both
 types as structures, and only the expected side is captured. **What is captured was worth more** —
 where the target type is declared, and, for a union, what it actually allows.
 
@@ -1392,7 +1391,7 @@ the output had no business being there.
 
 Two fixes, both general:
 - **an enricher never describes a declaration outside the program's files** — the same authority as
-  §5.1 for a cause, `ProgramFacts.files`, all or nothing then native fallback (rule 5);
+  the causality threshold for a cause, `ProgramFacts.files`, all or nothing then native fallback (rule 5);
 - **well-known symbol names (`__@…`) are filtered** out of `memberNames`, for the same reason
   `displayName` refuses `__type`.
 
@@ -1500,7 +1499,7 @@ on a single strategy in its `expectedFix`.
 >
 > So the categories were split instead. `meta.json` may now declare **`consumerFiles`**, the sites its
 > own prose accepts as the wide alternative. A write there is scored in its own column; a false start
-> goes back to being what PROJECT.md §7 always said — a write to a file **no** fix involves, which on
+> goes back to being what the protocol always said — a write to a file **no** fix involves, which on
 > `order-book` is the five untouched `src/domain/` modules. Nothing is decreed invalid and nothing
 > stops being counted.
 >
@@ -1556,7 +1555,7 @@ cannot answer it** — which puts corpus width ([Corpus limits](#corpus-limits))
 
 ---
 
-## Real code — `keyzia/data-explorer` (2026-08-03)
+## Real code — `private-monorepo` (2026-08-03)
 
 **The first time a P2 enricher fires on real code.** Every P2 number above is measured on fixtures and
 on the frozen corpus; the [2307 section](#the-cost-of-2307-measured) states plainly that its value "is
@@ -1564,7 +1563,7 @@ measured on no real code". This section is a spot check on a private Nx monorepo
 project, one run, no n=5, no model arm. It is recorded because it produced two things the fixtures did
 not: a confirmation on code nobody wrote for us, and a folding gap that only real code made visible.
 
-**Target:** `apps/data-explorer/tsconfig.json` in a private Next/Nx monorepo, **TypeScript 5.8.3**, 919
+**Target:** `apps/<app>/tsconfig.json` in a private Next/Nx monorepo, **TypeScript 5.8.3**, 919
 files checked.
 
 > **Correction (2026-08-04).** This section originally read *"errors are the developer's own, not
@@ -1594,9 +1593,9 @@ report **0 errors over 0 files** there; the referenced sub-projects have to be t
 
 ```bash
 # arm A
-./node_modules/.bin/tsc --noEmit -p apps/data-explorer/tsconfig.json
+./node_modules/.bin/tsc --noEmit -p apps/<app>/tsconfig.json
 # arm B — run from the tssift checkout: the target repository pins Node 18, tssift needs ≥ 20.19
-mise exec -- node dist/cli.js --project <abs>/apps/data-explorer/tsconfig.json
+mise exec -- node dist/cli.js --project <abs>/apps/<app>/tsconfig.json
 ```
 
 ### The numbers
@@ -1653,7 +1652,7 @@ confirms — would fold these 8 entries into 4, taking the whole report from 10 
 
 **The `cannot-find-name` fixture could never have shown this**: it carries **one name at one site**, so
 its 0 % fold is a property of the fixture, not of the code. This is the first real witness of a 2304
-cascade with repetition, and it is what puts the rule on the table. §5.1 classifies 2304 as a
+cascade with repetition, and it is what puts the rule on the table. The causality threshold classifies 2304 as a
 near-certain root on the same footing as 2307, and its rule was the half of that list left unwritten in
 P1.
 
@@ -1663,7 +1662,7 @@ measurement that motivated it, not the rule.*
 
 ### A second target, and 2307's honest limit on real code
 
-`libs/chat-components/tsconfig.lib.json` in the same monorepo: 5 diagnostics (2 × TS7006, 3 × TS2307),
+`libs/<lib>/tsconfig.lib.json` in the same monorepo: 5 diagnostics (2 × TS7006, 3 × TS2307),
 713 characters in arm A against 860 in arm B (**121 %**), **0 % fold**.
 
 **The 0 % fold is correct**: the three TS2307 carry three *distinct* specifiers
@@ -1672,7 +1671,7 @@ refuses to merge them, exactly as on `wrong-tsconfig-paths`. No cascade, so no H
 
 What 2307 renders on each of them is a single line: `no node_modules directory at the project root`.
 That statement is **true and correctly scoped** — the project root is the tsconfig's directory,
-`libs/chat-components/`, and there is indeed no `node_modules` there (`resolution.ts` tests
+`libs/<lib>/`, and there is indeed no `node_modules` there (`resolution.ts` tests
 `join(root, "node_modules")` and does not walk up). It is also **all the enricher has left to say**,
 because that directory holds no `package.json` at all: by [decision 3](#three-things-that-are-not-said-by-decision),
 `ResolutionFacts.dependencies` is absent rather than empty, so no "not declared in package.json" fact is
@@ -1699,12 +1698,12 @@ one data point does not answer.
 
 ## P1 / 2304 · 2552 — folding by missing name (2026-08-04)
 
-A **causality** rule, not an enricher — which is why it is numbered P1 rather than P2. §5.1 has listed
+A **causality** rule, not an enricher — which is why it is numbered P1 rather than P2. The causality threshold has listed
 TS2304 among its near-certain roots since the beginning and its rule was the half of that list left
 unwritten; the section above is what finally made writing it obviously worth doing.
 
-The rule folds TS2304/TS2552 on `(file, missing name)`. Full design, and the §5.1 amendment it
-required, in `.plans/2026-08-04_p1-2304.md` and PROJECT.md §5.1.
+The rule folds TS2304/TS2552 on `(file, missing name)`, and it required an amendment to the
+causality threshold — see below.
 
 ### The measurement, at constant scope
 
@@ -1748,7 +1747,7 @@ name (one).
 
 Of the five single-cause cascades still not folding — `nullable-chain` (18047), `misspelled-property`
 (2551), `unconstrained-generic` (2536), `value-used-as-type` (2749), `missing-type-import` (1484) —
-only **18047** is an open §5.2 gap. 2551 is closed by decision, and the other three are outside the
+only **18047** is an open enriched-code gap. 2551 is closed by decision, and the other three are outside the
 table.
 
 ### On real code, entries halve and characters rise — both, and the second is the honest half
@@ -1774,7 +1773,7 @@ worth 596 characters is exactly the kind of question B0 cannot answer and B2 cou
 it is a claim about what a reader does with a report, and it stays unmeasured.
 
 **The fixture and the real code disagree on the sign, and both are published.** `cannot-find-name`
-gains 15 % because seven sites clear the cap; `data-explorer` loses 25 % because no group has more
+gains 15 % because seven sites clear the cap; `private-monorepo` loses 25 % because no group has more
 than two. The predictor is the same one this file has repeated since P1 — the number of sites one
 cause explains — and this milestone is the cleanest demonstration of it, precisely because it lands on
 both sides of the line in one change.
@@ -1802,7 +1801,7 @@ enforced by a test that could not silently ignore a case it did not know about.
 The [2304 · 2552 milestone](#p1--2304--2552--folding-by-missing-name-2026-08-04) cost 596 characters on
 real code, and named the reason: OpenAI-generated type names make headers of roughly 140 characters,
 three of which repeat the same file path. That is a plausible case for shortening the header form — and
-the output contract (PROJECT.md §6) has been frozen since 2026-07-27, so reopening it needs a measured
+the output contract has been frozen since 2026-07-27, so reopening it needs a measured
 reason rather than a preference.
 
 **The measurement was run before touching the renderer, and it does not supply one.**
@@ -1810,7 +1809,7 @@ reason rather than a preference.
 ### Where the characters actually are
 
 `agent-text` rendered over the **28 B0 targets** — 22 fixtures, 5 corpus entries, and the
-`data-explorer` report — decomposed by line kind:
+`private-monorepo` report — decomposed by line kind:
 
 | component | chars | share |
 |---|---:|---:|
@@ -1837,13 +1836,13 @@ from rendering as identical strings, which is why `causeLine` prints the file in
 |---|---:|---:|---:|---:|
 | `cannot-find-name` | 419 | 1 | 26 | 6.2 % |
 | `two-missing-names-one-file` | 633 | 2 | 36 | 5.7 % |
-| `data-explorer` | 3 010 | 4 | 165 | 5.5 % |
+| `private-monorepo` | 3 010 | 4 | 165 | 5.5 % |
 | **all 28 targets** | **21 448** | 7 | **227** | **1.06 %** |
 
 **1.06 % of total output**, and on the one target that raised the question it recovers **165 of the 596
 characters** the rule cost — 28 %. The rest of that regression is not a formatting choice:
 
-| the +596 on `data-explorer` | chars |
+| the +596 on `private-monorepo` | chars |
 |---|---:|
 | 4 name headers | 480 |
 | — *of which the ` in <file>` suffix* | *165* |
@@ -1857,7 +1856,7 @@ one thing an agent needs to know which generated type vanished — and no header
 
 ### Verdict
 
-The contract stays as it is. A 1 % gain does not clear the bar PROJECT.md §6 sets for reopening a frozen
+The contract stays as it is. A 1 % gain does not clear the bar set for reopening a frozen
 decision, it would trade a small saving for a real ambiguity between same-name groups, and it would
 address a quarter of a regression whose remaining three quarters are load-bearing content.
 
@@ -1894,7 +1893,7 @@ reasons are worth recording because they are what a real project looks like:
 
 | repo | why the real config cannot be used as-is |
 |---|---|
-| hono | root config is a **solution tsconfig** (`references`) — `tsc -p .` reports 0 errors over 0 files, the same trap [data-explorer](#real-code--keyziadata-explorer-2026-08-03) sprang. `src/adapter/**` and `src/middleware/context-storage/**` need `@types/node`. Its base sets `composite`, which `--incremental false` refuses (TS6379). |
+| hono | root config is a **solution tsconfig** (`references`) — `tsc -p .` reports 0 errors over 0 files, the same trap [private-monorepo](#real-code--private-monorepo-2026-08-03) sprang. `src/adapter/**` and `src/middleware/context-storage/**` need `@types/node`. Its base sets `composite`, which `--incremental false` refuses (TS6379). |
 | zod | package config pins `rootDir: src` and then catches `vitest.config.ts`; benchmarks and v3 tests need `benchmark`, `vitest` and `@types/node`. |
 | date-fns | package config extends `@date-fns/dev/config/tsconfig`, which exists only once dev dependencies are installed. Temporal subtrees need a `lib` no TypeScript in range ships. |
 
@@ -1942,7 +1941,7 @@ Two defects that five entries and twenty-two fixtures could not see, both found 
   and a working tree moves underneath a measurement.
 - **The pinned shas are current heads at the time of writing**, not historically interesting commits.
   They are pins for reproducibility, nothing more.
-- **The three `lekes` entries are now unbuildable** — their private source repository is gone from this
+- **The three `private-app` entries are now unbuildable** — their private source repository is gone from this
   machine. The harness reports them as incoherent and excludes them from the totals rather than scoring
   a target where arm A type-checks nothing. That is the instability
   [Corpus limits](#corpus-limits) predicted, arriving on schedule.
@@ -1952,17 +1951,17 @@ Two defects that five entries and twenty-two fixtures could not see, both found 
 ## P1 / 18047 · 18048 · 18049 — folding by nullable declaration (2026-08-04)
 
 **Three documents said this was impossible, and they were all wrong in the same way.**
-`AGENTS.md`, `CLAUDE.md` and `src/codes.ts` recorded 18047/18048 as blocked on control-flow analysis;
+The design notes and `src/codes.ts` recorded 18047/18048 as blocked on control-flow analysis;
 `codes.ts` added that the code "has nothing here to resolve". None of them had separated two questions.
 
-Control flow is what §5.2's **payload** asks for — *where* the value became nullable, *which* branch
+Control flow is what the enriched-code table's **payload** asks for — *where* the value became nullable, *which* branch
 guards it — and it remains out of reach. The **causality link** never needed it. What is possibly null
-is a *declared symbol*, and its declaration is the ordinary structural link PROJECT.md §5.1 rule 2 has
+is a *declared symbol*, and its declaration is the ordinary structural link the causality threshold has
 allowed since the beginning. Probed before writing a line of engine code: **4 of 4** diagnostics on
 `nullable-chain` resolve to `proxy` at `src/config/settings.ts:13:3`, the exact line its `meta.json`
 names as the root cause.
 
-This is the [2322](#the-cost-of-2322) shape repeating: the payload the table demanded stays
+This is the [2322](#cost) shape repeating: the payload the table demanded stays
 underivable, a different link is worth more, and it folds.
 
 ### The measurement
@@ -1975,14 +1974,14 @@ underivable, a different link is worth more, and it folds.
 **The entry count divides by four and the character count goes up.** That was predicted in the plan
 before it was measured, and by the predictor this file has used since P1: four short diagnostics do not
 clear the three-site display cap, so all four still print and the cause header is added on top. Same
-sign as `partial-interface-rename` and `data-explorer`, opposite sign to `cannot-find-name`. Anyone
+sign as `partial-interface-rename` and `private-monorepo`, opposite sign to `cannot-find-name`. Anyone
 quoting a single fixture's ratio as evidence for or against folding is quoting the cap, not the rule.
 
-Single-cause folding: **14 of 19 → 16 of 20**, and **§5.2 now has no open gap.**
+Single-cause folding: **14 of 19 → 16 of 20**, and **the enriched-code table now has no open gap.**
 
 ### 18049 was added to the table, and leaving it out was not the neutral option
 
-`'{0}' is possibly 'null' or 'undefined'.` exists, fires, and was outside §5.2's list — the same
+`'{0}' is possibly 'null' or 'undefined'.` exists, fires, and was outside the enriched-code table's list — the same
 position TS2740 was in on 2026-08-02, and it took the same human decision. Same family, same template
 across 5.4.5 / 5.9.3 / 6.0.3, same anchor, same resolver, so it costs almost nothing once 18047 is
 written. The cost of *omitting* it is not nothing: three nullable properties declared side by side in
@@ -1995,13 +1994,13 @@ The naive implementation is wrong in a way that matters more than a miss. Taking
 diagnostic's span and walking up property accesses lands on `settings.proxy.host` and resolves
 **`host`** — a property that is not nullable and is not the cause. A rule keyed there would split one
 cascade into **two** groups (`host`, `port`) and head each with a perfectly healthy declaration: the
-"real error hidden behind a counter" that PROJECT.md §11 classes as the critical failure.
+"real error hidden behind a counter" classed as the critical failure.
 
 So the anchor is the expression the **message quotes**, and the widened node must equal it exactly or
 nothing is returned. Templates were read out of `ts.Diagnostics` in all three compilers rather than
 assumed, as the 2304 rule established.
 
-**§5.1 needed no amendment this time, and that was checked rather than hoped.** The quoted text is only
+**The causality threshold needed no amendment this time, and that was checked rather than hoped.** The quoted text is only
 how the node is found; the key is the `declaredAt` the checker resolves from it. Probed on a throwaway
 project: `box.item` appears with **identical text** in two files and resolves to **two different**
 declarations. A text-keyed rule would have merged two independent bugs; this one yields two groups.
@@ -2156,7 +2155,7 @@ reads as a peer, and a column of them reads as a to-do list.* On `hono`, arm B e
 80 % of runs against arm A's 0 %, and its stray files were exactly the four carrying the seven
 second-order diagnostics rendered as `[2]`–`[8]` beneath the one folded cause.
 
-PROJECT.md §6 requires a **measured** reason to reopen the output contract. This was one, so it was
+Reopening the output contract requires a **measured** reason. This was one, so it was
 reopened — under a stop condition stated before the run.
 
 ### What was changed
@@ -2187,7 +2186,7 @@ lone diagnostic; everything else was byte-identical.
 from 8.2 to 7.0, but arm A fell from 5.8 to 5.4 in the same direction, so the *gap* goes 2.4 → 1.6,
 inside the drift B2 documented. Tokens get worse.
 
-**The hypothesis is refuted, and the change was reverted.** §6 is frozen again, and the reason that
+**The hypothesis is refuted, and the change was reverted.** The output contract is frozen again, and the reason that
 justified reopening it evaporated with the result.
 
 ### What it means instead, and this is the more useful finding
@@ -2205,7 +2204,7 @@ Two consequences worth stating plainly:
   the behaviour H1 set out to eliminate.
 - **The seven are real diagnostics and editing them is still a false start**, because they vanish the
   moment `context.ts` is fixed. Nothing in the captured data says so — establishing "this diagnostic
-  disappears once that one is fixed" is a claim §5.1's threshold does not license from a structural
+  disappears once that one is fixed" is a claim the causality threshold does not license from a structural
   link, and inventing it is exactly what rule 1 forbids.
 
 So the honest position is that this is an **open problem**, not a bug with a known fix. The one thing

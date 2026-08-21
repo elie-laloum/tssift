@@ -6,9 +6,9 @@
  * parameter's type is declared**, and its full member list when the message
  * truncated the shape.
  *
- * §5.2 also asked for "the first diverging field". It is not produced, and the
+ * The enriched-code table also asked for "the first diverging field". It is not produced, and the
  * reason is a data one rather than a difficulty one: `context.actual` is captured
- * as *text* (§4), not as a `SymbolRef`, so the supplied type has no member list
+ * as *text*, not as a `SymbolRef`, so the supplied type has no member list
  * to diff against the expected one. Computing it would mean either parsing a
  * type rendering — guessing, forbidden by rule 5 — or capturing a second
  * `SymbolRef` per TS2345, which is a checker round-trip that `src/codes.ts`

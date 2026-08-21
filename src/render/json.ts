@@ -13,7 +13,7 @@ import type { RenderInput } from "./index.js";
  * records which mode produced the text alongside it.
  *
  * Deliberately not snapshot-tested: it carries the resolved compiler's absolute
- * path and version, which differ per machine and per matrix cell. §4 requires
+ * path and version, which differ per machine and per matrix cell. The data model requires
  * both, and they are genuinely useful to a consumer; the text renderer is where
  * snapshot stability is bought.
  */

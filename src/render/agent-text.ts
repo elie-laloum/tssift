@@ -12,7 +12,7 @@ import type { RenderInput } from "./index.js";
 /**
  * The default renderer: a lossy projection of `json` (rule 14).
  *
- * Four things not to undo — PROJECT.md §6:
+ * Four things not to undo:
  *  1. the TS message is raw and verbatim, always. H2 arrives through `restated`,
  *     code by code, once the eval justifies it;
  *  2. the output is English, frame included, because the message is English and
@@ -151,7 +151,7 @@ function commonFacts(entry: Extract<Entry, { kind: "group" }>): Fact[] {
 
 /**
  * What the cause *is*, under the line saying where it is — the P2 half of the
- * §6 example.
+ * worked example.
  *
  * Both lines come straight off the cause's own `SymbolRef`, so a group carries
  * them once for however many members it explains. That is the whole economics of
@@ -159,7 +159,7 @@ function commonFacts(entry: Extract<Entry, { kind: "group" }>): Fact[] {
  * signature line, not 152.
  *
  * The member list is held back only when the shape already spells the type out,
- * which — measured on the fixtures — is rarer than §6's mock-up assumed: a named
+ * which — measured on the fixtures — is rarer than the original mock-up assumed: a named
  * interface renders as its own name, so on the contract fixture the shape line
  * is dropped and the member list is the fact. See `shapeAddsToName`.
  */
@@ -169,7 +169,7 @@ function causeFactLines(entry: Extract<Entry, { kind: "group" }>): string[] {
   // The `module` and `name` arms carry no `SymbolRef` — there is nothing declared
   // to describe — so their facts come off the members, which by construction all
   // name the same unresolved specifier (or identifier) and therefore produce the
-  // same facts. Hoisting them here is what keeps the economics of §5.2 intact:
+  // same facts. Hoisting them here is what keeps the economics of the enriched-code table intact:
   // three importers of `qs` get one statement about `qs`, not three.
   //
   // `name` has no enricher today, so the intersection is empty and this returns
@@ -287,7 +287,7 @@ export function renderAgentText(input: RenderInput): string {
 
   if (diagnostics.length === 0) {
     // A clean run prints a line rather than nothing, so success cannot be
-    // mistaken for a swallowed crash (PROJECT.md §9). The file count travels
+    // mistaken for a swallowed crash. The file count travels
     // with the zero so the zero is verifiable: `0 errors · 0 files checked`
     // reads as "nothing was checked", which a bare `0 errors` hides.
     lines.push(`0 errors · ${plural(input.facts.files.length, "file")} checked`);

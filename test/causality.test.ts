@@ -1,5 +1,5 @@
 /**
- * `pipeline/causality.ts` — the §5.1 threshold, defended.
+ * `pipeline/causality.ts` — the causality threshold, defended.
  *
  * These tests exist because causality is the one component whose failure is
  * *invisible*: a false positive does not crash, it produces a shorter, more
@@ -73,7 +73,7 @@ function diagnostic(
 
 /* ------------------------------------------------------------------ */
 
-describe("causality · two-independent-roots (Definition of Done, PROJECT.md §12)", () => {
+describe("causality · two-independent-roots (Definition of Done)", () => {
   // "Zéro faux positif de causalité sur la fixture double-racine" is a shipping
   // criterion, not a nice-to-have. The two failures share no import, no type and
   // no identifier; reporting them as one root and one derived would mean the
@@ -173,7 +173,7 @@ describe("causality · yarn-pnp-project (folds at the library, independent of th
 
 describe("causality · two-roots-one-file (the harder negative control)", () => {
   // Two independent causes in ONE file under ONE code (TS2339): the case where
-  // §5.1 rule 3 ("same 2339 in the same file ⇒ one root") is most tempting to
+  // The rule ("same 2339 in the same file ⇒ one root") is most tempting to
   // apply and most destructive if applied. Grouping keys on `declaredAt`, so the
   // two interfaces must yield two groups — folding within each, never across.
   const { report } = analyse("two-roots-one-file");
@@ -254,7 +254,7 @@ describe("causality · cannot-find-name (the name-keyed rule)", () => {
 describe("causality · two-missing-names-one-file (the name rule's negative control)", () => {
   // Two missing names in ONE file, and TypeScript reports them under two codes
   // only because a close candidate is in scope for one of them. Keying on the
-  // file — or on file + code, which §5.1 excludes — would merge them.
+  // file — or on file + code, which the causality threshold excludes — would merge them.
   const { report } = analyse("two-missing-names-one-file");
 
   it("splits into two groups on two distinct names, not one merged group", () => {
@@ -363,7 +363,7 @@ describe("causality · what the name rule must never do", () => {
   });
 
   it("does not reach codes it was not measured on", () => {
-    // TS2503 (Cannot find namespace) and TS2686 (UMD global) are §5.1 roots too
+    // TS2503 (Cannot find namespace) and TS2686 (UMD global) are near-certain roots too
     // and are deliberately out of scope: no fixture, no real-code witness, and a
     // different template. This test is what makes that a decision rather than an
     // oversight someone later "fixes" by widening the code list.
@@ -406,7 +406,7 @@ describe("causality · broken-barrel-export", () => {
   // The fixture that closes the trio's known hole: the other three are one- or
   // two-file, and this is the only one where a single cause is consumed by
   // three separate modules. Built that way on purpose — removing an export from
-  // a REAL barrel in `lekes` produced no cascade at all, because its eleven
+  // a REAL barrel in `private-app` produced no cascade at all, because its eleven
   // importers each wanted a different symbol (eval/corpus.json).
   const { report } = analyse("broken-barrel-export");
 
@@ -438,7 +438,7 @@ describe("causality · broken-barrel-export", () => {
 });
 
 describe("causality · arity-changed", () => {
-  // The committed twin of .corpus/lekes-ok-arity-changed, which folds 152
+  // The committed twin of .corpus/private-app-ok-arity-changed, which folds 152
   // diagnostics into one entry and is the single best piece of evidence for H1
   // — and which a fresh clone cannot run, `.corpus/` being git-ignored and
   // derived from a private repository.
@@ -491,7 +491,7 @@ describe("causality · narrowed-union-member", () => {
   });
 });
 
-describe("causality · the cascades the §5.1 threshold declines to fold", () => {
+describe("causality · the cascades the causality threshold declines to fold", () => {
   // Both fixtures below were single-cause cascades reported as lone roots — the
   // threshold working as specified, not a defect — and these tests existed so
   // that the day capture was extended, the change would surface as a failure
@@ -505,13 +505,13 @@ describe("causality · the cascades the §5.1 threshold declines to fold", () =>
   it("nullable-chain · folds since 2026-08-04, and the reason it could not before was wrong", () => {
     // This test used to assert `groups: []` and `context === undefined`, on a
     // stated reason: "nothing capturable answers a control-flow question."
-    // AGENTS.md, CLAUDE.md and codes.ts all said the same. It was half true.
+    // The design notes and codes.ts said the same. It was half true.
     //
-    // Control flow is what the §5.2 *payload* needs — where the value became
+    // Control flow is what the enriched-code table's *payload* needs — where the value became
     // nullable, which branch guards it — and that is still underivable. The
     // causality link never needed it: the thing that is possibly null is a
     // declared symbol, and its declaration is the ordinary structural link
-    // §5.1 rule 2 already allowed. Same shape as the 2322 milestone.
+    // the causality threshold already allowed. Same shape as the 2322 milestone.
     const { report } = analyse("nullable-chain");
     expect(report.diagnostics).toHaveLength(4);
     expect(new Set(report.diagnostics.map((d) => d.code))).toEqual(new Set([18047]));
@@ -614,7 +614,7 @@ describe("causality · why a related span may NOT be used as a group key", () =>
     // And line 9 is `currency: Currency;` — the PROPERTY of `Rate`, which is
     // correct code the reader must not touch. The cause is line 6, the union
     // that lost "GBP". Grouping on the related would send the reader to a line
-    // that needs no edit, which is the misdirection PROJECT.md §11 calls
+    // that needs no edit, which is the misdirection classed as
     // critical — just quieter than merging two unrelated bugs.
     expect(new Set(relatedSites.filter(Boolean))).not.toContain("src/pricing/currency.ts:6:1");
 
@@ -627,10 +627,10 @@ describe("causality · why a related span may NOT be used as a group key", () =>
 
 describe("causality · what must never happen", () => {
   it("does not group on a declaration outside the program's own files", () => {
-    // Measured, not hypothetical: on .corpus/lekes-result-value-renamed a TS2345
+    // Measured, not hypothetical: on .corpus/private-app-result-value-renamed a TS2345
     // resolves its expected type to <ts-lib>/lib.es2015.collection.d.ts —
     // `interface Map`. Two unrelated bugs mis-calling a Map method would merge,
-    // which is the failure PROJECT.md §11 classes as critical.
+    // which is the failure classed as critical.
     const foreign = symbol("<ts-lib>/lib.es2015.collection.d.ts", 19, 1, "Map");
     const report = detectCausality(
       [diagnostic({ subject: foreign }), diagnostic({ subject: foreign })],
@@ -650,7 +650,7 @@ describe("causality · what must never happen", () => {
   });
 
   it("does not group on the same name at a different position", () => {
-    // Two distinct bindings that shadow one another carry the same name. §5.1
+    // Two distinct bindings that shadow one another carry the same name. The causality threshold
     // excludes "the same identifier" by name for exactly this reason.
     //
     // This is the contrast case for the name-keyed rule above, and the reason
@@ -670,7 +670,7 @@ describe("causality · what must never happen", () => {
   });
 
   it("does not group on the same file and the same code", () => {
-    // Explicitly excluded by §5.1. Without a captured declaration there is no
+    // Explicitly excluded by the causality threshold. Without a captured declaration there is no
     // structural link, so two 2339s in one file stay two roots. The name-keyed
     // rule does not weaken this: it adds the missing *name* to the key, and only
     // for codes that assert the name resolves to nothing.

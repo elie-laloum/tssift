@@ -142,7 +142,7 @@ describe("budget · through the renderer", () => {
   });
 
   it("keeps the cause header when it sheds usage sites", () => {
-    // §5.3's order of sacrifice: derived sites go before anything explanatory.
+    // The budget's order of sacrifice: derived sites go before anything explanatory.
     const budgeted = renderAgentText(
       build("partial-interface-rename", { budgetTokens: ABOVE_FLOOR }),
     );

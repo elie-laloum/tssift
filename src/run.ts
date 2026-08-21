@@ -28,7 +28,7 @@ function pnpManifestAt(root: string): string | undefined {
  * genuine type errors runs fine, and the refusal fires only when the misread
  * would actually mislead. This is a run-layer guard, never in the source — the
  * library and the eval still fold `yarn-pnp-project`, so the 2307 rule stays
- * measured; only the shipped CLI refuses (§15).
+ * measured; only the shipped CLI refuses (rule 15).
  */
 export function isPnpMisread(
   root: string,
@@ -142,7 +142,7 @@ export function parseArgs(argv: readonly string[]): CliOptions {
  *
  * The report goes to stdout; tssift's own failures go to stderr and nothing
  * else does. An agent tells "your code is broken" from "my invocation is
- * broken" by the exit code alone (PROJECT.md §9).
+ * broken" by the exit code alone.
  */
 export function run(argv: readonly string[], streams: Streams): number {
   let options: CliOptions;
@@ -176,7 +176,7 @@ export function run(argv: readonly string[], streams: Streams): number {
     const report = enrich(detectCausality(dedupe(ingested, facts), facts), facts);
 
     // A bare-Node read of a Yarn PnP project produces plausible, entirely false
-    // TS2307s. Refusing beats rendering a clean-looking, wrong hierarchy (§15).
+    // TS2307s. Refusing beats rendering a clean-looking, wrong hierarchy (rule 15).
     const codes = report.diagnostics.map((diagnostic) => diagnostic.code);
     if (isPnpMisread(facts.root, Boolean(process.versions.pnp), codes)) {
       const manifest = pnpManifestAt(facts.root) ?? join(facts.root, PNP_MANIFESTS[0]);

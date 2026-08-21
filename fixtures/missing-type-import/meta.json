@@ -8,8 +8,8 @@
     "TS1484"
   ],
   "difficulty": "easy",
-  "purpose": "Covers the `import de type manquant` category of §7 — the last §7 category without a witness. It is the only fixture in the family of value-vs-type import errors (TS1484), the complement of `value-used-as-type` (a value used where a type is expected, TS2749): here a type is imported as though it were a value. It does not fold — TS1484 is not in the ten of §5.2 and not captured — and it is a cross-file pattern rather than a single slip, so it also witnesses that three diagnostics of one code across two files are reported as three lone roots when no derivation rule links them. The module resolves cleanly, so this is emphatically not a TS2307: the fix is a keyword, not a dependency.",
-  "deviatesFromCanonicalConfig": "Adds `verbatimModuleSyntax: true` to the canonical block. The strictness of the import form is the subject of the fixture (§7).",
+  "purpose": "Covers the `import de type manquant` category of the fixture matrix — the last category without a witness. It is the only fixture in the family of value-vs-type import errors (TS1484), the complement of `value-used-as-type` (a value used where a type is expected, TS2749): here a type is imported as though it were a value. It does not fold — TS1484 is not in the original ten enriched codes and not captured — and it is a cross-file pattern rather than a single slip, so it also witnesses that three diagnostics of one code across two files are reported as three lone roots when no derivation rule links them. The module resolves cleanly, so this is emphatically not a TS2307: the fix is a keyword, not a dependency.",
+  "deviatesFromCanonicalConfig": "Adds `verbatimModuleSyntax: true` to the canonical block. The strictness of the import form is the subject of the fixture.",
   "rootCauseFiles": [
     "src/api/handler.ts",
     "src/audit/log.ts"

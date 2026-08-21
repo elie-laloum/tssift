@@ -1,5 +1,5 @@
 /**
- * Enrichment — the `code → enricher` table of PROJECT.md §5.2.
+ * Enrichment — the `code → enricher` table.
  *
  * A pipeline stage like any other (rule 4): pure, no I/O, no `typescript`. Every
  * enricher reads `NormalizedDiagnostic.context`, which the *source* filled at
@@ -15,19 +15,19 @@
  * payload is a declaration site and a member list, which a terminal reader
  * cannot obtain at all and an editor gives away on hover.
  *
- * The four §5.2 entries that do **not** ship, each for a stated reason rather
+ * The four enriched-code entries that do **not** ship, each for a stated reason rather
  * than for lack of time:
  *
- * - **2769** (`No overload matches this call`) — §5.2 ranks it first, and the
+ * - **2769** (`No overload matches this call`) — the table ranks it first, and the
  *   measurement demotes it. Its whole payload is already in `chain`: TypeScript
  *   nests one TS2772 per candidate, each carrying the signature *and* the error
- *   that killed it, and the renderer has printed that tree since P0. What §5.2
+ *   that killed it, and the renderer has printed that tree since P0. What the enriched-code table
  *   asked to add on top — "which one fails latest, and on which argument" — is
  *   not derivable from what is captured: on `overload-mismatch`, the only
  *   fixture with a branching chain, all three branches have identical depth and
  *   one leaf each, so no structural signal separates them. Ranking them would
  *   mean reading the leaf messages semantically, which is guessing (rule 5).
- * **2322 shipped on 2026-08-02, and not for the reason §5.2 gave.** That table
+ * **2322 shipped on 2026-08-02, and not for the reason the enriched-code table gave.** That table
  * asks it for the divergence path (`a.b[0].c`), which needs both types as
  * structures and is still not derivable. What is derivable turned out to be
  * worth more: where the target type is declared, and — for a union — what it
@@ -37,11 +37,11 @@
  * - **18047/18048** (`Possibly null`) — the origin of the nullability is a
  *   control-flow question; nothing captured answers it.
  *
- * **2739/2740/2741 shipped on 2026-08-02, and the measurement corrected §5.2 on
+ * **2739/2740/2741 shipped on 2026-08-02, and the measurement corrected the enriched-code table on
  * the way.** That table asks 2739/2741 for "the exact list of the missing"
  * because TypeScript is said to truncate its own. It does not: 1 missing gives
  * TS2741, 2 to 5 give TS2739 with the list complete, and only **TS2740** elides,
- * at four, from six missing upwards. So the payload §5.2 described belongs to a
+ * at four, from six missing upwards. So the payload the enriched-code table described belongs to a
  * code that was **not in its table of ten** — added there deliberately, as a
  * human decision, on 2026-08-02. What all three add is the declaration site of
  * the target type, which no message of theirs ever carries; what 2740 alone adds
@@ -51,16 +51,16 @@
  * `context`: its facts are about the *installed topology* — declared or not in
  * `package.json`, PnP, `paths` — which is file reading a pipeline stage may not
  * do (rule 4). What unblocked it is the `ProgramFacts.resolution` channel the
- * source now fills; that is the shape every remaining §5.2 entry is waiting for
+ * source now fills; that is the shape every remaining enriched-code entry is waiting for
  * too, each on a different missing channel.
  *
  * And one entry ships as a **deliberate no-op**: **2551** (`Did you mean X`) is
- * already good natively and §5.2's instruction is to not degrade it. It is
+ * already good natively and the enriched-code table's instruction is to not degrade it. It is
  * absent from the table below, so it renders exactly as TypeScript wrote it.
  *
  * ## No suggestions, on any code
  *
- * §5.2 asked for a Levenshtein near match on 2339. It is not implemented, on
+ * The enriched-code table asked for a Levenshtein near match on 2339. It is not implemented, on
  * evidence: TypeScript emits TS2551/TS2724 instead of TS2339/TS2305 whenever its
  * own speller finds a candidate, so every diagnostic reaching an enricher here is
  * one it already rejected. Measured 2026-08-01 over the 20 fixtures and the 5
@@ -87,7 +87,7 @@ import { enrich2739 } from "./2739.js";
  * Both channels of rule 4 reach an enricher: `NormalizedDiagnostic.context`,
  * captured per diagnostic, and `ProgramFacts`, captured per program. Five of the
  * six enrichers use only the first; 2307 uses only the second, which is what the
- * two-channel design in PROJECT.md §3 was for.
+ * two-channel design was for.
  */
 type Enricher = (diagnostic: NormalizedDiagnostic, facts: ProgramFacts) => Fact[];
 
@@ -127,7 +127,7 @@ export const ENRICHED_CODES: readonly number[] = Object.keys(ENRICHERS)
 /**
  * Do these facts describe something declared outside the program's own files?
  *
- * The same authority §5.1 gives causality — `ProgramFacts.files`, never a prefix
+ * The same authority the causality threshold gives causality — `ProgramFacts.files`, never a prefix
  * test on the path, so a sibling package in a monorepo is admitted while a lib
  * type is not. Extended to enrichment on 2026-08-02, when capturing TS2322
  * produced the first case: `unconstrained-generic` resolves its expected type to

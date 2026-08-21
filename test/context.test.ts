@@ -4,7 +4,7 @@
  * What these tests defend is not "a field is populated" but the property the
  * whole of P1 rests on: **two diagnostics with one cause come back carrying one
  * identical `declaredAt`**. Causality is only allowed to derive on a structural
- * link present in the captured data (§5.1), so if this identity silently stops
+ * link present in the captured data, so if this identity silently stops
  * holding — a path normalised differently here than there, a span that moved
  * from the declaration to its name — P1 folds nothing and no test would notice.
  */
@@ -50,7 +50,7 @@ describe("context capture · partial-interface-rename", () => {
   it("collapses all three onto one identical declaration site", () => {
     // The property P1 exists to exploit: three different codes, three different
     // syntaxes, one cause. If this ever returns three sites, the fixture stops
-    // demonstrating anything and PROJECT.md §6's P1 example becomes fiction.
+    // demonstrating anything and the worked example becomes fiction.
     const sites = new Set(diagnostics.map((d) => siteOf(requireAnchor(d).declaredAt)));
     expect([...sites]).toEqual(["src/types/user.ts:7:1"]);
   });
@@ -80,7 +80,7 @@ describe("context capture · two-independent-roots (the negative control)", () =
   it("gives the two roots two different anchors, or none at all", () => {
     // The Definition of Done criterion, checked one layer below causality: if
     // capture already handed these two the same `declaredAt`, no downstream
-    // rule could tell them apart (PROJECT.md §12).
+    // rule could tell them apart.
     const sites = diagnostics.map((d) => {
       const anchor = anchorOf(d);
       return anchor ? siteOf(anchor.declaredAt) : `none:${d.id}`;
@@ -116,7 +116,7 @@ describe("context capture · discipline", () => {
   });
 
   it("captures nothing for a code outside the list", () => {
-    // overload-mismatch is TS2769, a §5.2 enrichment code held for P2.
+    // overload-mismatch is TS2769, a the enriched-code table enrichment code held for P2.
     const { diagnostics } = load("overload-mismatch");
     expect(diagnostics.map((d) => d.code)).toEqual([2769]);
     expect(diagnostics[0]?.context).toBeUndefined();
@@ -187,7 +187,7 @@ describe("context capture · the 18047 family (2026-08-04)", () => {
     // quoted expression reaches `settings.proxy.host` and resolves `host` — a
     // property that is not nullable and is not the cause. Keying there would
     // split one cascade into two groups (host, port) and head each with a
-    // healthy declaration: PROJECT.md §11's critical failure.
+    // healthy declaration: the critical failure this guard exists to prevent.
     for (const diagnostic of diagnostics) {
       const anchor = requireAnchor(diagnostic);
       expect(anchor.name).toBe("proxy");

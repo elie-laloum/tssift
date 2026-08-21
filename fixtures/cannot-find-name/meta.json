@@ -9,7 +9,7 @@
     "TS2304"
   ],
   "difficulty": "easy",
-  "purpose": "The first fixture to exercise TS2304 (`Cannot find name`), which §5.1 classes a quasi-certain root alongside 2307 yet which no fixture produced until now — the threshold had never been confronted with half of its own root list. Seven references to one missing name in one file: a genuine single-cause cascade whose structure mirrors 2307 (the name gives every use an error type and nothing cascades further, so all seven are 2304, none derived from anything else). It does not fold today — 2304 is not in `src/codes.ts` and no 2304 derivation is written — so it stands as the measurable gap a future name-keyed root rule would close, the sibling of the still-unwritten 2307 rule. The key would be the missing name, never the line.",
+  "purpose": "The first fixture to exercise TS2304 (`Cannot find name`), which the causality threshold classes a quasi-certain root alongside 2307 yet which no fixture produced until now — the threshold had never been confronted with half of its own root list. Seven references to one missing name in one file: a genuine single-cause cascade whose structure mirrors 2307 (the name gives every use an error type and nothing cascades further, so all seven are 2304, none derived from anything else). It does not fold today — 2304 is not in `src/codes.ts` and no 2304 derivation is written — so it stands as the measurable gap a future name-keyed root rule would close, the sibling of the still-unwritten 2307 rule. The key would be the missing name, never the line.",
   "rootCauseFiles": [
     "src/billing/invoice.ts",
     "src/money.ts"

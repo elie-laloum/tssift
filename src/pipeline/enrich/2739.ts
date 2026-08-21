@@ -14,7 +14,7 @@
  *
  * ## What is not added, and this one is a correction
  *
- * §5.2 asks these two codes for "the exact list of the missing, without the
+ * The enriched-code table asks these two codes for "the exact list of the missing, without the
  * rest of the type", on the stated ground that TypeScript truncates its own.
  * **It does not** — measured on 5.9.3 over 1 to 8 missing properties:
  *
@@ -22,7 +22,7 @@
  *  - 2 to 5 ⇒ **TS2739**, complete list, never elided;
  *  - 6 or more ⇒ **TS2740**, `…, and N more.`, truncated at four.
  *
- * The truncation §5.2 describes belongs to **TS2740**, a code that is not in
+ * The truncation the enriched-code table describes belongs to **TS2740**, a code that is not in
  * its table of ten. So for 2739 and 2741 the list is already printed in full,
  * and repeating it would be the one thing `facts.ts` forbids: a fact that
  * restates the message.

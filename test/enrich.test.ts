@@ -1,7 +1,7 @@
 /**
  * P2 — the enrichment stage.
  *
- * The first test in this file is the one AGENTS.md makes **mandatory the moment
+ * The first test in this file is the one that is **mandatory the moment
  * an enricher exists**: every `Fact.text` produced over every fixture is scanned
  * for an imperative. It runs on the facts themselves rather than on the rendered
  * text, because the renderer suppresses a group member's facts as duplicates of
@@ -152,7 +152,7 @@ describe("what a fact says", () => {
 
   it("a named interface's shape is not repeated as its own name", () => {
     // `checker.typeToString` renders a named type as its name, so a shape line
-    // would read `type 'CreateUserInput' CreateUserInput`. PROJECT.md §6's
+    // would read `type 'CreateUserInput' CreateUserInput`. the output contract's
     // mock-up assumed an expanded shape; it does not exist for named types.
     const [diagnostic] = build("partial-interface-rename").after.diagnostics.filter(
       (d) => d.code === 2339,
@@ -310,7 +310,7 @@ describe("2307 · what the declarative files say", () => {
 });
 
 /**
- * TS2739/2741 — the pair that folds, and the §5.2 claim the measurement broke.
+ * TS2739/2741 — the pair that folds, and the enriched-code table claim the measurement broke.
  */
 describe("2739/2741 · the target type, and the list that needed no completing", () => {
   it("names the declaration TypeScript never prints, on both codes", () => {
@@ -348,7 +348,7 @@ describe("2739/2741 · the target type, and the list that needed no completing",
 
   it("no fact repeats the list of missing properties (TS2739 never truncates)", () => {
     // Probed on 5.9.3: 1 missing ⇒ 2741, 2–5 ⇒ 2739 with the list complete,
-    // 6+ ⇒ TS2740 truncated at four. The truncation §5.2 attributes to these two
+    // 6+ ⇒ TS2740 truncated at four. The truncation the enriched-code table attributes to these two
     // belongs to 2740, which is not in the table of ten. Restating a complete
     // list would be a fact that says what the message just said.
     for (const name of ["missing-multiple-properties", "missing-required-property"] as const) {
@@ -360,7 +360,7 @@ describe("2739/2741 · the target type, and the list that needed no completing",
     }
   });
 
-  it("2740 IS captured and enriched — added to §5.2 by decision, 2026-08-02", () => {
+  it("2740 IS captured and enriched — added to the enriched-code table by decision, 2026-08-02", () => {
     // It was outside the table of ten, and this test asserted its absence. The
     // measurement above is what changed that: 2740 is the only code where "the
     // exact list of the missing" is information the reader does not already

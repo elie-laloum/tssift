@@ -8,7 +8,7 @@
  * claim — is near enough tokenizer-independent. `chars / 4` is quoted as an
  * estimate with its divisor stated, never as a measurement.
  *
- * Read PROJECT.md §7 before reading the numbers. The composition below is the
+ * Read the evaluation protocol before reading the numbers. The composition below is the
  * one `run.ts` ships, and it has grown twice since the first table: P1 added
  * causality, which is what makes arm B smaller than arm A at all, and P2 added
  * enrichment, which makes it *larger* again by a stated amount. Both are in the

@@ -9,7 +9,7 @@ coverage/
 .env
 
 # Un seul lockfile est commité : bun.lock. Un second lockfile commité est un
-# piège à dérive de versions — AGENTS.md § « Stack & commandes », PROJECT.md §9.1.
+# piège à dérive de versions.
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
@@ -18,7 +18,7 @@ pnpm-lock.yaml
 # sujet de la fixture. `phantom-dependency-pnpm` et `yarn-pnp-project` portent
 # une topologie commitée — liens symboliques .pnpm, .pnp.cjs, .yarn/unplugged —
 # parce qu'une fixture doit rester reproductible sans réseau et sans que pnpm ni
-# yarn soient installés (AGENTS.md § « Recette — ajouter une fixture »).
+# yarn soient installés.
 # Ce ne sont pas des dépendances de tssift : rien n'y est jamais installé ni
 # résolu par nous, ce sont des fichiers déclaratifs à lire (règle 10).
 !fixtures/**/node_modules/

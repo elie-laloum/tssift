@@ -57,7 +57,7 @@ describe("cli · exit codes", () => {
   it("refuses a Yarn PnP project read by bare Node, naming what it found", () => {
     // yarn-pnp-project has a .pnp.cjs and no bug; its three TS2307 are the
     // artefact of a bare-Node read. Refusing beats a clean-looking, wrong
-    // report (§15). The library still folds it — this is a run-layer guard only.
+    // report (rule 15). The library still folds it — this is a run-layer guard only.
     const { code, out, err } = capture(["--project", "fixtures/yarn-pnp-project/before"]);
     expect(code).toBe(2);
     expect(out).toBe("");

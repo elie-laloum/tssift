@@ -18,7 +18,7 @@ import type { Fact, SymbolRef } from "../../types.js";
 /**
  * Members listed in full before the count takes over.
  *
- * §5.3 asks for an abbreviated form under budget pressure (`{ id, email, …12
+ * The budget rules ask for an abbreviated form under budget pressure (`{ id, email, …12
  * more }`); this is that cap, applied unconditionally rather than only under
  * `--budget-tokens`. A 60-member type listed in full is noise at any budget, and
  * a cap that only sometimes applies makes two reports of the same project differ
@@ -54,7 +54,7 @@ export function memberList(names: readonly string[]): string {
  * TS2554 never tells anyone.
  *
  * This is why the member list, not the shape, is the load-bearing fact on named
- * object types — the opposite of what PROJECT.md §6's mock-up assumed.
+ * object types — the opposite of what the original mock-up assumed.
  */
 export function shapeAddsToName(symbol: SymbolRef): boolean {
   return symbol.signature !== undefined && symbol.signature !== symbol.name;

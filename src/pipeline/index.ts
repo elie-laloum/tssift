@@ -12,7 +12,7 @@
  *  3. **Nothing is deleted, only declassed** (rule 2) — with the one bounded
  *     exception argued in `dedupe.ts`, which removes only byte-identical
  *     copies, i.e. removes no information at all.
- *  4. **Nothing is derived on a resemblance** (§5.1). The only link that
+ *  4. **Nothing is derived on a resemblance**. The only link that
  *     attaches one diagnostic to another is an identical declaration site.
  *
  * The order is `dedupe → detectCausality → enrich → entriesOf`, and `run.ts` is
@@ -20,7 +20,7 @@
  *
  * `enrich` runs **after** causality on purpose. Facts are for a reader; grouping
  * is a structural decision. Letting a fact influence a group would make the
- * threshold of §5.1 depend on how well a type happened to resolve, which is the
+ * causality threshold depend on how well a type happened to resolve, which is the
  * "derived on a resemblance" failure property 4 forbids.
  */
 export type { BudgetedEntry, BudgetResult } from "./budget.js";

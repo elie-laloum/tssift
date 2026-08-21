@@ -32,7 +32,7 @@
  * An entry may also `write` files after the archive is unpacked. Every one of
  * the public entries needs it: their real project files are solution tsconfigs
  * with `references` (`tsc -p .` there reports 0 errors over 0 files, the trap
- * EVAL.md records on data-explorer), or they extend a config that only exists
+ * EVAL.md records on private-monorepo), or they extend a config that only exists
  * once dependencies are installed. The written file is always `tsconfig.json`
  * in the measured directory, overwriting the archived one, so that everything
  * downstream — this script, run.ts, the CLI — keeps pointing a plain directory

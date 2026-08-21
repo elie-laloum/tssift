@@ -1,8 +1,8 @@
 /**
  * Rule 4 made testable.
  *
- * "A file under `pipeline/` that imports `typescript` breaks rule 4" is listed
- * in AGENTS.md as a warning sign, and a warning sign that only a reader can
+ * "A file under `pipeline/` that imports `typescript` breaks rule 4" started
+ * life as a warning sign for readers, and a warning sign that only a reader can
  * raise is one that rots. The TS 7 Go port removed `ts.createProgram`; the whole
  * point of capturing everything at ingestion is that `Ts7ApiSource` can be
  * *added* rather than force a rewrite. A stray `import type * as TS` under

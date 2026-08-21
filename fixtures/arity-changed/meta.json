@@ -10,7 +10,7 @@
     "TS2554"
   ],
   "difficulty": "easy",
-  "purpose": "Commits the largest cascade family measured anywhere in the eval. TS2554 folds 152 diagnostics into one entry on .corpus/lekes-ok-arity-changed — but `.corpus/` is git-ignored and derived from a private repository, so until this fixture existed a fresh clone could not reproduce the single best piece of evidence for H1. It is also the only committed witness for the `getResolvedSignature().declaration` link, which is what made design question 2 of the P1 plan moot (a related span never had to count as a declaredAt). Four diagnostics rather than three on purpose: it is the only fixture that exceeds MAX_SHOWN_MEMBERS, so it is the only one whose default rendering exercises the `+N more sites` counter.",
+  "purpose": "Commits the largest cascade family measured anywhere in the eval. TS2554 folds 152 diagnostics into one entry on .corpus/private-app-ok-arity-changed — but `.corpus/` is git-ignored and derived from a private repository, so until this fixture existed a fresh clone could not reproduce the single best piece of evidence for H1. It is also the only committed witness for the `getResolvedSignature().declaration` link, which is what made design question 2 of the P1 plan moot (a related span never had to count as a declaredAt). Four diagnostics rather than three on purpose: it is the only fixture that exceeds MAX_SHOWN_MEMBERS, so it is the only one whose default rendering exercises the `+N more sites` counter.",
   "rootCauseFiles": [
     "src/audit/event.ts",
     "src/accounts/session.ts",

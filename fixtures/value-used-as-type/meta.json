@@ -10,7 +10,7 @@
     "TS2749"
   ],
   "difficulty": "medium",
-  "purpose": "The cascade with the LEAST material of any fixture here: four diagnostics sharing one cause, and not one of them carries a relatedInformation or a resolvable declaration — the name exists, it simply has no meaning in type position, so there is nothing for the source to capture. Where `missing-required-property` shows a link that is present but unused, and `assignability-mismatch` shows a link that is present and misleading, this one shows the third case: no link at all. Any future rule that folds it would have to work from `ProgramFacts.imports` and the identifier, which is precisely the 'same identifier' derivation §5.1 forbids. It is therefore the fixture that marks the outer edge of what the structural threshold can ever reach.",
+  "purpose": "The cascade with the LEAST material of any fixture here: four diagnostics sharing one cause, and not one of them carries a relatedInformation or a resolvable declaration — the name exists, it simply has no meaning in type position, so there is nothing for the source to capture. Where `missing-required-property` shows a link that is present but unused, and `assignability-mismatch` shows a link that is present and misleading, this one shows the third case: no link at all. Any future rule that folds it would have to work from `ProgramFacts.imports` and the identifier, which is precisely the 'same identifier' derivation the causality threshold forbids. It is therefore the fixture that marks the outer edge of what the structural threshold can ever reach.",
   "rootCauseFiles": [
     "src/domain/order-status.ts",
     "src/orders/board.ts",

@@ -106,7 +106,7 @@ export function normalizeFilePath(absolute: string, root: string, tsLibDir: stri
   return toPosix(relative(root, absolute)) || ".";
 }
 
-/** sha256(code|file|line|col|message), first 12 hex (PROJECT.md §4). */
+/** sha256(code|file|line|col|message), first 12 hex. */
 export function diagnosticId(
   code: number,
   file: string,
@@ -331,7 +331,7 @@ function referenceLabel(absolute: string, root: string): string {
 }
 
 /**
- * The solution-tsconfig hole (PROJECT.md §9, decided 2026-07-27).
+ * The solution-tsconfig hole (decided 2026-07-27).
  *
  * A monorepo root with `"files": []`, `"include": []`, `"references": [...]`
  * makes `tsc -p` type-check nothing and exit 0. Reproducing that zero verbatim
@@ -418,7 +418,7 @@ export class TsApiSource implements DiagnosticSource {
       configFileParsingDiagnostics: parsed.errors,
     });
 
-    // Selective capture (rule 4, PROJECT.md §5.2). The checker is only asked for
+    // Selective capture (rule 4). The checker is only asked for
     // when at least one code is listed; `getPreEmitDiagnostics` has already built
     // it, so the cost measured in `src/codes.ts` is the per-diagnostic node walk
     // and type resolution, never a second program.

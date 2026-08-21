@@ -4,7 +4,7 @@
  *
  * Why this exists at all: the pipeline never sees the checker, so everything it
  * could ever need has to be captured here, at ingestion. Causality in particular
- * needs a *declaration site* it can compare for identity — §5.1 lets a
+ * needs a *declaration site* it can compare for identity — the causality threshold lets a
  * diagnostic be derived only on a structural link present in the captured data,
  * and a `declaredAt` is that link.
  *
@@ -14,12 +14,12 @@
  * The contract of every resolver below: **return `undefined` rather than guess**
  * (rule 5). A missing context degrades to the native format, which is a success.
  * A wrong `declaredAt` would let causality hide a real error behind a counter,
- * which is the failure PROJECT.md §11 classes as critical.
+ * which is the failure classed as critical.
  */
 import type * as TS from "typescript";
 import type { DiagnosticContext, SourceSpan, SymbolRef } from "../types.js";
 
-/** `SymbolRef.signature` is a rendering of a type, and §4 says it is truncated. */
+/** `SymbolRef.signature` is a rendering of a type, and the data model says it is truncated. */
 const SIGNATURE_MAX = 200;
 
 function truncate(text: string): string {
@@ -126,7 +126,7 @@ type SpanOf = (file: TS.SourceFile, start: number, length: number) => SourceSpan
  * module symbol is its resolved file, absolute, and `checker.typeToString` of a
  * module type prints that same absolute path inside `import("…")`. Both were
  * landing verbatim in the rendered header — `/home/<user>/…` in an output the
- * data model says is never absolute (AGENTS.md § Modèle de données).
+ * data model says is never absolute.
  *
  * No fixture could see it: their module causes are named from the *written*
  * specifier (`'../domain'`), not from the symbol. It took a namespace-import
@@ -492,10 +492,10 @@ function context2305(
  * on the corpus, all pointing at one arrow function.
  *
  * This is what makes the corpus's largest cascade foldable **without** loosening
- * §5.1. The obvious alternative was to treat the span of TypeScript's own
+ * the causality threshold. The obvious alternative was to treat the span of TypeScript's own
  * `relatedInformation` as a declaration site; that would have been a new kind of
  * evidence needing a spec amendment, where `getResolvedSignature().declaration`
- * is the ordinary structural link §5.1 rule 2 already talks about.
+ * is the ordinary structural link the causality threshold already talks about.
  */
 function context2554(
   ts: typeof TS,
@@ -618,7 +618,7 @@ function context2739(
  *
  * `unconstrained-generic` is the witness that this stays honest where it should
  * not fold: its lone TS2322 resolves to `Map` in `lib.es2015.collection.d.ts`,
- * which §5.1's "a declaration outside the program's files cannot be a cause"
+ * which the causality threshold's "a declaration outside the program's files cannot be a cause"
  * guard refuses. That guard was written in P1 for a corpus TS2345 that resolved
  * the same way, and it catches this one for free.
  */
@@ -658,12 +658,12 @@ function context2322(
  * TS18048 — `… 'undefined'.`
  * TS18049 — `… 'null' or 'undefined'.`
  *
- * **The block here was never where the repo said it was.** AGENTS.md, CLAUDE.md
+ * **The block here was never where the repo said it was.** The design notes
  * and `src/codes.ts` all recorded 18047 as blocked on control-flow analysis, and
  * `codes.ts` added that it "has nothing to resolve". That is true of the payload
- * §5.2 asked for — *where* the value became nullable, *which* branch guards it —
+ * the enriched-code table asked for — *where* the value became nullable, *which* branch guards it —
  * and false of the causality link. The thing that is possibly null is a declared
- * symbol, and its declaration is the ordinary structural link §5.1 rule 2
+ * symbol, and its declaration is the ordinary structural link the causality threshold
  * already allows. Measured on `nullable-chain`: 4 of 4 resolve to `proxy` at
  * `settings.ts:13:3`, the line `meta.json` calls the root cause. Same shape as
  * 2322 — the demanded path stays underivable, another link is worth more.
@@ -673,11 +673,11 @@ function context2322(
  * from the diagnostic's node lands on `settings.proxy.host` and resolves `host`
  * — a property that is not nullable and is not the cause. A rule keyed there
  * would split one cascade into two groups (`host`, `port`) and head each with a
- * perfectly healthy declaration, which is the failure PROJECT.md §11 classes as
+ * perfectly healthy declaration, which is the failure classed as
  * critical. So the widened node must match `{0}` exactly, or nothing is
  * returned.
  *
- * **§5.1 needs no amendment, unlike the 2304 rule, and that was checked rather
+ * **the causality threshold needs no amendment, unlike the 2304 rule, and that was checked rather
  * than assumed.** The quoted text is only how the node is found; the key is the
  * `declaredAt` the checker resolves from it. Probed on a throwaway project:
  * `box.item` appears with identical text in two files and resolves to two

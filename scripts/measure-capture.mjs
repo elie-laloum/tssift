@@ -1,7 +1,7 @@
 /**
  * P1 T1 — what selective context capture buys, and what it costs.
  *
- * Decision 28 of `.plans/2026-07-27_p1-causality.md`: every extension of
+ * A standing decision of the capture design: every extension of
  * `CONTEXT_CAPTURE_CODES` is paid for in checker round-trips, so it is measured
  * before it is kept. This script reports, per target:
  *

@@ -1,8 +1,8 @@
 /**
  * TS2322 — `Type 'A' is not assignable to type 'B'`.
  *
- * The last of §5.2's ten to ship, and it shipped for a reason the table did not
- * anticipate. §5.2 asks 2322 for "the divergence path (`a.b[0].c`)", which needs
+ * The last of the enriched-code table's ten to ship, and it shipped for a reason the table did not
+ * anticipate. The table asks 2322 for "the divergence path (`a.b[0].c`)", which needs
  * both types as structures and is still not derivable from what is captured.
  * What *is* derivable turned out to matter more: **where `B` is declared, and
  * what `B` actually permits.**

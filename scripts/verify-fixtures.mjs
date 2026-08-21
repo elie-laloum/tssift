@@ -8,7 +8,7 @@
  * Both compilers are loaded through the TypeScript API rather than the `tsc`
  * binary: `typescript` and `typescript-5.4` both ship a bin named `tsc`, so
  * `node_modules/.bin/tsc` is whichever one bun linked last — invisible, and
- * exactly the kind of silent version drift AGENTS.md rule 12 exists to stop.
+ * exactly the kind of silent version drift this script exists to stop.
  *
  * Usage:
  *   node scripts/verify-fixtures.mjs            # check only
@@ -25,7 +25,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesRoot = join(repoRoot, "fixtures");
 const print = process.argv.includes("--print");
 
-/** The ends and the middle of the declared support range (PROJECT.md §9.2, axis 1). */
+/** The ends and the middle of the declared support range (axis 1 of the CI matrix). */
 const COMPILERS = ["typescript-5.4", "typescript", "typescript-6"];
 
 function loadDiagnostics(ts, beforeDir) {

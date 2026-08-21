@@ -116,7 +116,7 @@ describe("dedupe · the boundary that protects rule 2", () => {
 
   it("keeps distinct diagnostics that merely resemble one another", () => {
     // Same code, same file, adjacent lines, near-identical message. A
-    // near-identity heuristic would fold these; §5.1 forbids exactly that.
+    // near-identity heuristic would fold these; the causality threshold forbids exactly that.
     const first = diagnostic({
       id: "aaaaaaaaaaaa",
       primary: { file: "src/a.ts", line: 1, column: 1 },

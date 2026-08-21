@@ -1,9 +1,10 @@
 /**
- * The data model, transcribed from PROJECT.md §4. That section is the source of
- * truth; this file is its literal transcription and nothing else.
+ * The data model. This file is the source of truth for it: every shape the
+ * source, the pipeline and the renderers exchange is declared here and nowhere
+ * else.
  *
- * If a field is missing for a task, it gets added to PROJECT.md §4 in the same
- * change, with its reason. Never the other way round.
+ * If a field is missing for a task, it is added here in the same change, with
+ * its reason — never improvised at a call site.
  *
  * This module imports nothing — least of all `typescript`. The shape below is
  * dimensioned on the TS 7 `Diagnostic`, the poorer of the two APIs, so that
@@ -52,7 +53,7 @@ export interface DiagnosticContext {
    * Only TS2739/2740/2741 fill it, and only TS2740 has a reader for it: that is
    * the one code where TypeScript truncates its own list (at four, from six
    * missing upwards). On 2739 and 2741 the message is already complete, so this
-   * field exists there and is deliberately unused (PROJECT.md §4, §5.2).
+   * field exists there and is deliberately unused.
    */
   missing?: string[];
 }
@@ -82,14 +83,14 @@ export interface ProgramFacts {
    * File → specifiers **as written**, resolved or not. This channel is what makes
    * "2307 ⇒ importers are derived" decidable — a module that does not resolve has
    * no resolution to index, so a table of successful resolutions could not answer
-   * the question the rule asks (PROJECT.md §4).
+   * the question the rule asks.
    */
   imports: Record<string, string[]>;
   /**
    * How module specifiers resolve in this project — declared dependencies,
    * installer, PnP, `paths`. The channel TS2307 needs and that no
    * `NormalizedDiagnostic` can carry: the message is identical under all four
-   * installers while the truth behind it is not (PROJECT.md §4, §9.1).
+   * installers while the truth behind it is not.
    */
   resolution: ResolutionFacts;
   /** The compiler actually loaded. */
@@ -181,7 +182,7 @@ export interface EnrichedDiagnostic extends NormalizedDiagnostic {
  * - `name` is TS2304/TS2552's — an identifier that resolves to nothing, keyed on
  *   the name **and the file**. Unlike a module specifier, which means the same
  *   package everywhere, an identifier is scope-local: the same missing name in
- *   two files is two causes and may take two different fixes (§5.1).
+ *   two files is two causes and may take two different fixes.
  */
 export type GroupCause =
   | {
@@ -229,7 +230,7 @@ export interface DiagnosticGroup {
  */
 export interface DiagnosticReport {
   diagnostics: EnrichedDiagnostic[];
-  /** Ranked by explanatory power: most members first (§5.1). */
+  /** Ranked by explanatory power: most members first. */
   groups: DiagnosticGroup[];
 }
 

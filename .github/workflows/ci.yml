@@ -1,4 +1,4 @@
-# Three separate axes plus a guard — never a cartesian product (PROJECT.md §9.2).
+# Three separate axes plus a guard — never a cartesian product.
 #
 # This workflow deliberately does NOT read mise.toml and does not use
 # jdx/mise-action. mise pins the development machine; CI's job is to sweep a
@@ -169,7 +169,7 @@ jobs:
               corepack enable
               corepack prepare pnpm@latest --activate
               # pnpm does not install peers by default: typescript is explicit,
-              # which is exactly the topology difference §9.1 is about.
+              # which is exactly the topology difference the installer matrix is about.
               pnpm add "$TARBALL" typescript@${{ env.SNAPSHOT_TYPESCRIPT }}
               RUN="pnpm exec tssift"
               ;;

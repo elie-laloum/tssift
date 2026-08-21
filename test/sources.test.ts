@@ -37,7 +37,7 @@ function scratchProject(files: Record<string, string>): string {
  * Makes `typescript` resolvable from a scratch project by symlinking our own
  * install into its `node_modules/`. A copy would cost 20 MB per test; a stub
  * `main` pointing at the real file would break `libDir`, which is derived from
- * the resolved path. Ubuntu-only CI and Windows out of scope for v0.1 (§9.2),
+ * the resolved path. Ubuntu-only CI and Windows out of scope for v0.1 ,
  * so a symlink is safe here.
  */
 function linkTypeScript(projectDir: string, pkg = "typescript"): void {
@@ -258,18 +258,18 @@ describe("TsApiSource · exit-2 conditions (rule 15)", () => {
   it("refuses a solution tsconfig, naming the references to point at instead", () => {
     // `"files": []` + `"include": []` + `"references": [...]` is the monorepo
     // root shape. `tsc -p` type-checks nothing there and exits 0; printing that
-    // zero would be a false clean over a whole repository (PROJECT.md §9).
+    // zero would be a false clean over a whole repository.
     const project = scratchProject({
       "tsconfig.json": JSON.stringify({
         compilerOptions: { strict: true, noEmit: true },
         files: [],
         include: [],
-        references: [{ path: "./apps/data-explorer" }, { path: "./apps/widget" }],
+        references: [{ path: "./apps/api" }, { path: "./apps/widget" }],
       }),
-      "apps/data-explorer/tsconfig.json": JSON.stringify({
+      "apps/api/tsconfig.json": JSON.stringify({
         compilerOptions: { strict: true, noEmit: true, composite: true },
       }),
-      "apps/data-explorer/index.ts": "export const x: number = 1;\n",
+      "apps/api/index.ts": "export const x: number = 1;\n",
       "apps/widget/tsconfig.json": JSON.stringify({
         compilerOptions: { strict: true, noEmit: true, composite: true },
       }),
@@ -289,7 +289,7 @@ describe("TsApiSource · exit-2 conditions (rule 15)", () => {
     expect(message).toMatch(/Nothing to type-check/);
     expect(message).toContain(join(project, "tsconfig.json"));
     expect(message).toMatch(/0 files matched, 2 project references declared/);
-    expect(message).toContain("./apps/data-explorer");
+    expect(message).toContain("./apps/api");
     expect(message).toContain("./apps/widget");
   });
 

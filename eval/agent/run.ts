@@ -2,7 +2,7 @@
  * B1 — the model arm. For each target, two arms (A = raw `tsc --noEmit`, B =
  * tssift's `agent-text`) share one fixed system prompt and turn cap; the ONLY
  * difference is the initial diagnostic framing. Each arm runs n times on a fresh
- * sandbox copy, and the four §7 metrics fall straight out of the loop.
+ * sandbox copy, and the four evaluation metrics fall straight out of the loop.
  *
  * Drives an OpenAI-compatible Chat Completions endpoint:
  *

@@ -13,12 +13,12 @@
  *
  * | code | why it is here | resolution rate |
  * |------|----------------|-----------------|
- * | 2339 | `Property 'x' does not exist on type 'T'`. The receiver's type is the shared cause. Largest property cascade in the corpus. | 91/99 on `lekes-result-value-renamed`, all on one declaration |
+ * | 2339 | `Property 'x' does not exist on type 'T'`. The receiver's type is the shared cause. Largest property cascade in the corpus. | 91/99 on `private-app-result-value-renamed`, all on one declaration |
  * | 2353 | Same cause as 2339 through object-literal syntax; the type is *contextual*, so nothing in the source names it. Without it the contract fixture folds nothing. | 1/1 on `partial-interface-rename` |
  * | 2345 | `Argument of type 'A' is not assignable to parameter of type 'B'`. `B` is the shared declaration; `A` is captured as text. | 1/1 on `partial-interface-rename` |
- * | 2305 | `Module 'X' has no exported member 'Y'`. Measured first, as the plan asked: `ProgramFacts.imports` is **not** enough — it carries specifiers as written, so importers of one module through different relative paths look unrelated. | 12/12 on `lekes-task-export-renamed` |
+ * | 2305 | `Module 'X' has no exported member 'Y'`. Measured first, as the plan asked: `ProgramFacts.imports` is **not** enough — it carries specifiers as written, so importers of one module through different relative paths look unrelated. | 12/12 on `private-app-task-export-renamed` |
  * | 2724 | 2305 with a suggestion appended (`… Did you mean 'Z'?`). Same resolver, same shape. | 3/3 on `broken-barrel-export` |
- * | 2554 | `Expected N arguments, but got M`. `getResolvedSignature().declaration` is an ordinary structural link, so the corpus's largest cascade folds without amending §5.1. | 152/152 on `lekes-ok-arity-changed` |
+ * | 2554 | `Expected N arguments, but got M`. `getResolvedSignature().declaration` is an ordinary structural link, so the corpus's largest cascade folds without amending the causality threshold. | 152/152 on `private-app-ok-arity-changed` |
  * | 2322 | `Type 'A' is not assignable to type 'B'`. `B` is the shared cause, resolved as the **contextual type** of the expression that was checked. The fixture written to forbid keying on a `related` span folds correctly on this instead. Added 2026-08-02. | 3/3 on `assignability-mismatch`, all on `type Currency` |
  * | 2739 · 2740 · 2741 | `… is missing the following properties from type 'T'` / `Property 'x' is missing … but required in type 'T'`. `T` is the shared declaration: N construction sites of one interface break together the day it gains a required member. Added 2026-08-02. | 6/6 on the two fixtures, 3 per interface |
  * | 18047 · 18048 · 18049 | `'x' is possibly 'null'` / `'undefined'` / `'null' or 'undefined'`. The symbol that is possibly nullish is declared somewhere, and that declaration is the shared cause — N readers of one optional field break together the day it gains `| null`. Added 2026-08-04, against three files that said it was impossible. | 4/4 on `nullable-chain`, all on `proxy` at settings.ts:13:3 |
@@ -36,11 +36,11 @@
  * code. Probed on 5.9.3 with 1 to 8 missing properties: 1 ⇒ **2741** (names it),
  * 2 to 5 ⇒ **2739** (complete list, never elided), 6 and beyond ⇒ **2740**
  * (`…, and N more.`, truncated at four). The "complete list of the missing"
- * payload §5.2 attributed to 2739/2741 therefore does not exist for them, and
+ * payload the enriched-code table attributed to 2739/2741 therefore does not exist for them, and
  * what those two get instead is the declaration site.
  *
- * **2740 was absent from PROJECT.md §5.2 and was added to it deliberately on
- * 2026-08-02**, as the human decision AGENTS.md requires for a code outside the
+ * **2740 was absent from the enriched-code table and was added to it deliberately on
+ * 2026-08-02**, as a deliberate decision for a code outside the
  * table. It is the only place where that payload is real, and `fixtures/
  * missing-many-properties` is the only fixture that emits it.
  *
@@ -56,8 +56,8 @@
  *
  * - **2307** (`Cannot find module`) has nothing to resolve: the module did not
  *   resolve, so there is no declaration to point at. Its derivation rule in
- *   §5.1 runs on `ProgramFacts.imports`, which P0 already captures.
- * - **2769 and 2551** are §5.2 enrichment codes whose payload is a *fact for a
+ *   the causality threshold runs on `ProgramFacts.imports`, which P0 captures.
+ * - **2769 and 2551** are enrichment codes whose payload is a *fact for a
  *   reader*, not a link for causality: 2769's is already in `chain`, 2551's is
  *   already in the message.
  *   (2739/2741 and then 2322 left this list on 2026-08-02, and **18047/18048 on
@@ -74,7 +74,7 @@
  *   one failure had to be captured together; here, one of them is structurally
  *   out of reach. A test pins the exclusion so it is not read as an oversight.
  *
- * The list this will grow into is PROJECT.md §5.2 — the same table that drives
+ * The list this will grow into is the enriched-code table — the same table that drives
  * the enrichers, which is why it lives in one declarative place.
  */
 export const CONTEXT_CAPTURE_CODES: readonly number[] = [

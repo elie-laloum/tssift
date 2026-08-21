@@ -50,5 +50,5 @@ API, you are pasting fragments of that project.
 
 - Bugs in TypeScript itself. Report those upstream.
 - Incorrect grouping or an inaccurate fact in a report: that is a correctness
-  bug, and a serious one, but not a vulnerability. Open a normal issue —
-  `CONTRIBUTING.md` says what to include.
+  bug, and a serious one, but not a vulnerability. Open a normal issue,
+  including your TypeScript version, Node version and package manager.

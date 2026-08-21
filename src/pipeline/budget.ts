@@ -1,5 +1,5 @@
 /**
- * Token budget — truncation under constraint (PROJECT.md §5.3).
+ * Token budget — truncation under constraint.
  *
  * Ships together with the `--budget-tokens` flag that exposes it, never before:
  * a flag that parses and does nothing is a lie with a version number
@@ -13,11 +13,11 @@
  * wrong for every other model. The character is the primitive anyone can
  * reproduce; the budget is honoured against it and says so.
  *
- * ## The order of sacrifice (§5.3)
+ * ## The order of sacrifice
  *
  * 1. Long types → abbreviated. **A no-op in P1, and deliberately so.** The only
  *    long types on screen live inside TypeScript's own message, which rule 3
- *    forbids touching. The abbreviated forms §5.3 describes belong to the facts
+ *    forbids touching. The abbreviated forms the budget rules describe belong to the facts
  *    P2 renders, so this step arrives with them.
  * 2. Derived usage sites → a counter. This is where P1's budget actually bites:
  *    a group sheds member lines, three then one then none, keeping its cause

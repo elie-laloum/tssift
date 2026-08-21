@@ -5,7 +5,7 @@ export interface RenderInput {
    * The pipeline's output: the complete diagnostic table plus the ranked group
    * index over it. Both, always — a renderer that received only the groups
    * could not honour `--all`, and one that received only the diagnostics could
-   * not rank (rule 2, §5.1).
+   * not rank (rule 2).
    */
   report: DiagnosticReport;
   facts: ProgramFacts;

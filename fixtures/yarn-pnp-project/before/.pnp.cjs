@@ -11,7 +11,7 @@
  * This file carries the *data* and none of the runtime: the package registry,
  * the dependency edges, and the on-disk location of the one unplugged package.
  * That is deliberate, and it is what the fixture is for — the data is what a
- * declarative reader opens (AGENTS.md rule 10: read files, never invoke a
+ * declarative reader opens (rule 10: read files, never invoke a
  * package manager), and the missing hook is precisely why `tsc` run as a plain
  * Node process reports `Cannot find module '@acme/http'` on a project that is
  * installed and correct.

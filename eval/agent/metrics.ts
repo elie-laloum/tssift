@@ -1,5 +1,5 @@
 /**
- * The B1 metrics (PROJECT.md §7), and how a set of runs rolls up.
+ * The B1 metrics, and how a set of runs rolls up.
  *
  * The load-bearing one is the **false start**: a `write_file` to a path outside
  * the fixture's known root-cause set. It is the direct test of H1 — a noisier
@@ -18,7 +18,7 @@
  * The repair does not decree either route invalid. A `meta.json` may declare
  * `consumerFiles`, the sites its own prose accepts as an alternative fix; a
  * write there is **not** a false start and lands in its own column instead.
- * A false start stays what §7 says it is — a write to a file no fix involves.
+ * A false start stays what the protocol says it is — a write to a file no fix involves.
  */
 export interface RunResult {
   target: string;

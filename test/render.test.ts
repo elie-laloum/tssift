@@ -39,7 +39,7 @@ const FIXTURES = [
  * Exact text snapshots are pinned to one TypeScript version. The raw message is
  * printed verbatim, so snapshots inherit TypeScript's wording — and that wording
  * moves between minors. Everywhere else in the matrix, only the tolerant
- * invariants below run (PROJECT.md §9.2).
+ * invariants below run.
  */
 const SNAPSHOT_VERSION = "5.9.3";
 

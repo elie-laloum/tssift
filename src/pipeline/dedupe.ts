@@ -9,13 +9,13 @@
  *
  * So this is deliberately small. What would have been wrong is a machinery of
  * near-identity heuristics: "same code, same line, similar message" is precisely
- * the resemblance-based reasoning §5.1 forbids, and it would collapse two real
+ * the resemblance-based reasoning the causality threshold forbids, and it would collapse two real
  * errors into one at the very layer that has no way of noticing.
  *
  * What it is *not* is trivial in its contract, and that is worth spelling out:
  *
  * **An identical `id` is not sufficient grounds for removal.** `id` is
- * `sha256(code|file|line|col|message)` (§4). It covers neither `related`, nor
+ * `sha256(code|file|line|col|message)`. It covers neither `related`, nor
  * `chain`, nor `context`. Two diagnostics can therefore share an `id` while
  * carrying different information — one with a resolved `declaredAt`, one
  * without. Dropping either would lose exactly what P1 needs. So the identity

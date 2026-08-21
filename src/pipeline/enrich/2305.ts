@@ -14,7 +14,7 @@
  * reader has no way to tell which file answered.
  *
  * What is deliberately not added: a suggestion. On TS2724 TypeScript already
- * made one and §5.2's standing instruction for suggestions is not to degrade
+ * made one and the enriched-code table's standing instruction for suggestions is not to degrade
  * what is already good natively; on TS2305 it looked and found none, so ours
  * would fire exactly where its own speller said no. Measured over the fixtures
  * and the corpus: 24 of 24 with a resolved export list, TypeScript suggested

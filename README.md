@@ -91,6 +91,7 @@ entries; a root is never dropped.
 - **Project references:** solution-style `tsconfig` files with project references
   are rejected rather than silently checking nothing; point tssift at a concrete
   referenced project.
+
 ## Evaluation evidence
 
 Two claims, and only the first of them holds.
@@ -121,6 +122,64 @@ reasons are documented rather than quietly dropped.
 See [EVAL.md](./EVAL.md) for the method, the raw tables, the per-campaign drift,
 and every limitation — including the two targets this campaign failed to
 measure.
+
+## Design rules
+
+Fifteen invariants the code is written against. They are not style preferences:
+each one exists because breaking it makes the tool confidently wrong, and source
+comments throughout the repository cite them by number.
+
+1. **Never prescribe a fix.** No `Fact.text` may contain an imperative. The tool
+   says `interface 'User' is declared at src/types.ts:4:1 and has 2 properties:
+   id, email`; it never says "add the missing property". A deterministic tool
+   that states a wrong fix confidently is worse than a vague message, because
+   the caller will follow it without questioning. A test walks every fact
+   produced over every fixture and fails on imperative or modal vocabulary.
+2. **Never drop a diagnostic — only rank it lower.** `--all` always restores
+   everything and the JSON report always carries the complete list. The pipeline
+   returns `{ diagnostics, groups }` where `diagnostics` is untouched; grouping
+   is a rendering index, not a filter.
+3. **The TypeScript message stays verbatim.** `NormalizedDiagnostic.message` is
+   byte-for-byte what `tsc` produced, so a reader can always get back to native
+   output. Rewording is a separate, unproven hypothesis, gated behind
+   measurement.
+4. **The pipeline never touches the `TypeChecker`.** Everything it needs is
+   captured at ingestion, on two channels: `NormalizedDiagnostic.context` (per
+   diagnostic, selective, driven by a code list) and `ProgramFacts` (per
+   program). A file under `src/pipeline/` importing `typescript` breaks this,
+   and a test enforces it. This is what will let a TypeScript 7 source be
+   *added* rather than force a rewrite — the Go port removed
+   `ts.createProgram`.
+5. **Low confidence falls back to the native format.** Degrading is a success,
+   not a failure.
+6. **Never truncate a root cause** under a token budget. It is the one thing the
+   caller has to read first.
+7. **`typescript` is a peer dependency (`>=5.4 <7`), never bundled, and resolved
+   from the analyzed project** rather than from our own installation.
+   Type-checking with a different compiler than the user's own `tsc` would
+   produce diagnostics their reference tool does not produce.
+8. **Nothing ships ahead of the numbers.** New diagnostic codes and new surfaces
+   wait for the evaluation to justify them, code by code.
+9. **No `--fix`, no codefixes, no reimplementation of `tsc`.** Stated non-goals.
+10. **Never assume `node_modules/` exists, and never spawn a package manager.**
+    We read declarative files only — `package.json`, lockfile *names*,
+    `.pnp.cjs`, `tsconfig.json`. Yarn PnP has no `node_modules` at all and
+    pnpm's topology differs from npm's; both are supported and both are in CI.
+11. **Tests run on Node, never under `bun test` or `bun run --bun`.** Bun manages
+    development dependencies; Node is the runtime users have.
+12. **Local commands go through `mise exec --`,** never a binary called by
+    absolute path. A hard-coded path bypasses the pinned version silently. This
+    does not apply to CI, which installs its own matrix of versions.
+13. **The renderer's output is English, frame included, and the TypeScript
+    message inside it is raw.** No rewording before the evaluation justifies it
+    code by code.
+14. **`json` is the complete report; `agent-text` is a lossy projection of it.**
+    Never the reverse: every field in the text exists in the JSON with the same
+    meaning.
+15. **No silent fallback.** An unsupported TypeScript version, an unresolvable
+    peer, an unreadable config: exit **2** with a message naming what was looked
+    for and where — never a warning on stderr followed by a wobbly run. Agents
+    do not read stderr.
 
 ## Development
 
@@ -154,8 +213,10 @@ through `prepublishOnly`.
 
 The toolchain is pinned with [mise](https://mise.jdx.dev); CI deliberately does
 not read that pin, because its job is to sweep a matrix a single version would
-contradict. [CONTRIBUTING.md](./CONTRIBUTING.md) has the full setup and the rules
-a change must not break.
+contradict — TypeScript 5.4 → 6.0, Node 20/22/24, and the five installers.
+
+The renderer's output is test content: any format change breaks snapshots, and
+that is intentional. **Read the snapshot diff; never regenerate it blind.**
 
 ## Project documents
 
@@ -163,14 +224,13 @@ a change must not break.
 |---|---|
 | [EVAL.md](./EVAL.md) | the method, the raw tables, every campaign including the ones that failed |
 | [CHANGELOG.md](./CHANGELOG.md) | what a release would contain, and the known limitations |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | how to set up, and the rules a change must not break |
 | [SECURITY.md](./SECURITY.md) | how to report a vulnerability, and what the tool actually does to your machine |
-| [MAINTAINERS.md](./MAINTAINERS.md) | who decides, and what to expect |
-| [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
 
-`PROJECT.md` and `AGENTS.md` are the internal specification and working rules.
-They are in **French** — they were written for the author. Everything you need in
-order to contribute is in `CONTRIBUTING.md`, in English.
+This is an early public preview. Issues are welcome — especially a **wrong
+grouping**, which is the most serious defect this tool can have, or a **refusal
+that should not have happened** (exit 2 on a project that ought to work). Please
+include your TypeScript version, your Node version, your package manager, and
+where you can a minimal project that reproduces.
 
 ## License
 

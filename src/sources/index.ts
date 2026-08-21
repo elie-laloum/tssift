@@ -3,7 +3,7 @@ import type { NormalizedDiagnostic, ProgramFacts } from "../types.js";
 export interface LoadOptions {
   /**
    * Path to the tsconfig, or to the directory holding one. Taken as given —
-   * there is no upward search. Determinism beats magic (PROJECT.md §9).
+   * there is no upward search. Determinism beats magic.
    */
   project: string;
   /**

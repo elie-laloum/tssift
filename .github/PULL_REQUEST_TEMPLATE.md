@@ -31,7 +31,7 @@ diff larger than you expected is the test doing its job, not noise. -->
 ## The rules
 
 Tick what applies; delete what does not. The full list with its reasoning is in
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+[README.md](../README.md#design-rules).
 
 - [ ] No `Fact.text` contains an imperative or a prescription
 - [ ] No diagnostic is dropped — `--all` still restores everything

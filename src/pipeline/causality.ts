@@ -1,6 +1,6 @@
 /**
  * Causality detection — the highest-value component, and the easiest to make
- * wrong (PROJECT.md §5.1).
+ * wrong.
  *
  * ## The threshold, and why it is this strict
  *
@@ -12,7 +12,7 @@
  *
  * The asymmetry is deliberate. Under-grouping costs part of H1's number.
  * Over-grouping hides a real error behind a counter and sends the agent to edit
- * the wrong file, which is the failure PROJECT.md §11 classes as *critical*. So:
+ * the wrong file, which is the failure classed as *critical*. So:
  * we loosen later, with numbers; we do not tighten after a miss.
  *
  * ## A cause is usually not a diagnostic
@@ -26,7 +26,7 @@
  *
  * ## TS2307 — grouped by the unresolved specifier
  *
- * §5.1 names TS2307 a near-certain root, and the three installer/config fixtures
+ * The causality threshold names TS2307 a near-certain root, and the three installer/config fixtures
  * taught its shape. It is a cascade *of* 2307, not *from* one: an unresolved
  * import gives its bindings `any`, so nothing downstream errors — every
  * diagnostic is itself a 2307. And an unresolved module has no declaration to
@@ -36,14 +36,14 @@
  * imports table does not carry — a message whose wording drifted, a form
  * `collectImports` skips — is left an isolated root rather than risking a merge.
  * Relative specifiers are never grouped: `./types` from two directories are two
- * modules, and folding them would be the §11-critical over-group.
+ * modules, and folding them would be the critical over-group.
  *
  * TS2305 needs none of this: its module *does* resolve, so it is already an
  * identical-`declaredAt` case (12/12 on the corpus).
  *
  * ## TS2304 / TS2552 — grouped by the missing name, within one file
  *
- * §5.1 excludes "the same identifier" by name, and its stated reason is
+ * The causality threshold excludes "the same identifier" by name, and its stated reason is
  * shadowing: *two distinct bindings that shadow one another carry the same name*.
  * **That reason cannot apply here.** Shadowing needs at least one binding, and
  * `Cannot find name 'X'` is the compiler stating there is none reachable at that
@@ -56,14 +56,14 @@
  * analogy with 2307 stops: a non-relative module specifier means the same package
  * from any file, whereas an identifier is scope-local, so the same missing name
  * in two files is two causes that may take two different fixes. Under-grouping,
- * per §5.1's asymmetry.
+ * per the causality threshold's asymmetry.
  *
  * TS2552 rides with TS2304 for the reason 2724 rides with 2305: TypeScript emits
  * it *instead of* 2304 as soon as a close name is in scope, so which code comes
  * out depends on the analysed author's spelling and not on the failure. Splitting
  * them would make an identical cascade fold or not by accident.
  *
- * TS2503 (`Cannot find namespace`) and TS2686 (UMD global) are §5.1 roots too and
+ * TS2503 (`Cannot find namespace`) and TS2686 (UMD global) are near-certain roots too and
  * are deliberately **not** handled: no fixture, no real-code witness, and a
  * different message template. They are a measurement away, not a guess away.
  *
@@ -121,7 +121,7 @@ function causeKey(group: DiagnosticGroup): string {
  * and only trusted when `ProgramFacts.imports` for the same file carries it. A
  * relative specifier is never returned: `./x` is file-relative, so the same
  * string from two directories is two different modules, and grouping them would
- * be the §11-critical over-group. Anything the imports table cannot confirm is
+ * be the critical over-group. Anything the imports table cannot confirm is
  * `undefined`, and the diagnostic stays an isolated root — never a merge.
  *
  * Exported because the TS2307 **enricher** asks the same question and must get
@@ -178,10 +178,10 @@ function missingName(diagnostic: NormalizedDiagnostic): string | undefined {
  * May this declaration act as a cause?
  *
  * **No, if it lives outside the analysed program.** This guard is not
- * hypothetical: on `.corpus/lekes-result-value-renamed` a TS2345 resolves its
+ * hypothetical: on `.corpus/private-app-result-value-renamed` a TS2345 resolves its
  * expected type to `<ts-lib>/lib.es2015.collection.d.ts` — `interface Map`.
  * Grouping on that would merge two entirely unrelated bugs the moment both
- * happened to mis-call a `Map` method, which is precisely the §11-critical
+ * happened to mis-call a `Map` method, which is precisely the critical
  * failure. The same reasoning covers `node_modules/`: a shared dependency's
  * declaration is not a shared *cause*, and it is not something the reader can
  * edit either.
@@ -304,7 +304,7 @@ export function detectCausality(
   }
 
   // Ranked by explanatory power: the first thing the agent reads must be the
-  // thing that explains the most (§5.1). Ties broken on the cause key so the
+  // thing that explains the most. Ties broken on the cause key so the
   // order is total and a snapshot cannot flap.
   groups.sort(
     (a, b) => b.members.length - a.members.length || causeKey(a).localeCompare(causeKey(b)),

@@ -1,5 +1,5 @@
 /**
- * Ranking and declassing — what the renderers walk (PROJECT.md §5.1).
+ * Ranking and declassing — what the renderers walk.
  *
  * **Declassing is a property of the rendering, never of the data** (rule 2).
  * Nothing here removes a diagnostic; `DiagnosticReport.diagnostics` stays whole
@@ -14,7 +14,7 @@ import type { DiagnosticGroup, DiagnosticReport, EnrichedDiagnostic } from "../t
 
 /**
  * Sites shown in full under a group header before the counter takes over
- * (§5.1 rule 4: "three sites then `+37 other usages`").
+ * (the display cap: "three sites then `+37 other usages`").
  */
 export const MAX_SHOWN_MEMBERS = 3;
 
@@ -37,7 +37,7 @@ export type Entry = GroupEntry | DiagnosticEntry;
  * The ordered entries a report renders as.
  *
  * With `all`, every diagnostic is its own entry in source order and no group is
- * emitted: `--all` restores each diagnostic to a full line, ungrouped (§5.1).
+ * emitted: `--all` restores each diagnostic to a full line, ungrouped.
  * The grouping still *happened* — `role` and `group` are still on every
  * diagnostic in json — it is only the rendering that is flattened.
  */

@@ -1,7 +1,7 @@
 /**
  * TS2307 — `Cannot find module 'X' or its corresponding type declarations.`
  *
- * The one code in §5.2 whose payload is not about types at all. TypeScript
+ * The one code in the enriched-code table whose payload is not about types at all. TypeScript
  * prints the same sentence under npm, pnpm, yarn and bun, and it is true in all
  * four while meaning something different in each: undeclared but hoisted into
  * reach, undeclared and unreachable, declared and installed but resolved
