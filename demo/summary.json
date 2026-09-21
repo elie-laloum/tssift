@@ -1,0 +1,17 @@
+{
+  "fixture": "corpus/dispatch-arity-changed/before",
+  "typescript": "5.9.3",
+  "counts": {
+    "diagnostics": 24,
+    "errors": 24,
+    "warnings": 0,
+    "filesWithDiagnostics": 19,
+    "filesChecked": 21,
+    "groups": 1,
+    "derived": 24
+  },
+  "rawCharacters": 2892,
+  "groupedCharacters": 761,
+  "rawExit": 2,
+  "groupedExit": 1
+}

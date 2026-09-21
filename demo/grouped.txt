@@ -1,0 +1,13 @@
+root: corpus\dispatch-arity-changed\before
+24 errors · 19 files · 1 root cause
+
+[1] cause: function 'emit' declared at src/events/dispatch.ts:15:1
+      (event: DomainEvent, actor: string): void
+    24 diagnostics, all TS2554
+    src/api/admin-route.ts:5:3 error TS2554: Expected 2 arguments, but got 1.
+      related src/events/dispatch.ts:15:42: An argument for 'actor' was not provided.
+    src/api/orders-route.ts:5:3 error TS2554: Expected 2 arguments, but got 1.
+      related src/events/dispatch.ts:15:42: An argument for 'actor' was not provided.
+    src/api/orders-route.ts:9:3 error TS2554: Expected 2 arguments, but got 1.
+      related src/events/dispatch.ts:15:42: An argument for 'actor' was not provided.
+    +21 more sites (--all for every one)
