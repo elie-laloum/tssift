@@ -1,5 +1,5 @@
 <p align="right"><a href="README.fr.md">Français</a></p>
-<img src="assets/cover-v2.png" width="100%" alt="tssift — Find the cause behind the cascade.">
+<img src="assets/cover-v4.png" width="100%" alt="tssift — Find the cause behind the cascade.">
 
 [![CI](https://img.shields.io/github/actions/workflow/status/elie-laloum/tssift/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/elie-laloum/tssift/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-586475?style=flat-square)](LICENSE)
 
